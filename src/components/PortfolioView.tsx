@@ -402,8 +402,8 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({
 
       {/* Evidence Drawer Modal */}
       {selectedEvidenceSkill && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-          <div className="w-full max-w-xl rounded-2xl bg-slate-900 border border-slate-800 p-6 shadow-2xl text-slate-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+          <div className="w-full max-w-xl rounded-2xl bg-[#0f121a] border border-white/[0.08] p-6 shadow-2xl shadow-black/80 text-slate-200 animate-enter">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <Award className="h-5 w-5 text-amber-400" />

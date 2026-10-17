@@ -196,10 +196,10 @@ Try asking about any topic or tap one of the prompts below!`,
 
             {/* Bubble Body */}
             <div
-              className={`rounded-2xl px-5 py-4 max-w-3xl text-sm leading-relaxed ${
+              className={`rounded-2xl px-5 py-4 max-w-3xl text-sm leading-relaxed animate-slide-up ${
                 msg.sender === 'user'
-                  ? 'bg-emerald-600 text-white rounded-tr-none shadow-md'
-                  : 'bg-slate-900/90 border border-slate-800 text-slate-200 rounded-tl-none shadow-xl'
+                  ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-tr-none shadow-lg shadow-emerald-950/30'
+                  : 'bg-slate-900/90 border border-white/[0.08] text-slate-200 rounded-tl-none shadow-xl'
               }`}
             >
               {/* Formatted markdown text */}

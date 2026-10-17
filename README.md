@@ -31,10 +31,19 @@ Grove turns this paradigm on its head by anchoring itself to the student's **ent
    - Compiles 4 years of verified course notes and capstone deliverables into an interactive portfolio.
    - Generates a polished, professional CV where **every technical skill is backed by an evidence link** pointing directly to the coursework and notes where the skill was acquired.
    - Instant Markdown export, PDF print/save, and copy-to-clipboard.
-4. **SuperMemo Spaced-Repetition Active Recall Engine**:
+4. **Course Clearance Advice & Cohort Annotations ("Senior Survival Guides")**:
+   - Students who cleared a course (with an A+, A, or B+) leave battle-tested warnings, exam gotchas, lab shortcuts, and lecturer grading quirks.
+   - Integrated directly into the Chat Tutor: when asking Grove about a topic, relevant advice from A+ alumni is surfaced automatically alongside technical notes.
+5. **Student Categorization & Work Ethic Telemetry (A+ Blueprints)**:
+   - Tracks study patterns, hours spent per week, revision buffers (e.g., beginning prep 16 days prior to exams), and categorizes students into performance tiers (*Tier A+*, *Tier A*, *Tier B+*) and work ethic archetypes (*Consistent Daily Architect*, *First-Principles Deep Diver*, *Active Recall Specialist*).
+   - **"Adopt This Blueprint"**: Lower-year students can adopt an A+ student's exact study pacing and 14-week syllabus execution roadmap into their own dashboard with a single click.
+6. **1-on-1 Peer Tutoring & Mentorship Marketplace**:
+   - Freshmen and sophomores can search verified seniors who earned an A+ in a course and request 1-on-1 tutoring sessions for specific topics or exam prep.
+   - Built-in tutoring request queue with urgent flagging (*Midterm Prep*, *Lab Deadline*) and status tracking.
+7. **SuperMemo Spaced-Repetition Active Recall Engine**:
    - Auto-generates flashcards from course notes across all 4 years.
    - Spaced repetition algorithm (Again, Hard, Good, Easy) tracking mastery and decay.
-5. **Zero-Setup Offline Intelligence + Bring-Your-Own-Key**:
+8. **Zero-Setup Offline Intelligence + Bring-Your-Own-Key**:
    - Works 100% out of the box with zero API keys required, using an intelligent local simulation engine.
    - Supports Google Gemini and OpenAI API keys for live LLM generation.
 
@@ -44,10 +53,11 @@ Grove turns this paradigm on its head by anchoring itself to the student's **ent
 
 You can copy and adapt these bullet points directly for your resume, CV, or LinkedIn profile:
 
-> - **Developed Grove**, a full-stack degree-long AI study companion and portfolio generator built with React 19, TypeScript, and Tailwind CSS, featuring cross-year retrieval-augmented generation (RAG) across 4 years of academic coursework.
-> - **Engineered an adaptive cognitive telemetry engine** that dynamically tunes explanation styles (Code-First, First Principles, Socratic) and maintains a transparent, user-editable audit log of student learning patterns.
-> - **Built an automated graduation CV generator** with an evidence-backed verification matrix linking technical competencies directly to course notes, lab outcomes, and git repositories.
-> - **Implemented an active recall engine** utilizing SuperMemo spaced repetition algorithms with interval calculation and topic revisit diagnostics.
+> - **Architected & Developed Grove**, a collaborative AI study companion and cohort intelligence platform using **React 19, TypeScript, and Tailwind CSS**, featuring degree-long RAG and peer mentorship workflows.
+> - **Engineered an A+ Study Blueprint engine** that extracts high-performing students' study habits, revision buffers, and weekly workload metrics into adoptable roadmaps for incoming cohorts.
+> - **Built a verified course clearance advice system** allowing alumni who cleared courses with honors (A+/A) to leave exam warnings and annotate topics, integrating directly into LLM retrieval pipelines.
+> - **Implemented a 1-on-1 peer tutoring exchange** matching lower-year students with high-performing seniors based on course clearance grades, topic bottlenecks, and explanation styles.
+> - **Designed an evidence-backed CV generator** linking technical competencies directly to 4 years of verified course notes and capstone repositories.
 
 ---
 

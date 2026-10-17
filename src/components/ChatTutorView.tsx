@@ -10,7 +10,8 @@ import {
   Zap,
   HelpCircle,
   Compass,
-  Lightbulb
+  Lightbulb,
+  GraduationCap
 } from 'lucide-react';
 import { Note, LearningProfile, ChatMessage } from '../types';
 import { aiService } from '../services/aiService';
@@ -280,6 +281,32 @@ Try asking about any topic or tap one of the prompts below!`,
                         </button>
                       );
                     })}
+                  </div>
+                </div>
+              )}
+
+              {/* Vetted Senior Clearance Advice */}
+              {msg.seniorTips && msg.seniorTips.length > 0 && (
+                <div className="mt-4 pt-3 border-t border-slate-800/80">
+                  <div className="flex items-center gap-2 mb-2 text-xs font-semibold text-amber-400">
+                    <GraduationCap className="h-4 w-4" />
+                    <span>Battle-Tested Advice from Course Clearance Alumni</span>
+                  </div>
+                  <div className="space-y-2">
+                    {msg.seniorTips.map((tip, idx) => (
+                      <div
+                        key={idx}
+                        className="rounded-xl bg-amber-950/20 border border-amber-500/20 p-3 text-xs text-slate-300 space-y-1"
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="rounded bg-amber-500/20 text-amber-300 text-[10px] font-bold px-1.5 py-0.5 border border-amber-500/30">
+                            {tip.courseCode} · Cleared with {tip.authorGrade}
+                          </span>
+                          <span className="font-semibold text-slate-200">{tip.authorName}</span>
+                        </div>
+                        <p className="text-slate-300 leading-normal italic">{tip.tip}</p>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}

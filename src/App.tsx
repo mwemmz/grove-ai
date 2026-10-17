@@ -1,22 +1,41 @@
 import React, { useState, useEffect } from 'react';
-import { Header } from './components/Header';
+import { Header, AppTab } from './components/Header';
 import { ChatTutorView } from './components/ChatTutorView';
 import { DegreeMemoryView } from './components/DegreeMemoryView';
+import { StudyBlueprintsView } from './components/StudyBlueprintsView';
+import { PeerTutoringView } from './components/PeerTutoringView';
 import { LearningProfileView } from './components/LearningProfileView';
 import { PortfolioView } from './components/PortfolioView';
 import { QuizView } from './components/QuizView';
 import { SettingsModal } from './components/SettingsModal';
-import { Note, Course, LearningProfile, Flashcard, PortfolioSkill, PortfolioProject } from './types';
+import { 
+  Note, 
+  Course, 
+  LearningProfile, 
+  Flashcard, 
+  PortfolioSkill, 
+  PortfolioProject,
+  SeniorComment,
+  StudyBlueprint,
+  TutorProfile,
+  TutorRequest 
+} from './types';
 import { storage } from './services/storage';
 
 export function App() {
-  const [activeTab, setActiveTab] = useState<'chat' | 'notes' | 'profile' | 'portfolio' | 'quiz'>('chat');
+  const [activeTab, setActiveTab] = useState<AppTab>('chat');
   const [notes, setNotes] = useState<Note[]>(() => storage.getNotes());
   const [courses, setCourses] = useState<Course[]>(() => storage.getCourses());
   const [profile, setProfile] = useState<LearningProfile>(() => storage.getProfile());
   const [flashcards, setFlashcards] = useState<Flashcard[]>(() => storage.getFlashcards());
   const [skills, setSkills] = useState<PortfolioSkill[]>(() => storage.getSkills());
   const [projects, setProjects] = useState<PortfolioProject[]>(() => storage.getProjects());
+  
+  // Cohort & Peer Mentorship State
+  const [seniorComments, setSeniorComments] = useState<SeniorComment[]>(() => storage.getSeniorComments());
+  const [blueprints, setBlueprints] = useState<StudyBlueprint[]>(() => storage.getBlueprints());
+  const [tutors, setTutors] = useState<TutorProfile[]>(() => storage.getTutors());
+  const [tutorRequests, setTutorRequests] = useState<TutorRequest[]>(() => storage.getTutorRequests());
 
   const [selectedNoteForDetail, setSelectedNoteForDetail] = useState<Note | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -38,6 +57,22 @@ export function App() {
     storage.saveFlashcards(flashcards);
   }, [flashcards]);
 
+  useEffect(() => {
+    storage.saveSeniorComments(seniorComments);
+  }, [seniorComments]);
+
+  useEffect(() => {
+    storage.saveBlueprints(blueprints);
+  }, [blueprints]);
+
+  useEffect(() => {
+    storage.saveTutors(tutors);
+  }, [tutors]);
+
+  useEffect(() => {
+    storage.saveTutorRequests(tutorRequests);
+  }, [tutorRequests]);
+
   const handleResetDemo = () => {
     storage.resetAllToDemo();
     setNotes(storage.getNotes());
@@ -46,6 +81,10 @@ export function App() {
     setFlashcards(storage.getFlashcards());
     setSkills(storage.getSkills());
     setProjects(storage.getProjects());
+    setSeniorComments(storage.getSeniorComments());
+    setBlueprints(storage.getBlueprints());
+    setTutors(storage.getTutors());
+    setTutorRequests(storage.getTutorRequests());
   };
 
   const handleOpenNoteDetail = (note: Note) => {
@@ -87,6 +126,25 @@ export function App() {
             courses={courses}
             selectedNoteForDetail={selectedNoteForDetail}
             setSelectedNoteForDetail={setSelectedNoteForDetail}
+          />
+        )}
+
+        {activeTab === 'blueprints' && (
+          <StudyBlueprintsView
+            blueprints={blueprints}
+            setBlueprints={setBlueprints}
+          />
+        )}
+
+        {activeTab === 'tutoring' && (
+          <PeerTutoringView
+            seniorComments={seniorComments}
+            setSeniorComments={setSeniorComments}
+            tutors={tutors}
+            setTutors={setTutors}
+            tutorRequests={tutorRequests}
+            setTutorRequests={setTutorRequests}
+            courses={courses}
           />
         )}
 

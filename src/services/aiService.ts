@@ -1,4 +1,4 @@
-import { Note, LearningProfile, AcademicYear, MemoryLogEntry } from '../types';
+import { Note, LearningProfile, AcademicYear, MemoryLogEntry, StudentTier } from '../types';
 import { storage } from './storage';
 
 export interface AIResponsePayload {
@@ -16,8 +16,15 @@ export interface AIResponsePayload {
     earlierTopic: string;
     connectionText: string;
   }[];
+  seniorTips?: {
+    authorName: string;
+    authorGrade: StudentTier;
+    courseCode: string;
+    tip: string;
+  }[];
   appliedProfileAttributes: string[];
 }
+
 
 export const aiService = {
   /**
@@ -129,12 +136,32 @@ export const aiService = {
       relevanceQuote: n.keyTakeaways[0] || n.summary,
     }));
 
+    // Retrieve matching senior tips from students who cleared the course
+    const allSeniorComments = storage.getSeniorComments();
+    const matchingSeniorTips = allSeniorComments
+      .filter(sc => {
+        const cCode = sc.courseCode.toLowerCase();
+        const top = sc.topic.toLowerCase();
+        return qLower.includes(cCode) || 
+               topNotes.some(n => n.courseId.toLowerCase().includes(cCode)) || 
+               qLower.includes(top) ||
+               sc.commentText.toLowerCase().includes(qLower.slice(0, 15));
+      })
+      .slice(0, 2)
+      .map(sc => ({
+        authorName: sc.authorName,
+        authorGrade: sc.authorGrade,
+        courseCode: sc.courseCode,
+        tip: sc.commentText,
+      }));
+
     const appliedAttributes: string[] = [
       `Style: ${profile.explanationStyle}`,
       `Density: ${profile.answerLength}`,
     ];
 
     if (profile.socraticPacing) appliedAttributes.push('Socratic pacing enabled');
+    if (matchingSeniorTips.length > 0) appliedAttributes.push(`${matchingSeniorTips.length} Senior Clearance Advice integrated`);
 
     // Check if query is explicitly asking about learning history
     const isHistoryQuery = 
@@ -144,11 +171,15 @@ export const aiService = {
       qLower.includes('when did we cover');
 
     if (isHistoryQuery) {
-      return this.generateTimelineResponse(question, allNotes, profile, citedNotes, connections, appliedAttributes);
+      const resp = this.generateTimelineResponse(question, allNotes, profile, citedNotes, connections, appliedAttributes);
+      resp.seniorTips = matchingSeniorTips;
+      return resp;
     }
 
     // Default intelligent synthesized answer adapted to user style
-    return this.generateAdaptiveResponse(question, topNotes, profile, citedNotes, connections, appliedAttributes);
+    const resp = this.generateAdaptiveResponse(question, topNotes, profile, citedNotes, connections, appliedAttributes);
+    resp.seniorTips = matchingSeniorTips;
+    return resp;
   },
 
   generateTimelineResponse(

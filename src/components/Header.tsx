@@ -7,13 +7,17 @@ import {
   Repeat, 
   Settings, 
   Flame,
-  Layers
+  Layers,
+  Compass,
+  Users
 } from 'lucide-react';
 import { LearningProfile } from '../types';
 
+export type AppTab = 'chat' | 'notes' | 'blueprints' | 'tutoring' | 'profile' | 'portfolio' | 'quiz';
+
 interface HeaderProps {
-  activeTab: 'chat' | 'notes' | 'profile' | 'portfolio' | 'quiz';
-  setActiveTab: (tab: 'chat' | 'notes' | 'profile' | 'portfolio' | 'quiz') => void;
+  activeTab: AppTab;
+  setActiveTab: (tab: AppTab) => void;
   profile: LearningProfile;
   totalNotes: number;
   onOpenSettings: () => void;
@@ -28,7 +32,7 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   return (
     <header className="sticky top-0 z-40 w-full border-b border-slate-800 bg-slate-950/80 backdrop-blur-md">
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
+      <div className="mx-auto flex max-w-7xl items-center justify-between px-3 py-2.5 sm:px-6">
         
         {/* Logo and Tree Rings Motif */}
         <div className="flex items-center gap-3">
@@ -47,8 +51,8 @@ export const Header: React.FC<HeaderProps> = ({
                 Year {profile.currentYear}
               </span>
             </div>
-            <p className="text-xs text-slate-400 hidden sm:block">
-              Degree-Long AI Learning Companion & Portfolio
+            <p className="text-[11px] text-slate-400 hidden sm:block">
+              Study NotebookLM & Cohort Mentorship
             </p>
           </div>
         </div>
@@ -57,65 +61,90 @@ export const Header: React.FC<HeaderProps> = ({
         <nav className="flex items-center gap-1 rounded-xl bg-slate-900/90 p-1 border border-slate-800/80 shadow-lg shadow-black/20 overflow-x-auto">
           <button
             onClick={() => setActiveTab('chat')}
-            className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs sm:text-sm font-medium transition-all ${
+            className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all ${
               activeTab === 'chat'
                 ? 'bg-emerald-600 text-white shadow-sm'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
             }`}
           >
-            <Sparkles className="h-4 w-4" />
+            <Sparkles className="h-3.5 w-3.5 text-emerald-300" />
             <span>Ask Grove</span>
           </button>
 
           <button
             onClick={() => setActiveTab('notes')}
-            className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs sm:text-sm font-medium transition-all ${
+            className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all ${
               activeTab === 'notes'
                 ? 'bg-emerald-600 text-white shadow-sm'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
             }`}
           >
-            <BookOpen className="h-4 w-4" />
-            <span>Degree Memory</span>
-            <span className="ml-0.5 rounded-full bg-slate-800 px-1.5 py-0.2 text-[10px] text-slate-300">
+            <BookOpen className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Degree Memory</span>
+            <span className="sm:hidden">Notes</span>
+            <span className="rounded-full bg-slate-800 px-1.5 py-0.2 text-[10px] text-slate-300">
               {totalNotes}
             </span>
           </button>
 
           <button
+            onClick={() => setActiveTab('blueprints')}
+            className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all ${
+              activeTab === 'blueprints'
+                ? 'bg-amber-600 text-white shadow-sm'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+            }`}
+          >
+            <Compass className="h-3.5 w-3.5 text-amber-300" />
+            <span>A+ Blueprints</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('tutoring')}
+            className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all ${
+              activeTab === 'tutoring'
+                ? 'bg-teal-600 text-white shadow-sm'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+            }`}
+          >
+            <Users className="h-3.5 w-3.5 text-teal-300" />
+            <span>Peer Tutoring</span>
+          </button>
+
+          <button
             onClick={() => setActiveTab('profile')}
-            className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs sm:text-sm font-medium transition-all ${
+            className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all ${
               activeTab === 'profile'
                 ? 'bg-emerald-600 text-white shadow-sm'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
             }`}
           >
-            <Brain className="h-4 w-4" />
-            <span>How I Learn</span>
+            <Brain className="h-3.5 w-3.5" />
+            <span className="hidden md:inline">How I Learn</span>
           </button>
 
           <button
             onClick={() => setActiveTab('portfolio')}
-            className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs sm:text-sm font-medium transition-all ${
+            className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all ${
               activeTab === 'portfolio'
                 ? 'bg-emerald-600 text-white shadow-sm'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
             }`}
           >
-            <GraduationCap className="h-4 w-4" />
-            <span>Portfolio & CV</span>
+            <GraduationCap className="h-3.5 w-3.5" />
+            <span className="hidden lg:inline">Portfolio & CV</span>
           </button>
 
           <button
             onClick={() => setActiveTab('quiz')}
-            className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs sm:text-sm font-medium transition-all ${
+            className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all ${
               activeTab === 'quiz'
                 ? 'bg-emerald-600 text-white shadow-sm'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
             }`}
           >
-            <Repeat className="h-4 w-4" />
-            <span className="hidden md:inline">Spaced Recall</span>
+            <Repeat className="h-3.5 w-3.5" />
+            <span className="hidden xl:inline">Recall</span>
           </button>
         </nav>
 
@@ -128,7 +157,7 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           {/* Academic Breadcrumb */}
-          <div className="hidden xl:flex items-center gap-1 text-xs text-slate-400">
+          <div className="hidden 2xl:flex items-center gap-1 text-xs text-slate-400">
             <Layers className="h-3.5 w-3.5 text-emerald-400" />
             <span>{profile.degreeName}</span>
           </div>

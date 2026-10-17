@@ -78,6 +78,9 @@ export interface LearningProfile {
   totalQuestionsAsked: number;
   studyStreaksDays: number;
   preferredStudyTime: string;
+  studentTier?: 'A+' | 'A' | 'B+' | 'B';
+  workEthicArchetype?: string;
+  clearedCourses?: string[];
 }
 
 export interface ChatMessage {
@@ -91,6 +94,12 @@ export interface ChatMessage {
     year: AcademicYear;
     title: string;
     relevanceQuote: string;
+  }[];
+  seniorTips?: {
+    authorName: string;
+    authorGrade: StudentTier;
+    courseCode: string;
+    tip: string;
   }[];
   yearConnections?: {
     earlierYear: AcademicYear;
@@ -156,4 +165,93 @@ export interface GraduationCV {
   skills: PortfolioSkill[];
   projects: PortfolioProject[];
   academicHighlights: string[];
+}
+
+// -------------------------------------------------------------
+// NEW: Senior Advice, Student Categorization & Peer Tutoring
+// -------------------------------------------------------------
+
+export type StudentTier = 'A+' | 'A' | 'B+' | 'B';
+
+export type WorkEthicArchetype = 
+  | 'Consistent Daily Architect' 
+  | 'Active Recall Specialist' 
+  | 'High-Intensity Sprinter' 
+  | 'First-Principles Deep Diver';
+
+export interface SeniorComment {
+  id: string;
+  courseCode: string;
+  topic: string;
+  authorName: string;
+  authorGrade: StudentTier;
+  semesterCleared: string;
+  category: 'exam-gotcha' | 'study-strategy' | 'lecturer-quirk' | 'resource-gem';
+  commentText: string;
+  upvotes: number;
+  hasUpvoted?: boolean;
+  verifiedClearance: boolean;
+  createdAt: string;
+}
+
+export interface WeeklyMilestone {
+  week: number;
+  topic: string;
+  focus: string;
+  workloadHours: number;
+  proTip: string;
+}
+
+export interface StudyBlueprint {
+  id: string;
+  studentName: string;
+  studentTier: StudentTier;
+  archetype: WorkEthicArchetype;
+  courseCode: string;
+  courseName: string;
+  overallGpa: string;
+  weeklyHours: number;
+  pacingStrategy: string;
+  examPrepDaysBefore: number;
+  flashcardReviewCadence: string;
+  summaryQuote: string;
+  recommendedHabits: string[];
+  syllabusMilestones: WeeklyMilestone[];
+  adoptedByCount: number;
+  isAdopted?: boolean;
+}
+
+export interface TutorProfile {
+  id: string;
+  name: string;
+  currentYear: AcademicYear;
+  degreeName: string;
+  clearedCourses: {
+    courseCode: string;
+    courseName: string;
+    grade: StudentTier;
+    yearCleared: number;
+  }[];
+  bio: string;
+  explanationStyle: ExplanationStyle;
+  rating: number; // 4.9 etc
+  sessionsDelivered: number;
+  hourlyRate: string; // e.g. "Free / Volunteer" or "$15/hr"
+  available: boolean;
+  preferredContact: string;
+}
+
+export interface TutorRequest {
+  id: string;
+  requesterName: string;
+  requesterYear: AcademicYear;
+  tutorId: string;
+  tutorName: string;
+  courseCode: string;
+  topic: string;
+  message: string;
+  preferredTime: string;
+  urgency: 'routine' | 'midterm-prep' | 'assignment-deadline';
+  status: 'pending' | 'accepted' | 'completed' | 'declined';
+  createdAt: string;
 }

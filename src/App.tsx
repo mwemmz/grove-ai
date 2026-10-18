@@ -198,7 +198,7 @@ function GroveApp() {
       ];
       const seeded: ChatMessage[] = [];
       for (const [i, q] of starters.entries()) {
-        const payload = await aiService.askGrove(q, notes, profile);
+        const payload = await aiService.askGrove(q, notes, profile, { live: false });
         const stamp = new Date(Date.now() - (starters.length - i) * 3600_000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         seeded.push(
           { id: `user-seed-${i}`, sender: 'user', text: q, timestamp: stamp },

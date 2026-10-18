@@ -1,5 +1,6 @@
 import { ThemePicker } from './ThemePicker';
-import { PROVIDERS, testKey, type Provider } from '../services/llmService';
+import { PROVIDERS, testKey, type LiveProvider } from '../services/llmService';
+import type { AiConfig } from '../services/storage';
 import React, { useEffect, useState } from 'react';
 import { 
   X, 
@@ -33,13 +34,21 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   setProfile,
   onResetDemo,
 }) => {
-  const [provider, setProvider] = useState<Provider>(() => storage.getApiProvider());
-  const [keys, setKeys] = useState<Record<string, string>>(() => Object.fromEntries(PROVIDERS.map((p) => [p.id, storage.getApiKey(p.id)])));
-  const [models, setModels] = useState<Record<string, string>>(() => Object.fromEntries(PROVIDERS.map((p) => [p.id, storage.getApiModel(p.id)])));
+  const LIVE = PROVIDERS.filter((p) => p.id !== 'mock') as (typeof PROVIDERS[number] & { id: LiveProvider })[];
+  const [cfg, setCfg] = useState<AiConfig>(() => storage.getAiConfig());
+  const [keys, setKeys] = useState<Record<string, string>>(() => Object.fromEntries(LIVE.map((p) => [p.id, storage.getApiKey(p.id)])));
+  const [models, setModels] = useState<Record<string, string>>(() => Object.fromEntries(LIVE.map((p) => [p.id, storage.getApiModel(p.id)])));
+  const [open, setOpen] = useState<string | null>(null);
   const [showKey, setShowKey] = useState(false);
-  const [test, setTest] = useState<{ state: 'idle' | 'busy' | 'ok' | 'fail'; msg: string }>({ state: 'idle', msg: '' });
-  const apiKey = keys[provider] ?? '';
-  const def = PROVIDERS.find((p) => p.id === provider)!;
+  const [tests, setTests] = useState<Record<string, { state: 'busy' | 'ok' | 'fail'; msg: string }>>({});
+  const move = (id: LiveProvider, dir: -1 | 1) => {
+    const o = [...cfg.order];
+    const i = o.indexOf(id);
+    const j = i + dir;
+    if (j < 0 || j >= o.length) return;
+    [o[i], o[j]] = [o[j], o[i]];
+    setCfg({ ...cfg, order: o });
+  };
   const [name, setName] = useState(profile.studentName);
   const [degree, setDegree] = useState(profile.degreeName);
   const [university, setUniversity] = useState(profile.university);
@@ -66,25 +75,26 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     };
     setProfile(updated);
     storage.saveProfile(updated);
-    storage.saveApiProvider(provider);
-    PROVIDERS.forEach((p) => {
-      if (p.id === 'mock') return;
+    LIVE.forEach((p) => {
       storage.saveApiKey((keys[p.id] ?? '').trim(), p.id);
       storage.saveApiModel((models[p.id] ?? '').trim(), p.id);
     });
+    storage.saveAiConfig(cfg);
+    const first = cfg.order.find((p) => (keys[p] ?? '').trim());
+    storage.saveApiProvider(first ?? 'mock'); // keeps the older single-provider setting in step
 
     setToastMessage('Settings successfully saved!');
     setTimeout(() => setToastMessage(null), 2500);
   };
 
-  const handleTest = async () => {
-    if (provider === 'mock') return;
-    setTest({ state: 'busy', msg: 'Checking…' });
+  const handleTest = async (id: LiveProvider) => {
+    const def = PROVIDERS.find((p) => p.id === id)!;
+    setTests((t) => ({ ...t, [id]: { state: 'busy', msg: 'Checking…' } }));
     try {
-      await testKey(provider, apiKey.trim(), (models[provider] || def.model).trim());
-      setTest({ state: 'ok', msg: 'Connected. Save settings to use it.' });
+      await testKey(id, (keys[id] ?? '').trim(), (models[id] || def.model).trim());
+      setTests((t) => ({ ...t, [id]: { state: 'ok', msg: 'Connected' } }));
     } catch (err) {
-      setTest({ state: 'fail', msg: err instanceof Error ? err.message : 'Could not connect.' });
+      setTests((t) => ({ ...t, [id]: { state: 'fail', msg: err instanceof Error ? err.message : 'Could not connect.' } }));
     }
   };
 
@@ -213,83 +223,111 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           <div className="space-y-3 bg-slate-950/60 border border-slate-800 p-4 rounded-xl">
             <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
               <Key className="h-3.5 w-3.5 text-teal-400" />
-              AI Intelligence Engine
+              AI engines
             </h3>
+            <p className="text-xs leading-relaxed text-muted">
+              Add a key for any provider. Grove tries them from the top. If one fails or runs out of quota, the next one picks up the same question. With no keys, Grove answers locally from your notes.
+            </p>
 
-            <div role="radiogroup" aria-label="AI engine" className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              {PROVIDERS.map((p) => (
-                <button
-                  type="button"
-                  role="radio"
-                  aria-checked={provider === p.id}
-                  key={p.id}
-                  onClick={() => { setProvider(p.id); setTest({ state: 'idle', msg: '' }); setShowKey(false); }}
-                  className={`rounded-lg border p-2.5 text-left ${
-                    provider === p.id ? 'border-accent bg-raised text-text' : 'border-line text-muted hover:bg-raised hover:text-text'
-                  }`}
-                >
-                  <div className="text-xs font-bold">{p.label}</div>
-                  <div className="mt-0.5 text-xs text-muted">{p.sub}</div>
-                </button>
+            <ul className="space-y-2">
+              {cfg.order.map((id, idx) => {
+                const def = LIVE.find((p) => p.id === id)!;
+                const has = !!(keys[id] ?? '').trim();
+                const isOpen = open === id;
+                const t = tests[id];
+                return (
+                  <li key={id} className="rounded-lg border border-line">
+                    <div className="flex items-center gap-2 p-2">
+                      <span className="w-5 text-center font-mono text-xs text-muted">{idx + 1}</span>
+                      <button
+                        type="button"
+                        aria-expanded={isOpen}
+                        onClick={() => { setOpen(isOpen ? null : id); setShowKey(false); }}
+                        className="flex min-w-0 flex-1 items-center gap-2 rounded-md px-1 py-1 text-left hover:bg-raised"
+                      >
+                        <span aria-hidden className={`h-2 w-2 shrink-0 rounded-full ${has ? 'bg-accent' : 'bg-line'}`} />
+                        <span className="text-sm font-medium text-text">{def.label}</span>
+                        <span className="truncate text-xs text-muted">{has ? 'Key saved' : 'No key'}</span>
+                      </button>
+                      <button type="button" aria-label={`Move ${def.label} up`} disabled={idx === 0} onClick={() => move(id, -1)} className="rounded-md px-2 py-1 text-muted hover:bg-raised hover:text-text">↑</button>
+                      <button type="button" aria-label={`Move ${def.label} down`} disabled={idx === cfg.order.length - 1} onClick={() => move(id, 1)} className="rounded-md px-2 py-1 text-muted hover:bg-raised hover:text-text">↓</button>
+                    </div>
+                    {isOpen && (
+                      <div className="space-y-3 border-t border-line p-3">
+                        <div>
+                          <label htmlFor={`key-${id}`} className="mb-1 block text-xs font-medium text-slate-400">{def.label} API key</label>
+                          <div className="flex gap-2">
+                            <input
+                              id={`key-${id}`}
+                              type={showKey ? 'text' : 'password'}
+                              autoComplete="off"
+                              spellCheck={false}
+                              value={keys[id] ?? ''}
+                              onChange={(e) => { setKeys({ ...keys, [id]: e.target.value }); setTests((x) => { const n = { ...x }; delete n[id]; return n; }); }}
+                              placeholder={def.keyHint}
+                              className="min-w-0 flex-1 rounded-lg border border-slate-700/80 bg-slate-900 px-3 py-1.5 font-mono text-xs text-text focus:border-emerald-500 focus:outline-none"
+                            />
+                            <button type="button" onClick={() => setShowKey((v) => !v)} className="rounded-lg border border-line px-3 text-xs text-muted hover:bg-raised hover:text-text">
+                              {showKey ? 'Hide' : 'Show'}
+                            </button>
+                          </div>
+                        </div>
+                        <div>
+                          <label htmlFor={`model-${id}`} className="mb-1 block text-xs font-medium text-slate-400">Model</label>
+                          <input
+                            id={`model-${id}`}
+                            type="text"
+                            spellCheck={false}
+                            value={models[id] ?? ''}
+                            onChange={(e) => setModels({ ...models, [id]: e.target.value })}
+                            placeholder={def.model}
+                            className="w-full rounded-lg border border-slate-700/80 bg-slate-900 px-3 py-1.5 font-mono text-xs text-text focus:border-emerald-500 focus:outline-none"
+                          />
+                          <p className="mt-1 text-xs text-muted">Blank uses {def.model}. Change it if the provider retires that name.</p>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-3">
+                          <button type="button" onClick={() => void handleTest(id)} disabled={!has || t?.state === 'busy'} className="rounded-lg border border-line px-3 py-1.5 text-xs font-semibold text-text hover:bg-raised">Test key</button>
+                          {def.keyUrl && <a href={def.keyUrl} target="_blank" rel="noreferrer" className="text-xs text-accent underline-offset-2 hover:underline">Get a key</a>}
+                          {has && <button type="button" onClick={() => setKeys({ ...keys, [id]: '' })} className="text-xs text-muted hover:text-text">Remove key</button>}
+                          {t && <span role="status" className={`text-xs ${t.state === 'ok' ? 'text-accent' : t.state === 'fail' ? 'text-warn' : 'text-muted'}`}>{t.msg}</span>}
+                        </div>
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              {([
+                ['ask', 'Answering questions'],
+                ['quiz', 'Quizzes and practice'],
+              ] as const).map(([task, label]) => (
+                <div key={task}>
+                  <label htmlFor={`route-${task}`} className="mb-1 block text-xs font-medium text-slate-400">{label}</label>
+                  <select
+                    id={`route-${task}`}
+                    value={cfg.routes[task]}
+                    onChange={(e) => setCfg({ ...cfg, routes: { ...cfg.routes, [task]: e.target.value as LiveProvider | 'auto' } })}
+                    className="w-full rounded-lg border border-slate-700/80 bg-slate-900 px-3 py-1.5 text-xs text-text focus:border-emerald-500 focus:outline-none"
+                  >
+                    <option value="auto">First available</option>
+                    {LIVE.map((p) => (
+                      <option key={p.id} value={p.id} disabled={!(keys[p.id] ?? '').trim()}>{p.label}</option>
+                    ))}
+                  </select>
+                </div>
               ))}
             </div>
 
-            {provider === 'mock' ? (
-              <p className="text-xs text-muted">Answers come from your notes with built-in rules. Add a key to get a real AI model answering from them.</p>
-            ) : (
-              <div className="space-y-3">
-                <div>
-                  <label htmlFor="ai-key" className="mb-1 block text-xs font-medium text-slate-400">{def.label} API key</label>
-                  <div className="flex gap-2">
-                    <input
-                      id="ai-key"
-                      type={showKey ? 'text' : 'password'}
-                      autoComplete="off"
-                      spellCheck={false}
-                      value={apiKey}
-                      onChange={(e) => { setKeys({ ...keys, [provider]: e.target.value }); setTest({ state: 'idle', msg: '' }); }}
-                      placeholder={def.keyHint}
-                      className="min-w-0 flex-1 rounded-lg border border-slate-700/80 bg-slate-900 px-3 py-1.5 font-mono text-xs text-text focus:border-emerald-500 focus:outline-none"
-                    />
-                    <button type="button" onClick={() => setShowKey((v) => !v)} className="rounded-lg border border-line px-3 text-xs text-muted hover:bg-raised hover:text-text">
-                      {showKey ? 'Hide' : 'Show'}
-                    </button>
-                  </div>
-                </div>
-                <div>
-                  <label htmlFor="ai-model" className="mb-1 block text-xs font-medium text-slate-400">Model</label>
-                  <input
-                    id="ai-model"
-                    type="text"
-                    spellCheck={false}
-                    value={models[provider] ?? ''}
-                    onChange={(e) => setModels({ ...models, [provider]: e.target.value })}
-                    placeholder={def.model}
-                    className="w-full rounded-lg border border-slate-700/80 bg-slate-900 px-3 py-1.5 font-mono text-xs text-text focus:border-emerald-500 focus:outline-none"
-                  />
-                  <p className="mt-1 text-xs text-muted">Leave blank to use {def.model}. Change it if the provider retires that name.</p>
-                </div>
-                <div className="flex flex-wrap items-center gap-3">
-                  <button type="button" onClick={() => void handleTest()} disabled={!apiKey.trim() || test.state === 'busy'} className="rounded-lg border border-line px-3 py-1.5 text-xs font-semibold text-text hover:bg-raised">
-                    Test key
-                  </button>
-                  {def.keyUrl && (
-                    <a href={def.keyUrl} target="_blank" rel="noreferrer" className="text-xs text-accent underline-offset-2 hover:underline">Get a key</a>
-                  )}
-                  {apiKey && (
-                    <button type="button" onClick={() => { setKeys({ ...keys, [provider]: '' }); setTest({ state: 'idle', msg: '' }); }} className="text-xs text-muted hover:text-text">
-                      Remove key
-                    </button>
-                  )}
-                  {test.msg && (
-                    <span role="status" className={`text-xs ${test.state === 'ok' ? 'text-accent' : test.state === 'fail' ? 'text-warn' : 'text-muted'}`}>{test.msg}</span>
-                  )}
-                </div>
-                <p className="text-xs leading-relaxed text-muted">
-                  Your key stays in this browser and goes only to {def.label}. When you ask a question, the question and the few notes that match it are sent there to write the answer. Use a key with a spending limit, and remove it on a shared computer.
-                </p>
-              </div>
-            )}
+            <label className="flex items-start gap-2 text-xs text-muted">
+              <input type="checkbox" checked={cfg.failover} onChange={(e) => setCfg({ ...cfg, failover: e.target.checked })} className="mt-0.5 accent-[var(--color-accent)]" />
+              <span>If a provider fails, hand the question to the next one with a key. Turn this off to stay on one provider and never spend the others.</span>
+            </label>
+
+            <p className="text-xs leading-relaxed text-muted">
+              Keys stay in this browser and go only to their own provider. When you ask, the question, the few notes that match it and your last exchange are sent to the provider that answers. Use keys with spending limits, and remove them on a shared computer.
+            </p>
           </div>
 
           {/* Backup & Persistence */}

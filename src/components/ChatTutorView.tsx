@@ -120,7 +120,7 @@ export const ChatTutorView: React.FC<ChatTutorViewProps> = ({
     setTimeout(() => setToast(null), 3000);
   };
 
-  const handleSend = async (textToSend?: string) => {
+  const handleSend = async (textToSend?: string, task: 'ask' | 'quiz' = 'ask') => {
     const query = (textToSend ?? input).trim();
     if (!query || isLoading) return;
 
@@ -132,7 +132,8 @@ export const ChatTutorView: React.FC<ChatTutorViewProps> = ({
 
     try {
       await new Promise((r) => setTimeout(r, 400));
-      const payload = await aiService.askGrove(query, notes, profile);
+      const previous = answer && question ? { question: question.text, answer: answer.text } : undefined;
+      const payload = await aiService.askGrove(query, notes, profile, { previous, task });
 
       setProfile((prev) => {
         const updated = { ...prev, totalQuestionsAsked: prev.totalQuestionsAsked + 1 };
@@ -169,7 +170,7 @@ export const ChatTutorView: React.FC<ChatTutorViewProps> = ({
     );
     setProfile(updatedProfile);
     flash(feedbackMessage);
-    if (action === 'quiz') handleSend('Generate an active-recall conceptual quiz question based on this topic.');
+    if (action === 'quiz') handleSend(question ? `Quiz me with one short question on: ${question.text}` : 'Generate an active-recall conceptual quiz question based on this topic.', 'quiz');
   };
 
   const clearChat = () => {

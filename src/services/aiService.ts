@@ -1,6 +1,6 @@
 import { Note, LearningProfile, AcademicYear, MemoryLogEntry, StudentTier } from '../types';
 import { storage } from './storage';
-import { PROVIDERS, buildSystemPrompt, buildUserPrompt, generate } from './llmService';
+import { PROVIDERS, buildSystemPrompt, buildUserPrompt, generateRouted, candidatesFor } from './llmService';
 
 export interface AIResponsePayload {
   text: string;
@@ -122,8 +122,10 @@ export const aiService = {
   async askGrove(
     question: string,
     allNotes: Note[],
-    profile: LearningProfile
+    profile: LearningProfile,
+    opts: { live?: boolean; task?: 'ask' | 'quiz'; previous?: { question: string; answer: string } } = {}
   ): Promise<AIResponsePayload> {
+    const live = opts.live !== false; // demo seeding passes live:false so it never spends the student's key
     const qLower = question.toLowerCase();
     const relevant = this.findRelevantNotes(question, allNotes);
     const topNotes = relevant.slice(0, 3).map(r => r.note);
@@ -174,6 +176,7 @@ export const aiService = {
     if (isHistoryQuery) {
       const resp = this.generateTimelineResponse(question, allNotes, profile, citedNotes, connections, appliedAttributes);
       resp.seniorTips = matchingSeniorTips;
+      resp.appliedProfileAttributes = ['Answered by Local Grove (timeline from your notes)', ...resp.appliedProfileAttributes];
       return resp;
     }
 
@@ -193,24 +196,22 @@ export const aiService = {
     resp.seniorTips = matchingSeniorTips;
 
     // A real model answers when the student has connected a key; the local answer is the safety net.
-    const provider = storage.getApiProvider();
-    const key = storage.getApiKey(provider);
-    if (provider === 'mock' || !key) {
+    const task = opts.task ?? 'ask';
+    const ready = live && candidatesFor(task).length > 0;
+    if (!ready) {
       resp.appliedProfileAttributes = ['Answered by Local Grove. Add an AI key in Settings for fuller answers.', ...resp.appliedProfileAttributes];
-    }
-    if (provider !== 'mock' && key) {
-      const def = PROVIDERS.find((p) => p.id === provider);
-      const model = storage.getApiModel(provider) || def?.model || '';
+    } else {
       try {
         const grounding = relevant.slice(0, 5).map((r) => r.note);
-        const text = await generate({
-          provider, key, model,
-          system: buildSystemPrompt(profile),
-          user: buildUserPrompt(question, grounding),
-        });
-        if (text) {
-          resp.text = text;
-          resp.appliedProfileAttributes = [`Answered by ${def?.label ?? provider}`, ...resp.appliedProfileAttributes];
+        const out = await generateRouted(task, buildSystemPrompt(profile), buildUserPrompt(question, grounding, opts.previous));
+        if (out) {
+          const label = PROVIDERS.find((p) => p.id === out.provider)?.label ?? out.provider;
+          const first = out.failed[0];
+          const tag = first
+            ? `Answered by ${label}, after ${PROVIDERS.find((p) => p.id === first.provider)?.label} failed (${first.reason})`
+            : `Answered by ${label}`;
+          resp.text = out.text;
+          resp.appliedProfileAttributes = [tag, ...resp.appliedProfileAttributes];
         }
       } catch (err) {
         resp.appliedProfileAttributes = [`AI engine unavailable, used local answer (${err instanceof Error ? err.message : 'unknown error'})`, ...resp.appliedProfileAttributes];

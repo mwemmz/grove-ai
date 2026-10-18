@@ -8,7 +8,7 @@ export type LiveProvider = Exclude<Provider, 'mock'>;
 export const PROVIDERS: { id: Provider; label: string; sub: string; keyHint: string; model: string; keyUrl?: string }[] = [
   { id: 'mock', label: 'Local Grove', sub: 'No key, works offline', keyHint: '', model: '' },
   { id: 'anthropic', label: 'Claude', sub: 'Anthropic key', keyHint: 'sk-ant-…', model: 'claude-haiku-5-5', keyUrl: 'https://console.anthropic.com/settings/keys' },
-  { id: 'gemini', label: 'Gemini', sub: 'Google AI Studio key', keyHint: 'AIza…', model: 'gemini-2.5-flash', keyUrl: 'https://aistudio.google.com/apikey' },
+  { id: 'gemini', label: 'Gemini', sub: 'Google AI Studio key', keyHint: 'AQ.… or AIza…', model: 'gemini-2.5-flash', keyUrl: 'https://aistudio.google.com/apikey' },
   { id: 'openai', label: 'OpenAI', sub: 'OpenAI key', keyHint: 'sk-…', model: 'gpt-4o-mini', keyUrl: 'https://platform.openai.com/api-keys' },
 ];
 

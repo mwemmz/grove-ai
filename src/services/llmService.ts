@@ -1,19 +1,41 @@
 /* Calls the student's chosen AI provider straight from the browser with their own key.
    The key never touches Grove's servers. Only the question and the few notes needed to answer it are sent. */
 import type { LearningProfile, Note } from '../types';
-import { storage, type AiTask, type LiveProviderId } from './storage';
+import { storage, type AiTask } from './storage';
 
-export type Provider = 'mock' | 'anthropic' | 'gemini' | 'openai';
-export type LiveProvider = Exclude<Provider, 'mock'>;
+import { CATALOG, catalogById, type CustomProvider, type ProviderKind } from '../shared/providerCatalog';
+import { apiPost } from '../lib/api';
 
-export const PROVIDERS: { id: Provider; label: string; sub: string; keyHint: string; model: string; keyUrl?: string }[] = [
-  { id: 'mock', label: 'Local Grove', sub: 'No key, works offline', keyHint: '', model: '' },
-  { id: 'anthropic', label: 'Claude', sub: 'Anthropic key', keyHint: 'sk-ant-…', model: 'claude-haiku-5-5', keyUrl: 'https://console.anthropic.com/settings/keys' },
-  { id: 'gemini', label: 'Gemini', sub: 'Google AI Studio key', keyHint: 'AQ.… or AIza…', model: 'gemini-2.5-flash', keyUrl: 'https://aistudio.google.com/apikey' },
-  { id: 'openai', label: 'OpenAI', sub: 'OpenAI key', keyHint: 'sk-…', model: 'gpt-4o-mini', keyUrl: 'https://platform.openai.com/api-keys' },
-];
+export type Provider = string;
+export type LiveProvider = string;
+
+/** What the rest of the app needs to know about any provider, built-in, catalog or custom. */
+export interface ProviderDef {
+  id: string;
+  label: string;
+  kind: ProviderKind;
+  baseUrl?: string;
+  model: string;
+  keyHint: string;
+  keyUrl?: string;
+  blurb: string;
+  builtin: boolean;
+  viaProxy: boolean;
+  custom: boolean;
+}
+
+export function resolveProvider(id: string, custom: CustomProvider[] = storage.getAiConfig().custom): ProviderDef | undefined {
+  const c = catalogById(id);
+  if (c) return { id: c.id, label: c.label, kind: c.kind, baseUrl: c.baseUrl, model: c.model, keyHint: c.keyHint, keyUrl: c.keyUrl, blurb: c.blurb, builtin: !!c.builtin, viaProxy: !!c.viaProxy, custom: false };
+  const u = custom.find((x) => x.id === id);
+  if (u) return { id: u.id, label: u.label, kind: 'openai-compat', baseUrl: u.baseUrl, model: u.model, keyHint: 'key', blurb: u.baseUrl, builtin: false, viaProxy: false, custom: true };
+  return undefined;
+}
+export const providerLabel = (id: string) => resolveProvider(id)?.label ?? id;
+export const BUILTIN_PROVIDERS = CATALOG.filter((p) => p.builtin);
 
 export class LLMError extends Error {}
+export class NetworkError extends LLMError {}
 
 const clip = (s: string, n: number) => (s.length > n ? s.slice(0, n) + '…' : s);
 
@@ -38,25 +60,46 @@ export function buildUserPrompt(question: string, notes: Note[], previous?: { qu
   return `Student's notes:\n\n${block}\n\n${prior}Question: ${question}`;
 }
 
+function statusError(status: number, detail: string): LLMError {
+  if (status === 401 || status === 403) return new LLMError('The provider rejected this key. Check it and try again.');
+  if (status === 429) return new LLMError('Rate limit or quota reached on this key.');
+  if (status === 404) return new LLMError(`The provider doesn't know this model. Change the model name in Settings. ${detail}`.trim());
+  if (status === 504) return new LLMError(detail || 'The provider did not answer in time.');
+  return new LLMError(`Provider error ${status}. ${detail}`.trim());
+}
+
+const errorDetail = (j: unknown): string => {
+  const e = (j as { error?: { message?: string } | string } | null)?.error;
+  return typeof e === 'string' ? e : e?.message ?? '';
+};
+
 async function post(url: string, headers: Record<string, string>, body: unknown): Promise<unknown> {
   let res: Response;
   try {
     res = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json', ...headers }, body: JSON.stringify(body) });
   } catch {
-    throw new LLMError('Could not reach the provider. Check your connection.');
+    throw new NetworkError('Could not reach the provider. Check your connection, or the provider may not allow calls from a browser.');
   }
   if (!res.ok) {
     let detail = '';
-    try {
-      const j = (await res.json()) as { error?: { message?: string } | string };
-      detail = typeof j.error === 'string' ? j.error : j.error?.message ?? '';
-    } catch { /* body wasn't JSON */ }
-    if (res.status === 401 || res.status === 403) throw new LLMError('The provider rejected this key. Check it and try again.');
-    if (res.status === 429) throw new LLMError('Rate limit or quota reached on this key.');
-    if (res.status === 404) throw new LLMError(`The provider doesn't know this model. Change the model name in Settings. ${detail}`.trim());
-    throw new LLMError(`Provider error ${res.status}. ${detail}`.trim());
+    try { detail = errorDetail(await res.json()); } catch { /* body wasn't JSON */ }
+    throw statusError(res.status, detail);
   }
   return res.json();
+}
+
+/** Same request, sent through Grove's signed-in relay for hosts that block browsers. Only catalog providers are allowed. */
+async function postViaRelay(providerId: string, key: string, payload: unknown): Promise<unknown> {
+  let out: { status: number; data: unknown };
+  try {
+    out = await apiPost<{ status: number; data: unknown }>('/ai-proxy', { provider: providerId, apiKey: key, payload });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : '';
+    if (msg.includes('(401)')) throw new LLMError('Sign in to Grove to use this provider.');
+    throw new LLMError('Grove could not reach the provider through its server. This provider may not work on this deployment yet.');
+  }
+  if (out.status < 200 || out.status >= 300) throw statusError(out.status, errorDetail(out.data));
+  return out.data;
 }
 
 export interface LLMRequest {
@@ -96,12 +139,24 @@ export async function generate(r: LLMRequest): Promise<string> {
     }
     return out;
   }
-  const j = (await post(
-    'https://api.openai.com/v1/chat/completions',
-    { authorization: `Bearer ${r.key}` },
-    { model: r.model, max_tokens: max, messages: [{ role: 'system', content: r.system }, { role: 'user', content: r.user }] },
-  )) as { choices?: { message?: { content?: string } }[] };
-  return (j.choices?.[0]?.message?.content ?? '').trim();
+  const def = resolveProvider(r.provider);
+  if (!def || def.kind !== 'openai-compat' || !def.baseUrl) throw new LLMError('Unknown provider. Re-add it in Settings.');
+  const payload = { model: r.model, max_tokens: max, messages: [{ role: 'system', content: r.system }, { role: 'user', content: r.user }] };
+  let j: unknown;
+  if (def.viaProxy) {
+    j = await postViaRelay(def.id, r.key, payload);
+  } else {
+    try {
+      j = await post(`${def.baseUrl}/chat/completions`, { authorization: `Bearer ${r.key}` }, payload);
+    } catch (err) {
+      // Listed providers can fall back to the relay when the browser is blocked. Custom ones cannot (the relay only reaches listed hosts).
+      if (err instanceof NetworkError && !def.custom && catalogById(def.id)) j = await postViaRelay(def.id, r.key, payload);
+      else throw err;
+    }
+  }
+  const out = ((j as { choices?: { message?: { content?: string } }[] })?.choices?.[0]?.message?.content ?? '').trim();
+  if (!out) throw new LLMError('The provider returned no text. Check the model name.');
+  return out;
 }
 
 /** Cheap round trip used by the "Test key" button. */
@@ -120,11 +175,11 @@ export interface RoutedResult {
 /** Providers that have a key, in the order this task should try them. */
 export function candidatesFor(task: AiTask): LiveProvider[] {
   const cfg = storage.getAiConfig();
-  const withKey = cfg.order.filter((p) => storage.getApiKey(p));
+  const withKey = cfg.order.filter((p) => storage.getApiKey(p) && resolveProvider(p, cfg.custom));
   const route = cfg.routes[task];
-  if (route !== 'auto' && withKey.includes(route as LiveProviderId)) {
+  if (route !== 'auto' && withKey.includes(route)) {
     const rest = withKey.filter((p) => p !== route);
-    return cfg.failover ? [route as LiveProvider, ...rest] : [route as LiveProvider];
+    return cfg.failover ? [route, ...rest] : [route];
   }
   return cfg.failover ? withKey : withKey.slice(0, 1);
 }
@@ -136,7 +191,7 @@ export async function generateRouted(task: AiTask, system: string, user: string,
   if (list.length === 0) return null;
   const failed: RoutedResult['failed'] = [];
   for (const provider of list) {
-    const def = PROVIDERS.find((p) => p.id === provider)!;
+    const def = resolveProvider(provider)!;
     try {
       const text = await generate({ provider, key: storage.getApiKey(provider), model: storage.getApiModel(provider) || def.model, system, user, maxTokens });
       if (text) return { text, provider, failed };
@@ -145,5 +200,5 @@ export async function generateRouted(task: AiTask, system: string, user: string,
       failed.push({ provider, reason: err instanceof Error ? err.message : 'unknown error' });
     }
   }
-  throw new LLMError(failed.map((f) => `${PROVIDERS.find((p) => p.id === f.provider)?.label}: ${f.reason}`).join(' | '));
+  throw new LLMError(failed.map((f) => `${providerLabel(f.provider)}: ${f.reason}`).join(' | '));
 }

@@ -1,5 +1,6 @@
 import { ThemePicker } from './ThemePicker';
-import { PROVIDERS, testKey, type LiveProvider } from '../services/llmService';
+import { resolveProvider, testKey, type LiveProvider } from '../services/llmService';
+import { searchCatalog, validBaseUrl } from '../shared/providerCatalog';
 import type { AiConfig } from '../services/storage';
 import React, { useEffect, useState } from 'react';
 import { 
@@ -34,13 +35,48 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   setProfile,
   onResetDemo,
 }) => {
-  const LIVE = PROVIDERS.filter((p) => p.id !== 'mock') as (typeof PROVIDERS[number] & { id: LiveProvider })[];
   const [cfg, setCfg] = useState<AiConfig>(() => storage.getAiConfig());
-  const [keys, setKeys] = useState<Record<string, string>>(() => Object.fromEntries(LIVE.map((p) => [p.id, storage.getApiKey(p.id)])));
-  const [models, setModels] = useState<Record<string, string>>(() => Object.fromEntries(LIVE.map((p) => [p.id, storage.getApiModel(p.id)])));
+  const [keys, setKeys] = useState<Record<string, string>>(() => Object.fromEntries(storage.getAiConfig().order.map((id) => [id, storage.getApiKey(id)])));
+  const [models, setModels] = useState<Record<string, string>>(() => Object.fromEntries(storage.getAiConfig().order.map((id) => [id, storage.getApiModel(id)])));
   const [open, setOpen] = useState<string | null>(null);
   const [showKey, setShowKey] = useState(false);
   const [tests, setTests] = useState<Record<string, { state: 'busy' | 'ok' | 'fail'; msg: string }>>({});
+  const [find, setFind] = useState('');
+  const [customOpen, setCustomOpen] = useState(false);
+  const [cName, setCName] = useState('');
+  const [cUrl, setCUrl] = useState('');
+  const [cModel, setCModel] = useState('');
+  const [cErr, setCErr] = useState('');
+  const addProvider = (id: string) => {
+    if (cfg.order.includes(id)) return;
+    setCfg({ ...cfg, order: [...cfg.order, id] });
+    setOpen(id);
+    setFind('');
+    setShowKey(false);
+  };
+  const removeProvider = (id: string) => {
+    setCfg({
+      ...cfg,
+      order: cfg.order.filter((p) => p !== id),
+      custom: cfg.custom.filter((c) => c.id !== id),
+      routes: { ask: cfg.routes.ask === id ? 'auto' : cfg.routes.ask, quiz: cfg.routes.quiz === id ? 'auto' : cfg.routes.quiz },
+    });
+    setKeys((k) => ({ ...k, [id]: '' }));
+    setModels((m) => ({ ...m, [id]: '' }));
+    setOpen(null);
+  };
+  const addCustom = () => {
+    const base = validBaseUrl(cUrl);
+    if (!cName.trim()) return setCErr('Give it a name.');
+    if (!base) return setCErr('Enter the provider\'s base URL, starting with https://');
+    if (!cModel.trim()) return setCErr('Enter a model name from the provider\'s docs.');
+    const slug = cName.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'provider';
+    let id = `custom-${slug}`;
+    for (let n = 2; cfg.custom.some((c) => c.id === id) || cfg.order.includes(id); n++) id = `custom-${slug}-${n}`;
+    setCfg({ ...cfg, custom: [...cfg.custom, { id, label: cName.trim(), baseUrl: base, model: cModel.trim() }], order: [...cfg.order, id] });
+    setOpen(id);
+    setCustomOpen(false); setCName(''); setCUrl(''); setCModel(''); setCErr(''); setFind('');
+  };
   const move = (id: LiveProvider, dir: -1 | 1) => {
     const o = [...cfg.order];
     const i = o.indexOf(id);
@@ -75,20 +111,18 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     };
     setProfile(updated);
     storage.saveProfile(updated);
-    LIVE.forEach((p) => {
-      storage.saveApiKey((keys[p.id] ?? '').trim(), p.id);
-      storage.saveApiModel((models[p.id] ?? '').trim(), p.id);
+    Object.keys(keys).forEach((id) => {
+      storage.saveApiKey((keys[id] ?? '').trim(), id);
+      storage.saveApiModel((models[id] ?? '').trim(), id);
     });
     storage.saveAiConfig(cfg);
-    const first = cfg.order.find((p) => (keys[p] ?? '').trim());
-    storage.saveApiProvider(first ?? 'mock'); // keeps the older single-provider setting in step
 
     setToastMessage('Settings successfully saved!');
     setTimeout(() => setToastMessage(null), 2500);
   };
 
   const handleTest = async (id: LiveProvider) => {
-    const def = PROVIDERS.find((p) => p.id === id)!;
+    const def = resolveProvider(id, cfg.custom)!;
     setTests((t) => ({ ...t, [id]: { state: 'busy', msg: 'Checking…' } }));
     try {
       await testKey(id, (keys[id] ?? '').trim(), (models[id] || def.model).trim());
@@ -231,7 +265,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
             <ul className="space-y-2">
               {cfg.order.map((id, idx) => {
-                const def = LIVE.find((p) => p.id === id)!;
+                const def = resolveProvider(id, cfg.custom);
+                if (!def) return null;
                 const has = !!(keys[id] ?? '').trim();
                 const isOpen = open === id;
                 const t = tests[id];
@@ -272,6 +307,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                             </button>
                           </div>
                         </div>
+                        {def.custom && <p className="break-all font-mono text-xs text-muted">{def.baseUrl}</p>}
                         <div>
                           <label htmlFor={`model-${id}`} className="mb-1 block text-xs font-medium text-slate-400">Model</label>
                           <input
@@ -289,6 +325,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           <button type="button" onClick={() => void handleTest(id)} disabled={!has || t?.state === 'busy'} className="rounded-lg border border-line px-3 py-1.5 text-xs font-semibold text-text hover:bg-raised">Test key</button>
                           {def.keyUrl && <a href={def.keyUrl} target="_blank" rel="noreferrer" className="text-xs text-accent underline-offset-2 hover:underline">Get a key</a>}
                           {has && <button type="button" onClick={() => setKeys({ ...keys, [id]: '' })} className="text-xs text-muted hover:text-text">Remove key</button>}
+                          {!def.builtin && <button type="button" onClick={() => removeProvider(id)} className="text-xs text-warn hover:underline">Remove provider</button>}
                           {t && <span role="status" className={`text-xs ${t.state === 'ok' ? 'text-accent' : t.state === 'fail' ? 'text-warn' : 'text-muted'}`}>{t.msg}</span>}
                         </div>
                       </div>
@@ -297,6 +334,50 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 );
               })}
             </ul>
+
+            <div className="space-y-2">
+              <label htmlFor="prov-find" className="block text-xs font-medium text-slate-400">Add a provider</label>
+              <input
+                id="prov-find"
+                type="search"
+                autoComplete="off"
+                value={find}
+                onChange={(e) => { setFind(e.target.value); setCustomOpen(false); }}
+                placeholder="Search: NVIDIA, Groq, Mistral…"
+                className="w-full rounded-lg border border-slate-700/80 bg-slate-900 px-3 py-1.5 text-xs text-text focus:border-emerald-500 focus:outline-none"
+              />
+              {(find.trim() || customOpen) && (
+                <div className="space-y-1 rounded-lg border border-line p-1.5">
+                  {searchCatalog(find, cfg.order).slice(0, 6).map((p) => (
+                    <button key={p.id} type="button" onClick={() => addProvider(p.id)} className="flex w-full items-center justify-between gap-3 rounded-md px-2 py-1.5 text-left hover:bg-raised">
+                      <span className="min-w-0">
+                        <span className="block text-sm text-text">{p.label}</span>
+                        <span className="block truncate text-xs text-muted">{p.blurb}</span>
+                      </span>
+                      <span className="shrink-0 text-xs font-semibold text-accent">Add</span>
+                    </button>
+                  ))}
+                  {!customOpen ? (
+                    <button type="button" onClick={() => { setCustomOpen(true); setCName(find.trim()); }} className="w-full rounded-md px-2 py-1.5 text-left text-xs text-accent hover:bg-raised">
+                      {searchCatalog(find, cfg.order).length === 0 ? `“${find.trim()}” is not listed. ` : 'Not here? '}Add your own provider
+                    </button>
+                  ) : (
+                    <div className="space-y-2 p-2">
+                      <p className="text-xs text-muted">Works with any provider that follows the OpenAI chat format. Find the base URL and model name in its docs.</p>
+                      <input aria-label="Provider name" value={cName} onChange={(e) => setCName(e.target.value)} placeholder="Name, e.g. My university gateway" className="w-full rounded-lg border border-slate-700/80 bg-slate-900 px-3 py-1.5 text-xs text-text focus:border-emerald-500 focus:outline-none" />
+                      <input aria-label="Base URL" value={cUrl} onChange={(e) => setCUrl(e.target.value)} spellCheck={false} placeholder="https://api.example.com/v1" className="w-full rounded-lg border border-slate-700/80 bg-slate-900 px-3 py-1.5 font-mono text-xs text-text focus:border-emerald-500 focus:outline-none" />
+                      <input aria-label="Model name" value={cModel} onChange={(e) => setCModel(e.target.value)} spellCheck={false} placeholder="Model name" className="w-full rounded-lg border border-slate-700/80 bg-slate-900 px-3 py-1.5 font-mono text-xs text-text focus:border-emerald-500 focus:outline-none" />
+                      {cErr && <p role="alert" className="text-xs text-warn">{cErr}</p>}
+                      <div className="flex gap-2">
+                        <button type="button" onClick={addCustom} className="rounded-lg border border-line px-3 py-1.5 text-xs font-semibold text-text hover:bg-raised">Add provider</button>
+                        <button type="button" onClick={() => { setCustomOpen(false); setCErr(''); }} className="text-xs text-muted hover:text-text">Cancel</button>
+                      </div>
+                      <p className="text-xs text-muted">Your own providers are called straight from this browser, so the provider must allow that.</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
               {([
@@ -312,8 +393,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     className="w-full rounded-lg border border-slate-700/80 bg-slate-900 px-3 py-1.5 text-xs text-text focus:border-emerald-500 focus:outline-none"
                   >
                     <option value="auto">First available</option>
-                    {LIVE.map((p) => (
-                      <option key={p.id} value={p.id} disabled={!(keys[p.id] ?? '').trim()}>{p.label}</option>
+                    {cfg.order.map((id) => (
+                      <option key={id} value={id} disabled={!(keys[id] ?? '').trim()}>{resolveProvider(id, cfg.custom)?.label ?? id}</option>
                     ))}
                   </select>
                 </div>
@@ -326,7 +407,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </label>
 
             <p className="text-xs leading-relaxed text-muted">
-              Keys stay in this browser and go only to their own provider. When you ask, the question, the few notes that match it and your last exchange are sent to the provider that answers. Use keys with spending limits, and remove them on a shared computer.
+              Keys stay in this browser and go only to their own provider. Providers that block browsers, such as NVIDIA, are reached through Grove's server, which passes the key on and does not store or log it. When you ask, the question, the few notes that match it and your last exchange are sent to the provider that answers. Use keys with spending limits, and remove them on a shared computer.
             </p>
           </div>
 

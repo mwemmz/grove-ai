@@ -34,13 +34,15 @@ import { apiGet, apiPost, apiPut } from '../lib/api';
  * The LLM API key / provider remain localStorage-only client secrets.
  */
 
-export type LiveProviderId = 'anthropic' | 'gemini' | 'openai';
+export type LiveProviderId = string; // built-in, catalog or custom provider id
 export type AiTask = 'ask' | 'quiz';
 export interface AiConfig {
-  order: LiveProviderId[]; // priority order, first is tried first
+  order: LiveProviderId[]; // priority order, first is tried first. Only providers the student has added.
   routes: Record<AiTask, LiveProviderId | 'auto'>;
   failover: boolean; // on failure, hand the same request to the next provider
+  custom: CustomProvider[]; // providers the student added by hand
 }
+import { BUILTIN_IDS, catalogById, type CustomProvider } from '../shared/providerCatalog';
 const API_KEY = 'grove_api_key_v1';
 const API_PROVIDER = 'grove_api_provider_v1';
 const currentProvider = (): 'mock' | 'anthropic' | 'gemini' | 'openai' => {
@@ -348,14 +350,16 @@ export const storage = {
   },
 
   getAiConfig(): AiConfig {
-    const live: LiveProviderId[] = ['anthropic', 'gemini', 'openai'];
     let cfg: Partial<AiConfig> = {};
     try { cfg = JSON.parse(localStorage.getItem('grove_ai_config_v1') || '{}'); } catch { /* ignore */ }
+    const custom = (cfg.custom ?? []).filter((c) => c && typeof c.id === 'string' && typeof c.baseUrl === 'string');
+    const known = (id: string) => BUILTIN_IDS.includes(id) || !!catalogById(id) || custom.some((c) => c.id === id);
     const legacy = currentProvider();
-    let order = (cfg.order ?? []).filter((p): p is LiveProviderId => live.includes(p as LiveProviderId));
+    let order = (cfg.order ?? []).filter(known);
     if (order.length === 0 && legacy !== 'mock') order = [legacy];
-    live.forEach((p) => { if (!order.includes(p)) order.push(p); });
-    return { order, routes: { ask: cfg.routes?.ask ?? 'auto', quiz: cfg.routes?.quiz ?? 'auto' }, failover: cfg.failover !== false };
+    BUILTIN_IDS.forEach((p) => { if (!order.includes(p)) order.push(p); });
+    const route = (r: string | undefined) => (r && r !== 'auto' && order.includes(r) ? r : 'auto');
+    return { order, routes: { ask: route(cfg.routes?.ask), quiz: route(cfg.routes?.quiz) }, failover: cfg.failover !== false, custom };
   },
 
   saveAiConfig(cfg: AiConfig): void {

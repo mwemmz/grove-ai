@@ -1,6 +1,6 @@
 import { Note, LearningProfile, AcademicYear, MemoryLogEntry, StudentTier } from '../types';
 import { storage } from './storage';
-import { PROVIDERS, buildSystemPrompt, buildUserPrompt, generateRouted, candidatesFor } from './llmService';
+import { providerLabel, buildSystemPrompt, buildUserPrompt, generateRouted, candidatesFor } from './llmService';
 
 export interface AIResponsePayload {
   text: string;
@@ -205,10 +205,10 @@ export const aiService = {
         const grounding = relevant.slice(0, 5).map((r) => r.note);
         const out = await generateRouted(task, buildSystemPrompt(profile), buildUserPrompt(question, grounding, opts.previous));
         if (out) {
-          const label = PROVIDERS.find((p) => p.id === out.provider)?.label ?? out.provider;
+          const label = providerLabel(out.provider);
           const first = out.failed[0];
           const tag = first
-            ? `Answered by ${label}, after ${PROVIDERS.find((p) => p.id === first.provider)?.label} failed (${first.reason})`
+            ? `Answered by ${label}, after ${providerLabel(first.provider)} failed (${first.reason})`
             : `Answered by ${label}`;
           resp.text = out.text;
           resp.appliedProfileAttributes = [tag, ...resp.appliedProfileAttributes];

@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=1280, height=720" />
+<meta data-composition-id="bst" data-width="1280" data-height="720" />
+<title>Binary search tree</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@500;600;700&family=Young+Serif&display=swap" rel="stylesheet" media="print" onload="this.media=\'all\'" />
+<link rel="stylesheet" href="../base.css" />
+<script src="../gsap.min.js"></script>
+<style>
+  .t { width: 68px; height: 68px; border-radius: 50%; opacity: 0; }
+</style>
+</head>
+<body>
+<div id="stage" data-composition-id="bst" data-width="1280" data-height="720">
+  <div id="cap">
+    <div class="step" id="c1">1 · Build the tree <small>Smaller values go left, larger values go right. Insert 8, 3, then 10.</small></div>
+    <div class="step" id="c2">2 · Insert more <small>Each new value walks down from the root: compare, go left or right, repeat.</small></div>
+    <div class="step" id="c3">3 · Search for 6 <small>Every comparison throws away half the tree: 3 steps instead of checking all 6.</small></div>
+    <div class="step" id="c4">4 · Read in order <small>Visiting left, then node, then right gives the values <em>sorted</em>.</small></div>
+  </div>
+
+  <svg id="wires" viewBox="0 0 1280 720">
+    <g stroke="#2f4439" stroke-width="4" stroke-linecap="round">
+      <line id="e83" x1="640" y1="190" x2="440" y2="320" opacity="0" />
+      <line id="e810" x1="640" y1="190" x2="840" y2="320" opacity="0" />
+      <line id="e31" x1="440" y1="320" x2="340" y2="450" opacity="0" />
+      <line id="e36" x1="440" y1="320" x2="540" y2="450" opacity="0" />
+      <line id="e1014" x1="840" y1="320" x2="940" y2="450" opacity="0" />
+    </g>
+  </svg>
+
+  <div class="node t" id="t8"  style="left:606px; top:156px;">8</div>
+  <div class="node t" id="t3"  style="left:406px; top:286px;">3</div>
+  <div class="node t" id="t10" style="left:806px; top:286px;">10</div>
+  <div class="node t" id="t1"  style="left:306px; top:416px;">1</div>
+  <div class="node t" id="t6"  style="left:506px; top:416px;">6</div>
+  <div class="node t" id="t14" style="left:906px; top:416px;">14</div>
+
+  <div class="tag" id="t-small" style="left:370px; top:172px;">smaller → left</div>
+  <div class="tag" id="t-large" style="left:700px; top:172px;">larger → right</div>
+  <div class="tag warm" id="b1" style="left:370px; top:172px;">6 &lt; 8 → go left</div>
+  <div class="tag warm" id="b2" style="left:170px; top:300px;">6 &gt; 3 → go right</div>
+  <div class="tag good" id="b3" style="left:590px; top:432px;">6 = 6 · found</div>
+
+  <div class="lbl" id="sorted-l" style="left:340px; top:524px; opacity:0;">in-order result</div>
+  <div class="tag good" id="s1" style="left:340px; top:556px;">1</div>
+  <div class="tag good" id="s3" style="left:430px; top:556px;">3</div>
+  <div class="tag good" id="s6" style="left:520px; top:556px;">6</div>
+  <div class="tag good" id="s8" style="left:610px; top:556px;">8</div>
+  <div class="tag good" id="s10" style="left:700px; top:556px;">10</div>
+  <div class="tag good" id="s14" style="left:800px; top:556px;">14</div>
+</div>
+
+<script src="../lib.js"></script>
+<script>
+  var tl = G.tl;
+  G.caps([[0, 4], [4, 8], [8, 12], [12, 16]]);
+  function grow(node, edge, at) {
+    if (edge) tl.fromTo(edge, { opacity: 0 }, { opacity: 1, duration: 0.3 }, at);
+    G.pop(node, at + 0.15);
+    G.glow(node, at + 0.2, 0.7);
+  }
+
+  /* 1 · build */
+  grow('#t8', null, 0.4);
+  grow('#t3', '#e83', 1.3);
+  grow('#t10', '#e810', 2.1);
+  tl.to('#t-small', { opacity: 1, duration: 0.3 }, 2.8);
+  tl.to('#t-large', { opacity: 1, duration: 0.3 }, 3.0);
+  tl.to('#t-small,#t-large', { opacity: 0, duration: 0.3 }, 7.7);
+
+  /* 2 · insert 1, 6, 14 (walk down from the root first) */
+  G.glow('#t8', 4.3, 0.5); G.glow('#t3', 4.7, 0.5);
+  grow('#t1', '#e31', 5.0);
+  G.glow('#t8', 5.6, 0.4); G.glow('#t3', 5.9, 0.4);
+  grow('#t6', '#e36', 6.2);
+  G.glow('#t8', 6.8, 0.4); G.glow('#t10', 7.1, 0.4);
+  grow('#t14', '#e1014', 7.3);
+
+  /* 3 · search for 6 */
+  G.glow('#t8', 8.4, 1.0, 'warn');
+  tl.to('#b1', { opacity: 1, duration: 0.3 }, 8.5);
+  G.wire('#e83', 9.2, 1.4);
+  G.glow('#t3', 9.5, 1.0, 'warn');
+  tl.to('#b2', { opacity: 1, duration: 0.3 }, 9.6);
+  G.wire('#e36', 10.3, 1.4);
+  G.glow('#t6', 10.6, 1.4);
+  tl.to('#b3', { opacity: 1, duration: 0.3 }, 10.7);
+  tl.to('#b1,#b2,#b3', { opacity: 0, duration: 0.3 }, 11.7);
+
+  /* 4 · in-order traversal */
+  tl.to('#sorted-l', { opacity: 1, duration: 0.3 }, 12.3);
+  [['1', 12.5], ['3', 13.0], ['6', 13.5], ['8', 14.0], ['10', 14.5], ['14', 15.0]].forEach(function (p) {
+    G.glow('#t' + p[0], p[1], 0.5);
+    tl.fromTo('#s' + p[0], { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.3 }, p[1] + 0.1);
+  });
+
+  G.end(16);
+  G.register('bst');
+</script>
+</body>
+</html>

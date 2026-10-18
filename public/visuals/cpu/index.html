@@ -5,154 +5,137 @@
 <meta name="viewport" content="width=1280, height=720" />
 <meta data-composition-id="cpu-cycle" data-width="1280" data-height="720" />
 <title>How a CPU runs one instruction</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@500;600;700&family=Young+Serif&display=swap" rel="stylesheet" media="print" onload="this.media=\'all\'" />
+<link rel="stylesheet" href="../base.css" />
 <script src="../gsap.min.js"></script>
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  html, body { width: 1280px; height: 720px; overflow: hidden; background: #0e1512; }
-  body { font-family: "Figtree", system-ui, sans-serif; color: #e5ede7; }
-  #stage { position: relative; width: 1280px; height: 720px; overflow: hidden; }
-
-  .cpu { position: absolute; left: 40px; top: 96px; width: 800px; height: 520px; border: 2px solid #26352d; border-radius: 18px; background: #101a15; }
-  .tag { position: absolute; font: 600 18px/1 "JetBrains Mono", monospace; letter-spacing: .12em; text-transform: uppercase; color: #92a59a; }
-  .box { position: absolute; border: 2px solid #26352d; border-radius: 12px; background: #151f1a; padding: 12px 14px; transition: none; }
-  .box h4 { font: 600 19px/1 "JetBrains Mono", monospace; letter-spacing: .08em; color: #92a59a; margin-bottom: 8px; }
-  .box .val { font: 600 34px/1.1 "JetBrains Mono", monospace; color: #e5ede7; }
-  .box .sub { font-size: 20px; color: #92a59a; margin-top: 6px; }
-  .ram { left: 920px; top: 96px; width: 320px; height: 520px; }
-  .ram .row { display: flex; justify-content: space-between; font: 500 22px/1 "JetBrains Mono", monospace; padding: 13px 10px; margin-top: 8px; border-radius: 8px; background: #0e1512; color: #92a59a; }
+  .cpu { position: absolute; left: 40px; top: 128px; width: 790px; height: 482px; border: 2.5px solid #26352d; border-radius: 20px; background: #101a15; }
+  .ram .row { display: flex; justify-content: space-between; align-items: center; height: 44px; margin-bottom: 6px; padding: 0 12px; border-radius: 10px; background: #0e1512; font: 500 22px/1 "JetBrains Mono", monospace; color: #92a59a; }
   .ram .row b { color: #e5ede7; font-weight: 500; }
-
-  .bus { position: absolute; background: #26352d; border-radius: 2px; }
-  .packet { position: absolute; z-index: 5; padding: 8px 14px; border-radius: 999px; background: #5fc2a2; color: #08140f; font: 700 24px/1 "JetBrains Mono", monospace; white-space: nowrap; opacity: 0; }
-  .packet.warm { background: #e0a94a; }
-
-  #caption { position: absolute; left: 40px; top: 28px; width: 1200px; }
-  #caption .step { position: absolute; left: 0; top: -6px; opacity: 0; font-family: "Young Serif", Georgia, serif; font-size: 38px; }
-  #caption .step small { display: block; font: 500 22px/1.25 "Figtree", sans-serif; color: #92a59a; margin-top: 4px; }
-  #caption .step em { font-style: normal; color: #5fc2a2; }
+  .ram .row.dim b { color: #4b5e54; }
 </style>
 </head>
 <body>
 <div id="stage" data-composition-id="cpu-cycle" data-width="1280" data-height="720">
 
-  <div id="caption">
-    <div class="step" id="c1">1 · Fetch <small>The Program Counter holds the address of the next instruction. It passes that address to memory.</small></div>
+  <div id="cap">
+    <div class="step" id="c1">1 · Fetch <small>The Program Counter holds the address of the next instruction. It is sent to memory.</small></div>
     <div class="step" id="c2">2 · Memory answers <small>RAM looks up that address and sends the instruction back to the CPU.</small></div>
-    <div class="step" id="c3">3 · Decode <small>The Control Unit reads the instruction and works out what to do: ADD means "use the ALU".</small></div>
-    <div class="step" id="c4">4 · Execute <small>The ALU does the sum. Values <em>2</em> and <em>3</em> come in from the registers.</small></div>
-    <div class="step" id="c5">5 · Write back <small>The result goes into a register, and the Program Counter moves on to the next instruction.</small></div>
+    <div class="step" id="c3">3 · Decode <small>The Control Unit reads the instruction: ADD means "use the ALU".</small></div>
+    <div class="step" id="c4">4 · Execute <small>The registers feed <em>2</em> and <em>3</em> to the ALU, which adds them.</small></div>
+    <div class="step" id="c5">5 · Write back <small>The result goes into a register and the Program Counter moves to 0x03.</small></div>
   </div>
 
   <div class="cpu"></div>
-  <div class="tag" style="left:64px; top:112px;">CPU</div>
+  <div class="lbl" style="left:64px; top:142px;">CPU</div>
 
-  <!-- buses -->
-  <div class="bus" id="bus-pc-mar" style="left:166px; top:262px; width:4px; height:58px;"></div>
-  <div class="bus" id="bus-mar-ram" style="left:236px; top:182px; width:684px; height:4px;"></div>
-  <div class="bus" id="bus-ir-cu" style="left:236px; top:408px; width:140px; height:4px;"></div>
-  <div class="bus" id="bus-reg-alu" style="left:556px; top:470px; width:90px; height:4px;"></div>
+  <svg id="wires" viewBox="0 0 1280 720">
+    <g fill="none" stroke="#2f4439" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+      <path id="w-pc-mar" d="M220 213 H276" />
+      <path id="w-addr" d="M440 213 H866" />
+      <path id="w-data" d="M880 333 H594" />
+      <path id="w-ir-cu" d="M435 376 V396" />
+      <path id="w-cu-alu" d="M540 470 H566" />
+      <path id="w-op" d="M160 560 V582 H695 V544" />
+      <path id="w-res" d="M755 530 V598 H205 V574" />
+    </g>
+    <g stroke="#2f4439" fill="#2f4439" stroke-width="2" stroke-linejoin="round">
+      <path id="h-pc-mar" d="M262 204 L276 213 L262 222 Z" />
+      <path id="h-addr" d="M852 204 L866 213 L852 222 Z" />
+      <path id="h-data" d="M608 324 L594 333 L608 342 Z" />
+      <path id="h-ir-cu" d="M426 382 L435 396 L444 382 Z" />
+      <path id="h-cu-alu" d="M552 461 L566 470 L552 479 Z" />
+      <path id="h-op" d="M686 558 L695 544 L704 558 Z" />
+      <path id="h-res" d="M196 588 L205 574 L214 588 Z" />
+    </g>
+  </svg>
 
-  <div class="box" id="pc" style="left:96px; top:168px; width:160px; height:96px;">
-    <h4>PC</h4><div class="val" id="pc-val">0x04</div>
-  </div>
-  <div class="box" id="mar" style="left:96px; top:318px; width:160px; height:96px;">
-    <h4>MAR</h4><div class="val" id="mar-val">—</div>
-  </div>
-  <div class="box" id="ir" style="left:96px; top:468px; width:200px; height:104px;">
-    <h4>IR</h4><div class="val" id="ir-val" style="font-size:24px;">—</div>
-  </div>
-  <div class="box" id="cu" style="left:376px; top:344px; width:220px; height:120px;">
-    <h4>CONTROL UNIT</h4><div class="val" id="cu-val" style="font-size:26px;">waiting</div>
-  </div>
-  <div class="box" id="alu" style="left:376px; top:496px; width:220px; height:96px;">
-    <h4>ALU</h4><div class="val" id="alu-val">—</div>
-  </div>
-  <div class="box" id="reg" style="left:660px; top:344px; width:156px; height:248px;">
-    <h4>REGISTERS</h4>
-    <div class="sub">R1 <b id="r1" style="color:#e5ede7; font-size:30px;">2</b></div>
-    <div class="sub">R2 <b id="r2" style="color:#e5ede7; font-size:30px;">3</b></div>
-    <div class="sub">R3 <b id="r3" style="color:#e5ede7; font-size:30px;">—</b></div>
+  <div class="lbl" style="left:470px; top:178px;">address bus</div>
+  <div class="lbl" style="left:670px; top:298px;">data bus</div>
+
+  <div class="box" id="pc"  style="left:70px;  top:170px; width:150px; height:86px;"><h4>PC</h4><div class="val" id="pc-val">0x02</div></div>
+  <div class="box" id="mar" style="left:290px; top:170px; width:150px; height:86px;"><h4>MAR</h4><div class="val" id="mar-val">—</div></div>
+  <div class="box" id="ir"  style="left:290px; top:290px; width:290px; height:86px;"><h4>IR</h4><div class="val" id="ir-val" style="font-size:26px;">—</div></div>
+  <div class="box" id="cu"  style="left:290px; top:410px; width:250px; height:120px;"><h4>Control unit</h4><div class="val" id="cu-val" style="font-size:28px;">waiting</div></div>
+  <div class="box" id="alu" style="left:580px; top:410px; width:230px; height:120px;"><h4>ALU</h4><div class="val" id="alu-val" style="font-size:30px;">—</div></div>
+  <div class="box" id="reg" style="left:70px;  top:410px; width:180px; height:150px; line-height:1.4;">
+    <h4>Registers</h4>
+    <div class="val" style="font-size:26px;">R1 <span id="r1">2</span></div>
+    <div class="val" style="font-size:26px;">R2 <span id="r2">3</span></div>
+    <div class="val" style="font-size:26px;">R3 <span id="r3">—</span></div>
   </div>
 
-  <div class="box ram" id="ram">
-    <h4>RAM (MEMORY)</h4>
-    <div class="row" id="row-03"><span>0x03</span><b>LOAD R1</b></div>
-    <div class="row" id="row-04"><span>0x04</span><b>ADD R3,R1,R2</b></div>
-    <div class="row" id="row-05"><span>0x05</span><b>STORE R3</b></div>
-    <div class="row" id="row-06"><span>0x06</span><b>HALT</b></div>
+  <div class="box ram" id="ram" style="left:880px; top:128px; width:360px; height:482px;">
+    <h4>RAM (memory)</h4>
+    <div class="row" id="row-0"><span>0x00</span><b>LOAD R1,2</b></div>
+    <div class="row" id="row-1"><span>0x01</span><b>LOAD R2,3</b></div>
+    <div class="row" id="row-2"><span>0x02</span><b>ADD R3,R1,R2</b></div>
+    <div class="row" id="row-3"><span>0x03</span><b>STORE R3,[9]</b></div>
+    <div class="row" id="row-4"><span>0x04</span><b>HALT</b></div>
+    <div class="row dim"><span>0x05</span><b>…</b></div>
+    <div class="row dim"><span>0x06</span><b>…</b></div>
+    <div class="row dim"><span>0x07</span><b>…</b></div>
   </div>
 
-  <div class="packet" id="p-addr">0x04</div>
-  <div class="packet" id="p-instr">ADD R3,R1,R2</div>
-  <div class="packet warm" id="p-a">2</div>
-  <div class="packet warm" id="p-b">3</div>
-  <div class="packet" id="p-res">5</div>
+  <div class="chip" id="p-addr">0x02</div>
+  <div class="chip" id="p-instr">ADD R3,R1,R2</div>
+  <div class="chip" id="p-op">ADD</div>
+  <div class="chip warm" id="p-a">2</div>
+  <div class="chip warm" id="p-b">3</div>
+  <div class="chip" id="p-res">5</div>
 </div>
 
+<script src="../lib.js"></script>
 <script>
-  var HI = "#5fc2a2", LO = "#26352d";
-  var tl = gsap.timeline({ paused: true });
-  function glow(id, at, dur) {
-    tl.to(id, { borderColor: HI, boxShadow: "0 0 0 4px rgba(95,194,162,.25)", duration: 0.35 }, at);
-    tl.to(id, { borderColor: LO, boxShadow: "0 0 0 0 rgba(95,194,162,0)", duration: 0.35 }, at + dur);
-  }
-  function caption(id, start) {
-    tl.fromTo(id, { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.4 }, start);
-    tl.to(id, { opacity: 0, duration: 0.3 }, start + 2.65);
-  }
-  function packet(id, x0, y0, x1, y1, start, dur, hold) {
-    tl.set(id, { x: x0, y: y0, left: 0, top: 0 }, start);
-    tl.fromTo(id, { opacity: 0 }, { opacity: 1, duration: 0.25 }, start);
-    tl.to(id, { x: x1, y: y1, duration: dur, ease: "power2.inOut" }, start + 0.2);
-    tl.to(id, { opacity: 0, duration: 0.25 }, start + 0.2 + dur + (hold || 0.15));
-  }
+  var tl = G.tl;
+  G.caps([[0, 3], [3, 6], [6, 9], [9, 12], [12, 15]]);
 
-  /* Step 1 · 0-3s : fetch */
-  caption("#c1", 0);
-  glow("#pc", 0.2, 2.2);
-  packet("#p-addr", 120, 205, 120, 345, 0.4, 0.8);
-  glow("#mar", 1.2, 0.9);
-  tl.set("#mar-val", { innerText: "0x04" }, 1.3);
-  packet("#p-addr", 120, 345, 940, 190, 1.7, 1.0, 0.0);
-  tl.to("#bus-mar-ram", { backgroundColor: HI, duration: 0.3 }, 1.7);
-  tl.to("#bus-mar-ram", { backgroundColor: LO, duration: 0.3 }, 2.8);
+  /* 1 · Fetch */
+  G.glow('#pc', 0.2, 2.4);
+  G.chip('#p-addr', [[145, 213], [365, 213]], 0.4, 0.7, 0);
+  G.wire('#w-pc-mar,#h-pc-mar', 0.5, 0.9);
+  G.txt('#mar-val', '0x02', 1.3);
+  G.glow('#mar', 1.2, 1.6);
+  G.chip('#p-addr', [[365, 213], [900, 213]], 1.8, 0.9, 0);
+  G.wire('#w-addr,#h-addr', 1.8, 1.0);
 
-  /* Step 2 · 3-6s : memory answers */
-  caption("#c2", 3);
-  glow("#ram", 3.1, 2.4);
-  tl.to("#row-04", { backgroundColor: "#1f4a3b", color: "#e5ede7", duration: 0.35 }, 3.2);
-  tl.to("#row-04", { backgroundColor: "#0e1512", color: "#92a59a", duration: 0.35 }, 5.7);
-  packet("#p-instr", 940, 292, 130, 500, 3.6, 1.6, 0.0);
-  tl.set("#ir-val", { innerText: "ADD R3,R1,R2" }, 5.3);
-  glow("#ir", 5.1, 0.8);
+  /* 2 · Memory answers */
+  G.glow('#ram', 3.1, 2.6);
+  tl.to('#row-2', { backgroundColor: '#1f4a3b', duration: 0.3 }, 3.2);
+  tl.to('#row-2 b', { color: '#e5ede7', duration: 0.1 }, 3.2);
+  tl.to('#row-2', { backgroundColor: '#0e1512', duration: 0.3 }, 5.7);
+  G.chip('#p-instr', [[1080, 299], [900, 333], [435, 333]], 3.5, 0.9, 0);
+  G.wire('#w-data,#h-data', 4.0, 1.6);
+  G.txt('#ir-val', 'ADD R3,R1,R2', 5.5);
+  G.glow('#ir', 5.4, 0.7);
 
-  /* Step 3 · 6-9s : decode */
-  caption("#c3", 6);
-  tl.to("#bus-ir-cu", { backgroundColor: HI, duration: 0.3 }, 6.2);
-  tl.to("#bus-ir-cu", { backgroundColor: LO, duration: 0.3 }, 8.4);
-  glow("#ir", 6.1, 1.0);
-  glow("#cu", 6.6, 2.2);
-  tl.set("#cu-val", { innerText: "ADD → ALU" }, 7.4);
+  /* 3 · Decode */
+  G.glow('#ir', 6.1, 1.0);
+  G.wire('#w-ir-cu,#h-ir-cu', 6.3, 1.5);
+  G.chip('#p-op', [[500, 376], [500, 450]], 6.4, 0.9, 0);
+  G.glow('#cu', 7.0, 2.0);
+  G.txt('#cu-val', 'ADD → ALU', 7.5);
 
-  /* Step 4 · 9-12s : execute */
-  caption("#c4", 9);
-  glow("#reg", 9.1, 1.4);
-  packet("#p-a", 690, 420, 440, 520, 9.4, 1.0, 0.0);
-  packet("#p-b", 690, 460, 440, 548, 9.5, 1.0, 0.0);
-  glow("#alu", 10.4, 1.7);
-  tl.set("#alu-val", { innerText: "2 + 3 = 5" }, 11.0);
+  /* 4 · Execute */
+  G.glow('#reg', 9.1, 1.2);
+  G.wire('#w-op,#h-op', 9.3, 1.6);
+  G.chip('#p-a', [[160, 470], [160, 582], [650, 582], [680, 470]], 9.3, 0.5, 0);
+  G.chip('#p-b', [[160, 510], [160, 582], [650, 582], [720, 500]], 9.5, 0.5, 0);
+  G.wire('#w-cu-alu,#h-cu-alu', 10.4, 1.0);
+  G.glow('#alu', 10.6, 1.4);
+  G.txt('#alu-val', '2 + 3 = 5', 11.0);
 
-  /* Step 5 · 12-15s : write back */
-  caption("#c5", 12);
-  packet("#p-res", 440, 530, 690, 500, 12.2, 1.0, 0.0);
-  tl.set("#r3", { innerText: "5" }, 13.3);
-  glow("#reg", 13.2, 1.2);
-  glow("#pc", 13.6, 1.0);
-  tl.set("#pc-val", { innerText: "0x05" }, 13.8);
+  /* 5 · Write back */
+  G.wire('#w-res,#h-res', 12.2, 1.8);
+  G.chip('#p-res', [[755, 480], [755, 598], [205, 598], [165, 500]], 12.2, 0.5, 0);
+  G.txt('#r3', '5', 13.6);
+  G.glow('#reg', 13.5, 1.0);
+  G.glow('#pc', 13.7, 1.0);
+  G.txt('#pc-val', '0x03', 13.9);
 
-  tl.set({}, {}, 15);
-  window.__timelines = window.__timelines || {};
-  window.__timelines["cpu-cycle"] = tl;
+  G.end(15);
+  G.register('cpu-cycle');
 </script>
 </body>
 </html>

@@ -351,7 +351,13 @@ function GroveApp() {
 
           {activeTab === 'visuals' && (
             <Suspense fallback={<p className="py-6 text-sm text-muted" role="status">Loading visuals…</p>}>
-              <VisualsView />
+              <VisualsView
+                notes={notes}
+                courses={courses}
+                currentYear={profile.currentYear}
+                onOpenNote={openNoteById}
+                onStartSession={handleStartSession}
+              />
             </Suspense>
           )}
 

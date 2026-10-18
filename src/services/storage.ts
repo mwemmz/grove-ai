@@ -34,6 +34,13 @@ import { apiGet, apiPost, apiPut } from '../lib/api';
  * The LLM API key / provider remain localStorage-only client secrets.
  */
 
+export type LiveProviderId = 'anthropic' | 'gemini' | 'openai';
+export type AiTask = 'ask' | 'quiz';
+export interface AiConfig {
+  order: LiveProviderId[]; // priority order, first is tried first
+  routes: Record<AiTask, LiveProviderId | 'auto'>;
+  failover: boolean; // on failure, hand the same request to the next provider
+}
 const API_KEY = 'grove_api_key_v1';
 const API_PROVIDER = 'grove_api_provider_v1';
 const currentProvider = (): 'mock' | 'anthropic' | 'gemini' | 'openai' => {
@@ -338,6 +345,21 @@ export const storage = {
   saveApiModel(model: string, provider: string = currentProvider()): void {
     if (model) localStorage.setItem(`grove_api_model_v1_${provider}`, model);
     else localStorage.removeItem(`grove_api_model_v1_${provider}`);
+  },
+
+  getAiConfig(): AiConfig {
+    const live: LiveProviderId[] = ['anthropic', 'gemini', 'openai'];
+    let cfg: Partial<AiConfig> = {};
+    try { cfg = JSON.parse(localStorage.getItem('grove_ai_config_v1') || '{}'); } catch { /* ignore */ }
+    const legacy = currentProvider();
+    let order = (cfg.order ?? []).filter((p): p is LiveProviderId => live.includes(p as LiveProviderId));
+    if (order.length === 0 && legacy !== 'mock') order = [legacy];
+    live.forEach((p) => { if (!order.includes(p)) order.push(p); });
+    return { order, routes: { ask: cfg.routes?.ask ?? 'auto', quiz: cfg.routes?.quiz ?? 'auto' }, failover: cfg.failover !== false };
+  },
+
+  saveAiConfig(cfg: AiConfig): void {
+    localStorage.setItem('grove_ai_config_v1', JSON.stringify(cfg));
   },
 
   getApiProvider(): 'mock' | 'anthropic' | 'gemini' | 'openai' {

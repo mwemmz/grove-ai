@@ -1,6 +1,7 @@
 /* Calls the student's chosen AI provider straight from the browser with their own key.
    The key never touches Grove's servers. Only the question and the few notes needed to answer it are sent. */
 import type { LearningProfile, Note } from '../types';
+import { storage, type AiTask, type LiveProviderId } from './storage';
 
 export type Provider = 'mock' | 'anthropic' | 'gemini' | 'openai';
 export type LiveProvider = Exclude<Provider, 'mock'>;
@@ -107,4 +108,42 @@ export async function generate(r: LLMRequest): Promise<string> {
 export async function testKey(provider: LiveProvider, key: string, model: string): Promise<void> {
   const text = await generate({ provider, key, model, system: 'Reply with the single word: ready', user: 'ping', maxTokens: 64 });
   if (!text) throw new LLMError('The provider answered with nothing. Check the model name.');
+}
+
+export interface RoutedResult {
+  text: string;
+  provider: LiveProvider;
+  /** Providers that were tried first and failed, with the reason, in order. */
+  failed: { provider: LiveProvider; reason: string }[];
+}
+
+/** Providers that have a key, in the order this task should try them. */
+export function candidatesFor(task: AiTask): LiveProvider[] {
+  const cfg = storage.getAiConfig();
+  const withKey = cfg.order.filter((p) => storage.getApiKey(p));
+  const route = cfg.routes[task];
+  if (route !== 'auto' && withKey.includes(route as LiveProviderId)) {
+    const rest = withKey.filter((p) => p !== route);
+    return cfg.failover ? [route as LiveProvider, ...rest] : [route as LiveProvider];
+  }
+  return cfg.failover ? withKey : withKey.slice(0, 1);
+}
+
+/** Try each candidate in turn. The same system prompt, notes and previous exchange go to the next provider,
+ *  so a second model picks up exactly where the first one stopped. */
+export async function generateRouted(task: AiTask, system: string, user: string, maxTokens?: number): Promise<RoutedResult | null> {
+  const list = candidatesFor(task);
+  if (list.length === 0) return null;
+  const failed: RoutedResult['failed'] = [];
+  for (const provider of list) {
+    const def = PROVIDERS.find((p) => p.id === provider)!;
+    try {
+      const text = await generate({ provider, key: storage.getApiKey(provider), model: storage.getApiModel(provider) || def.model, system, user, maxTokens });
+      if (text) return { text, provider, failed };
+      failed.push({ provider, reason: 'empty reply' });
+    } catch (err) {
+      failed.push({ provider, reason: err instanceof Error ? err.message : 'unknown error' });
+    }
+  }
+  throw new LLMError(failed.map((f) => `${PROVIDERS.find((p) => p.id === f.provider)?.label}: ${f.reason}`).join(' | '));
 }

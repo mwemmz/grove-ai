@@ -45,7 +45,7 @@ function SignInScreen() {
           portfolio from the cloud.
         </p>
         <SignInButton mode="modal">
-          <button className="w-full rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold py-3 transition">
+          <button className="w-full rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold py-3 transition-colors">
             Sign in to Grove
           </button>
         </SignInButton>

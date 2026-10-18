@@ -41,7 +41,7 @@ export const Header: React.FC<HeaderProps> = ({
             <div className="absolute inset-1 rounded-full border border-emerald-500/30" />
             <div className="absolute inset-2 rounded-full border border-teal-500/40" />
             <div className="absolute inset-3 rounded-full border border-blue-500/50" />
-            <div className="h-2 w-2 rounded-full bg-emerald-400 shadow-sm shadow-emerald-400/80 ring-pulse-slow" />
+            <div className="h-2 w-2 rounded-full bg-emerald-400 shadow-sm shadow-emerald-400/80" />
           </div>
 
           <div>
@@ -61,7 +61,7 @@ export const Header: React.FC<HeaderProps> = ({
         <nav className="flex items-center gap-1 rounded-xl bg-slate-900/90 p-1 border border-slate-800/80 shadow-lg shadow-black/20 overflow-x-auto">
           <button
             onClick={() => setActiveTab('chat')}
-            className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all ${
+            className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${
               activeTab === 'chat'
                 ? 'bg-emerald-600 text-white shadow-sm'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
@@ -73,7 +73,7 @@ export const Header: React.FC<HeaderProps> = ({
 
           <button
             onClick={() => setActiveTab('notes')}
-            className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all ${
+            className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${
               activeTab === 'notes'
                 ? 'bg-emerald-600 text-white shadow-sm'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
@@ -89,7 +89,7 @@ export const Header: React.FC<HeaderProps> = ({
 
           <button
             onClick={() => setActiveTab('blueprints')}
-            className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all ${
+            className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${
               activeTab === 'blueprints'
                 ? 'bg-amber-600 text-white shadow-sm'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
@@ -101,7 +101,7 @@ export const Header: React.FC<HeaderProps> = ({
 
           <button
             onClick={() => setActiveTab('tutoring')}
-            className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all ${
+            className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${
               activeTab === 'tutoring'
                 ? 'bg-teal-600 text-white shadow-sm'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
@@ -113,7 +113,7 @@ export const Header: React.FC<HeaderProps> = ({
 
           <button
             onClick={() => setActiveTab('profile')}
-            className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all ${
+            className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${
               activeTab === 'profile'
                 ? 'bg-emerald-600 text-white shadow-sm'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
@@ -125,7 +125,7 @@ export const Header: React.FC<HeaderProps> = ({
 
           <button
             onClick={() => setActiveTab('portfolio')}
-            className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all ${
+            className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${
               activeTab === 'portfolio'
                 ? 'bg-emerald-600 text-white shadow-sm'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
@@ -137,7 +137,7 @@ export const Header: React.FC<HeaderProps> = ({
 
           <button
             onClick={() => setActiveTab('quiz')}
-            className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all ${
+            className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${
               activeTab === 'quiz'
                 ? 'bg-emerald-600 text-white shadow-sm'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
@@ -165,7 +165,7 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Settings Trigger */}
           <button
             onClick={onOpenSettings}
-            className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-800 bg-slate-900 text-slate-400 hover:text-white hover:bg-slate-800 hover:border-slate-700 transition"
+            className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-800 bg-slate-900 text-slate-400 hover:text-white hover:bg-slate-800 hover:border-slate-700 transition-colors"
             title="Settings & Data Management"
           >
             <Settings className="h-4 w-4" />

@@ -152,7 +152,7 @@ export const QuizView: React.FC<QuizViewProps> = ({
 
         <button
           onClick={() => setIsCreateModalOpen(true)}
-          className="flex items-center gap-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 px-3.5 py-2 text-xs font-semibold border border-slate-700 self-start sm:self-auto transition"
+          className="flex items-center gap-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 px-3.5 py-2 text-xs font-semibold border border-slate-700 self-start sm:self-auto transition-colors"
         >
           <Plus className="h-3.5 w-3.5" />
           <span>Add Flashcard</span>
@@ -163,7 +163,7 @@ export const QuizView: React.FC<QuizViewProps> = ({
       <div className="flex items-center gap-2 overflow-x-auto pb-1">
         <button
           onClick={() => { setSelectedYear('all'); resetSession(); }}
-          className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition shrink-0 ${
+          className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors shrink-0 ${
             selectedYear === 'all'
               ? 'bg-emerald-600 text-white'
               : 'bg-slate-900 text-slate-400 border border-slate-800'
@@ -178,7 +178,7 @@ export const QuizView: React.FC<QuizViewProps> = ({
             <button
               key={yr}
               onClick={() => { setSelectedYear(yr); resetSession(); }}
-              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition shrink-0 ${
+              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors shrink-0 ${
                 selectedYear === yr
                   ? 'bg-emerald-600 text-white'
                   : 'bg-slate-900 text-slate-400 border border-slate-800'
@@ -205,14 +205,14 @@ export const QuizView: React.FC<QuizViewProps> = ({
           {/* Flashcard Box */}
           <div
             onClick={handleFlip}
-            className="cursor-pointer min-h-[300px] sm:min-h-[340px] rounded-3xl bg-slate-900 border border-slate-800 hover:border-emerald-500/40 p-8 flex flex-col justify-between shadow-2xl transition-all duration-300 relative group"
+            className="cursor-pointer min-h-[300px] sm:min-h-[340px] rounded-3xl bg-slate-900 border border-slate-800 hover:border-emerald-500/40 p-8 flex flex-col justify-between shadow-2xl transition-[background-color,border-color] duration-200 ease-out relative group"
           >
             {/* Card Header */}
             <div className="flex items-center justify-between">
               <span className="rounded-md bg-emerald-500/10 text-emerald-400 text-xs font-bold px-2 py-0.5 border border-emerald-500/20">
                 Year {currentCard.year} · {currentCard.courseCode}
               </span>
-              <span className="text-xs text-slate-500 flex items-center gap-1 group-hover:text-slate-300 transition">
+              <span className="text-xs text-slate-500 flex items-center gap-1 group-hover:text-slate-300 transition-colors">
                 <RotateCw className="h-3.5 w-3.5" />
                 Click anywhere to flip
               </span>
@@ -252,7 +252,7 @@ export const QuizView: React.FC<QuizViewProps> = ({
             <div className="grid grid-cols-4 gap-2 pt-2 animate-fade-in">
               <button
                 onClick={() => handleScore('again')}
-                className="rounded-xl bg-slate-900 hover:bg-rose-950/60 border border-rose-500/30 text-rose-400 p-3 text-center transition"
+                className="rounded-xl bg-slate-900 hover:bg-rose-950/60 border border-rose-500/30 text-rose-400 p-3 text-center transition-colors"
               >
                 <div className="text-xs font-bold">Again</div>
                 <div className="text-[10px] text-slate-500">1 day</div>
@@ -260,7 +260,7 @@ export const QuizView: React.FC<QuizViewProps> = ({
 
               <button
                 onClick={() => handleScore('hard')}
-                className="rounded-xl bg-slate-900 hover:bg-amber-950/60 border border-amber-500/30 text-amber-400 p-3 text-center transition"
+                className="rounded-xl bg-slate-900 hover:bg-amber-950/60 border border-amber-500/30 text-amber-400 p-3 text-center transition-colors"
               >
                 <div className="text-xs font-bold">Hard</div>
                 <div className="text-[10px] text-slate-500">+2 days</div>
@@ -268,7 +268,7 @@ export const QuizView: React.FC<QuizViewProps> = ({
 
               <button
                 onClick={() => handleScore('good')}
-                className="rounded-xl bg-slate-900 hover:bg-blue-950/60 border border-blue-500/30 text-blue-400 p-3 text-center transition"
+                className="rounded-xl bg-slate-900 hover:bg-blue-950/60 border border-blue-500/30 text-blue-400 p-3 text-center transition-colors"
               >
                 <div className="text-xs font-bold">Good</div>
                 <div className="text-[10px] text-slate-500">+7 days</div>
@@ -276,7 +276,7 @@ export const QuizView: React.FC<QuizViewProps> = ({
 
               <button
                 onClick={() => handleScore('easy')}
-                className="rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white p-3 text-center transition shadow-lg shadow-emerald-900/30"
+                className="rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white p-3 text-center transition-colors shadow-lg shadow-emerald-900/30"
               >
                 <div className="text-xs font-bold flex items-center justify-center gap-1">
                   <Sparkles className="h-3 w-3" />
@@ -289,7 +289,7 @@ export const QuizView: React.FC<QuizViewProps> = ({
             <div className="text-center">
               <button
                 onClick={handleFlip}
-                className="rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 px-6 py-2.5 text-xs font-semibold shadow transition"
+                className="rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 px-6 py-2.5 text-xs font-semibold shadow transition-colors"
               >
                 Show Solution (Spacebar or Click)
               </button>
@@ -310,7 +310,7 @@ export const QuizView: React.FC<QuizViewProps> = ({
           <div className="pt-4">
             <button
               onClick={resetSession}
-              className="rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-2.5 text-xs font-semibold shadow-lg shadow-emerald-900/30 transition"
+              className="rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-2.5 text-xs font-semibold shadow-lg shadow-emerald-900/30 transition-colors"
             >
               Start Another Round
             </button>
@@ -320,7 +320,7 @@ export const QuizView: React.FC<QuizViewProps> = ({
 
       {/* Create Flashcard Modal */}
       {isCreateModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
           <div className="w-full max-w-lg rounded-2xl bg-[#0f121a] border border-white/[0.08] p-6 shadow-2xl shadow-black/80 text-slate-200 animate-enter">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-base font-bold text-white">Create Degree Flashcard</h3>

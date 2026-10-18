@@ -162,7 +162,7 @@ export const StudyBlueprintsView: React.FC<StudyBlueprintsViewProps> = ({
 
         <button
           onClick={() => setIsSubmitModalOpen(true)}
-          className="flex items-center gap-1.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white px-4 py-2 text-xs font-semibold shadow-lg shadow-amber-950/40 transition self-start md:self-auto"
+          className="flex items-center gap-1.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white px-4 py-2 text-xs font-semibold shadow-lg shadow-amber-950/40 transition-colors self-start md:self-auto"
         >
           <Plus className="h-4 w-4" />
           <span>Publish Course Blueprint</span>
@@ -177,7 +177,7 @@ export const StudyBlueprintsView: React.FC<StudyBlueprintsViewProps> = ({
             <button
               key={tier}
               onClick={() => setSelectedTier(tier)}
-              className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition ${
+              className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition-colors ${
                 selectedTier === tier
                   ? 'bg-amber-600 text-white'
                   : 'bg-slate-950 text-slate-400 border border-slate-800 hover:text-slate-200'
@@ -216,7 +216,7 @@ export const StudyBlueprintsView: React.FC<StudyBlueprintsViewProps> = ({
             <div
               key={bp.id}
               onClick={() => setActiveBlueprintId(bp.id)}
-              className={`cursor-pointer rounded-2xl p-4 border transition-all ${
+              className={`cursor-pointer rounded-2xl p-4 border transition-[background-color,border-color,box-shadow] duration-200 ease-out ${
                 activeBlueprint?.id === bp.id
                   ? 'bg-slate-900 border-amber-500/60 shadow-lg shadow-black/40'
                   : 'bg-slate-950/70 border-slate-800 hover:bg-slate-900/60 hover:border-slate-700'
@@ -275,7 +275,7 @@ export const StudyBlueprintsView: React.FC<StudyBlueprintsViewProps> = ({
 
                 <button
                   onClick={() => handleToggleAdopt(activeBlueprint.id)}
-                  className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition shadow ${
+                  className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-colors shadow ${
                     activeBlueprint.isAdopted
                       ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
                       : 'bg-amber-600 hover:bg-amber-500 text-white'
@@ -398,7 +398,7 @@ export const StudyBlueprintsView: React.FC<StudyBlueprintsViewProps> = ({
 
       {/* Publish Blueprint Modal */}
       {isSubmitModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
           <div className="w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-2xl bg-[#0f121a] border border-white/[0.08] p-6 shadow-2xl shadow-black/80 text-slate-200 animate-enter">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-base font-bold text-white flex items-center gap-2">

@@ -197,7 +197,7 @@ export const PeerTutoringView: React.FC<PeerTutoringViewProps> = ({
         <div className="flex items-center gap-1 rounded-xl bg-slate-950 p-1 border border-slate-800 shrink-0">
           <button
             onClick={() => setActiveTab('advice')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
               activeTab === 'advice'
                 ? 'bg-teal-600 text-white'
                 : 'text-slate-400 hover:text-white'
@@ -207,7 +207,7 @@ export const PeerTutoringView: React.FC<PeerTutoringViewProps> = ({
           </button>
           <button
             onClick={() => setActiveTab('tutors')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
               activeTab === 'tutors'
                 ? 'bg-teal-600 text-white'
                 : 'text-slate-400 hover:text-white'
@@ -217,7 +217,7 @@ export const PeerTutoringView: React.FC<PeerTutoringViewProps> = ({
           </button>
           <button
             onClick={() => setActiveTab('requests')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
               activeTab === 'requests'
                 ? 'bg-teal-600 text-white'
                 : 'text-slate-400 hover:text-white'
@@ -263,7 +263,7 @@ export const PeerTutoringView: React.FC<PeerTutoringViewProps> = ({
 
             <button
               onClick={() => setIsAdviceModalOpen(true)}
-              className="flex items-center gap-1.5 rounded-xl bg-teal-600 hover:bg-teal-500 text-white px-3.5 py-1.5 text-xs font-semibold shadow transition self-start sm:self-auto"
+              className="flex items-center gap-1.5 rounded-xl bg-teal-600 hover:bg-teal-500 text-white px-3.5 py-1.5 text-xs font-semibold shadow transition-colors self-start sm:self-auto"
             >
               <Plus className="h-4 w-4" />
               <span>Leave Clearance Advice</span>
@@ -313,7 +313,7 @@ export const PeerTutoringView: React.FC<PeerTutoringViewProps> = ({
 
                   <button
                     onClick={() => handleUpvote(comment.id)}
-                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-semibold transition ${
+                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-semibold transition-colors ${
                       comment.hasUpvoted
                         ? 'bg-teal-500/20 text-teal-300 border-teal-500/40'
                         : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-slate-200'
@@ -406,7 +406,7 @@ export const PeerTutoringView: React.FC<PeerTutoringViewProps> = ({
 
                   <button
                     onClick={() => handleOpenRequestModal(tutor)}
-                    className="flex items-center gap-1.5 rounded-xl bg-teal-600 hover:bg-teal-500 text-white px-3.5 py-1.5 text-xs font-semibold shadow transition"
+                    className="flex items-center gap-1.5 rounded-xl bg-teal-600 hover:bg-teal-500 text-white px-3.5 py-1.5 text-xs font-semibold shadow transition-colors"
                   >
                     <Send className="h-3 w-3" />
                     <span>Request Tutor</span>
@@ -515,7 +515,7 @@ export const PeerTutoringView: React.FC<PeerTutoringViewProps> = ({
 
       {/* Leave Advice Modal */}
       {isAdviceModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
           <div className="w-full max-w-lg rounded-2xl bg-[#0f121a] border border-white/[0.08] p-6 shadow-2xl shadow-black/80 text-slate-200 animate-enter">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-base font-bold text-white flex items-center gap-2">
@@ -623,7 +623,7 @@ export const PeerTutoringView: React.FC<PeerTutoringViewProps> = ({
 
       {/* Request 1-on-1 Tutoring Modal */}
       {isRequestModalOpen && selectedTutorForRequest && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
           <div className="w-full max-w-lg rounded-2xl bg-[#0f121a] border border-white/[0.08] p-6 shadow-2xl shadow-black/80 text-slate-200 animate-enter">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-base font-bold text-white flex items-center gap-2">

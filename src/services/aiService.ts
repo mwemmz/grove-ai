@@ -195,16 +195,16 @@ export const aiService = {
 
 Here is the chronological evolution of this concept throughout your 4-year degree:
 
-1. **Year 1 — Foundational Building Blocks (CS101 / CS103)**:
+1. **Year 1: Foundational Building Blocks (CS101 / CS103)**:
    You were first introduced to manual memory layouts and pointer arithmetic. You analyzed why dereferencing an offset depends on \`sizeof(type)\` and how the CPU manages memory access.
 
-2. **Year 2 — Local Concurrency & Resource Contention (CS201)**:
+2. **Year 2: Local Concurrency & Resource Contention (CS201)**:
    In Operating Systems, this evolved into synchronizing multiple threads accessing shared memory. You proved deadlock prevention using the **4 Coffman conditions** and implemented mutexes and counting semaphores.
 
-3. **Year 3 — Breaking the Single-Machine Boundary (CS301 / CS302)**:
+3. **Year 3: Breaking the Single-Machine Boundary (CS301 / CS302)**:
    You moved beyond shared memory. When clocks and RAM are not shared, mutual exclusion transforms into **Consensus (Raft/Paxos)** and storage splits into **LSM vs B+ Trees**.
 
-4. **Year 4 — Production Capstone & Zero-Copy Architecture (CS401)**:
+4. **Year 4: Production Capstone & Zero-Copy Architecture (CS401)**:
    In your Capstone project, you unified all four years: streaming 500k msgs/sec using Linux \`sendfile()\` zero-copy I/O and partitioned commit logs.
 
 > **Grove Insight**: You first struggled with pointers in Year 1, but by Year 4 you built a production zero-copy broker that completely circumvents userland memory buffers. That is a 4-year leap in systems maturity!`,

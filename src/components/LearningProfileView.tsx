@@ -179,7 +179,7 @@ export const LearningProfileView: React.FC<LearningProfileViewProps> = ({
               <button
                 key={style.id}
                 onClick={() => updateProfileField('explanationStyle', style.id as ExplanationStyle)}
-                className={`p-2.5 rounded-xl text-left border transition ${
+                className={`p-2.5 rounded-xl text-left border transition-colors ${
                   profile.explanationStyle === style.id
                     ? 'bg-emerald-500/10 border-emerald-500/50 text-white shadow-sm'
                     : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700'
@@ -218,7 +218,7 @@ export const LearningProfileView: React.FC<LearningProfileViewProps> = ({
               <button
                 key={d.id}
                 onClick={() => updateProfileField('answerLength', d.id as AnswerLength)}
-                className={`p-2.5 rounded-xl text-center border transition ${
+                className={`p-2.5 rounded-xl text-center border transition-colors ${
                   profile.answerLength === d.id
                     ? 'bg-emerald-500/10 border-emerald-500/50 text-white'
                     : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:text-slate-200'
@@ -336,7 +336,7 @@ export const LearningProfileView: React.FC<LearningProfileViewProps> = ({
 
           <button
             onClick={() => setIsAddLogOpen(true)}
-            className="flex items-center gap-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 text-xs font-semibold border border-slate-700 self-start sm:self-auto transition"
+            className="flex items-center gap-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 text-xs font-semibold border border-slate-700 self-start sm:self-auto transition-colors"
           >
             <Plus className="h-3.5 w-3.5" />
             <span>Add Custom Rule</span>
@@ -348,7 +348,7 @@ export const LearningProfileView: React.FC<LearningProfileViewProps> = ({
           {profile.memoryLogs.map((log) => (
             <div
               key={log.id}
-              className={`rounded-xl p-3.5 border transition flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+              className={`rounded-xl p-3.5 border transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
                 log.isActive
                   ? 'bg-slate-950/80 border-slate-800 text-slate-200'
                   : 'bg-slate-950/30 border-slate-900 text-slate-500 opacity-60'
@@ -375,7 +375,7 @@ export const LearningProfileView: React.FC<LearningProfileViewProps> = ({
               <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
                 <button
                   onClick={() => toggleLogActive(log.id)}
-                  className={`text-xs px-2.5 py-1 rounded-lg border font-medium transition ${
+                  className={`text-xs px-2.5 py-1 rounded-lg border font-medium transition-colors ${
                     log.isActive
                       ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
                       : 'bg-slate-800 text-slate-400 border-slate-700'
@@ -385,7 +385,7 @@ export const LearningProfileView: React.FC<LearningProfileViewProps> = ({
                 </button>
                 <button
                   onClick={() => deleteLog(log.id)}
-                  className="h-7 w-7 rounded-lg bg-slate-800/80 hover:bg-rose-950/60 text-slate-400 hover:text-rose-400 border border-slate-700/60 flex items-center justify-center transition"
+                  className="h-7 w-7 rounded-lg bg-slate-800/80 hover:bg-rose-950/60 text-slate-400 hover:text-rose-400 border border-slate-700/60 flex items-center justify-center transition-colors"
                   title="Delete memory"
                 >
                   <Trash2 className="h-3.5 w-3.5" />

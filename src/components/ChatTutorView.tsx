@@ -269,7 +269,7 @@ Try asking about any topic or tap one of the prompts below!`,
                         <button
                           key={citation.noteId}
                           onClick={() => fullNote && onOpenNoteDetail && onOpenNoteDetail(fullNote)}
-                          className="flex items-center gap-1.5 rounded-lg bg-slate-800/90 hover:bg-slate-700/80 px-2.5 py-1 text-xs text-slate-300 border border-slate-700/60 transition group"
+                          className="flex items-center gap-1.5 rounded-lg bg-slate-800/90 hover:bg-slate-700/80 px-2.5 py-1 text-xs text-slate-300 border border-slate-700/60 transition-colors group"
                         >
                           <span className="rounded bg-emerald-500/20 text-emerald-400 text-[10px] font-bold px-1 py-0.2">
                             Y{citation.year} · {citation.courseCode}
@@ -318,7 +318,7 @@ Try asking about any topic or tap one of the prompts below!`,
                   
                   <button
                     onClick={() => handleFeedback('too-long')}
-                    className="flex items-center gap-1 rounded-md bg-slate-800 hover:bg-slate-700 px-2 py-0.8 text-[11px] text-slate-300 border border-slate-700/60 transition"
+                    className="flex items-center gap-1 rounded-md bg-slate-800 hover:bg-slate-700 px-2 py-0.8 text-[11px] text-slate-300 border border-slate-700/60 transition-colors"
                     title="Change profile to concise bullet points"
                   >
                     <Zap className="h-3 w-3 text-amber-400" />
@@ -327,7 +327,7 @@ Try asking about any topic or tap one of the prompts below!`,
 
                   <button
                     onClick={() => handleFeedback('analogy')}
-                    className="flex items-center gap-1 rounded-md bg-slate-800 hover:bg-slate-700 px-2 py-0.8 text-[11px] text-slate-300 border border-slate-700/60 transition"
+                    className="flex items-center gap-1 rounded-md bg-slate-800 hover:bg-slate-700 px-2 py-0.8 text-[11px] text-slate-300 border border-slate-700/60 transition-colors"
                     title="Switch explanation style to intuitive analogies"
                   >
                     <Lightbulb className="h-3 w-3 text-yellow-400" />
@@ -336,7 +336,7 @@ Try asking about any topic or tap one of the prompts below!`,
 
                   <button
                     onClick={() => handleFeedback('code')}
-                    className="flex items-center gap-1 rounded-md bg-slate-800 hover:bg-slate-700 px-2 py-0.8 text-[11px] text-slate-300 border border-slate-700/60 transition"
+                    className="flex items-center gap-1 rounded-md bg-slate-800 hover:bg-slate-700 px-2 py-0.8 text-[11px] text-slate-300 border border-slate-700/60 transition-colors"
                     title="Switch explanation style to code-first implementation"
                   >
                     <Code className="h-3 w-3 text-blue-400" />
@@ -345,7 +345,7 @@ Try asking about any topic or tap one of the prompts below!`,
 
                   <button
                     onClick={() => handleFeedback('lost')}
-                    className="flex items-center gap-1 rounded-md bg-slate-800 hover:bg-slate-700 px-2 py-0.8 text-[11px] text-slate-300 border border-slate-700/60 transition"
+                    className="flex items-center gap-1 rounded-md bg-slate-800 hover:bg-slate-700 px-2 py-0.8 text-[11px] text-slate-300 border border-slate-700/60 transition-colors"
                     title="Log to 'How I Learn' and flag for step-by-step guidance"
                   >
                     <Compass className="h-3 w-3 text-rose-400" />
@@ -354,7 +354,7 @@ Try asking about any topic or tap one of the prompts below!`,
 
                   <button
                     onClick={() => handleFeedback('quiz')}
-                    className="flex items-center gap-1 rounded-md bg-slate-800 hover:bg-slate-700 px-2 py-0.8 text-[11px] text-slate-300 border border-slate-700/60 transition"
+                    className="flex items-center gap-1 rounded-md bg-slate-800 hover:bg-slate-700 px-2 py-0.8 text-[11px] text-slate-300 border border-slate-700/60 transition-colors"
                     title="Generate an active-recall quiz question"
                   >
                     <HelpCircle className="h-3 w-3 text-purple-400" />
@@ -370,7 +370,7 @@ Try asking about any topic or tap one of the prompts below!`,
         {isLoading && (
           <div className="flex items-center gap-3 text-slate-400 text-sm py-2">
             <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/20 border border-emerald-500/40">
-              <TreePine className="h-4 w-4 text-emerald-400 ring-pulse-slow" />
+              <TreePine className="h-4 w-4 text-emerald-400 animate-pulse" />
             </div>
             <span>Searching 4-year degree memory & synthesizing connections...</span>
           </div>
@@ -388,7 +388,7 @@ Try asking about any topic or tap one of the prompts below!`,
               <button
                 key={i}
                 onClick={() => handleSend(prompt)}
-                className="text-left rounded-xl bg-slate-900/60 hover:bg-slate-800 border border-slate-800/80 p-2.5 text-xs text-slate-300 hover:text-emerald-300 hover:border-emerald-500/40 transition flex items-center justify-between"
+                className="text-left rounded-xl bg-slate-900/60 hover:bg-slate-800 border border-slate-800/80 p-2.5 text-xs text-slate-300 hover:text-emerald-300 hover:border-emerald-500/40 transition-colors flex items-center justify-between"
               >
                 <span>{prompt}</span>
                 <Sparkles className="h-3 w-3 text-emerald-400 opacity-60 ml-2 shrink-0" />
@@ -405,7 +405,7 @@ Try asking about any topic or tap one of the prompts below!`,
             e.preventDefault();
             handleSend();
           }}
-          className="flex items-center gap-2 rounded-2xl bg-slate-900/90 border border-slate-800 p-2 shadow-2xl focus-within:border-emerald-500/60 transition"
+          className="flex items-center gap-2 rounded-2xl bg-slate-900/90 border border-slate-800 p-2 shadow-2xl focus-within:border-emerald-500/60 transition-colors"
         >
           <input
             type="text"
@@ -418,7 +418,7 @@ Try asking about any topic or tap one of the prompts below!`,
           <button
             type="submit"
             disabled={!input.trim() || isLoading}
-            className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:hover:bg-emerald-600 text-white shadow-md transition"
+            className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:hover:bg-emerald-600 text-white shadow-md transition-colors"
           >
             <Send className="h-4 w-4" />
           </button>
@@ -431,7 +431,7 @@ Try asking about any topic or tap one of the prompts below!`,
           </span>
           <button
             onClick={clearChat}
-            className="hover:text-slate-400 transition"
+            className="hover:text-slate-400 transition-colors"
           >
             Clear conversation
           </button>

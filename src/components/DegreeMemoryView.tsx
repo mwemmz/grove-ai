@@ -116,7 +116,7 @@ export const DegreeMemoryView: React.FC<DegreeMemoryViewProps> = ({
 
         <button
           onClick={() => setIsAddModalOpen(true)}
-          className="flex items-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 text-sm font-semibold shadow-lg shadow-emerald-900/30 transition self-start md:self-auto"
+          className="flex items-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 text-sm font-semibold shadow-lg shadow-emerald-900/30 transition-colors self-start md:self-auto"
         >
           <Plus className="h-4 w-4" />
           <span>Add Course Note</span>
@@ -132,7 +132,7 @@ export const DegreeMemoryView: React.FC<DegreeMemoryViewProps> = ({
           </span>
           <button
             onClick={() => setSelectedYear('all')}
-            className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition shrink-0 ${
+            className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors shrink-0 ${
               selectedYear === 'all'
                 ? 'bg-emerald-600 text-white'
                 : 'bg-slate-900 text-slate-400 border border-slate-800 hover:text-slate-200'
@@ -148,7 +148,7 @@ export const DegreeMemoryView: React.FC<DegreeMemoryViewProps> = ({
               <button
                 key={year}
                 onClick={() => setSelectedYear(year)}
-                className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition shrink-0 ${
+                className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors shrink-0 ${
                   selectedYear === year
                     ? 'bg-emerald-600 text-white'
                     : 'bg-slate-900 text-slate-400 border border-slate-800 hover:text-slate-200'
@@ -196,7 +196,7 @@ export const DegreeMemoryView: React.FC<DegreeMemoryViewProps> = ({
             <div
               key={note.id}
               onClick={() => setSelectedNoteForDetail(note)}
-              className="group cursor-pointer rounded-2xl bg-slate-900/80 hover:bg-slate-900 border border-slate-800/80 hover:border-emerald-500/40 p-5 flex flex-col justify-between transition-all duration-200 hover:-translate-y-0.5 shadow-lg shadow-black/20"
+              className="group cursor-pointer rounded-2xl bg-slate-900/80 hover:bg-slate-900 border border-slate-800/80 hover:border-emerald-500/40 p-5 flex flex-col justify-between transition-[background-color,border-color,transform] duration-200 ease-out hover-lift shadow-lg shadow-black/20"
             >
               <div>
                 {/* Header Badge */}
@@ -218,7 +218,7 @@ export const DegreeMemoryView: React.FC<DegreeMemoryViewProps> = ({
                 </div>
 
                 {/* Title */}
-                <h3 className="text-base font-semibold text-slate-100 group-hover:text-emerald-300 transition line-clamp-2">
+                <h3 className="text-base font-semibold text-slate-100 group-hover:text-emerald-300 transition-colors line-clamp-2">
                   {note.title}
                 </h3>
 
@@ -252,7 +252,7 @@ export const DegreeMemoryView: React.FC<DegreeMemoryViewProps> = ({
                   ))}
                 </div>
 
-                <ArrowRight className="h-4 w-4 text-slate-600 group-hover:text-emerald-400 transition" />
+                <ArrowRight className="h-4 w-4 text-slate-600 group-hover:text-emerald-400 transition-colors" />
               </div>
             </div>
           );
@@ -269,7 +269,7 @@ export const DegreeMemoryView: React.FC<DegreeMemoryViewProps> = ({
 
       {/* Note Detail Modal */}
       {selectedNoteForDetail && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
           <div className="relative w-full max-w-3xl max-h-[85vh] overflow-y-auto rounded-2xl bg-[#0f121a] border border-white/[0.08] p-6 shadow-2xl shadow-black/80 text-slate-200 animate-enter">
             
             <button
@@ -359,7 +359,7 @@ export const DegreeMemoryView: React.FC<DegreeMemoryViewProps> = ({
 
       {/* Add Note Modal */}
       {isAddModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
           <div className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl bg-[#0f121a] border border-white/[0.08] p-6 shadow-2xl shadow-black/80 text-slate-200 animate-enter">
             <button
               onClick={() => setIsAddModalOpen(false)}

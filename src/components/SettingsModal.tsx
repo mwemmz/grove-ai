@@ -91,13 +91,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
       <div className="relative w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-2xl bg-[#0f121a] border border-white/[0.08] p-6 shadow-2xl shadow-black/80 text-slate-200 animate-enter">
         
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 h-8 w-8 rounded-lg bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center transition"
+          className="absolute top-4 right-4 h-8 w-8 rounded-lg bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center transition-colors"
         >
           <X className="h-4 w-4" />
         </button>
@@ -192,7 +192,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   type="button"
                   key={p.id}
                   onClick={() => setProvider(p.id as any)}
-                  className={`p-2.5 rounded-lg border text-left transition ${
+                  className={`p-2.5 rounded-lg border text-left transition-colors ${
                     provider === p.id
                       ? 'bg-emerald-500/10 border-emerald-500/60 text-white'
                       : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
@@ -231,13 +231,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <button
                 type="button"
                 onClick={handleDownloadBackup}
-                className="flex items-center gap-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 px-3 py-1.5 text-xs font-semibold text-slate-200 border border-slate-700 transition"
+                className="flex items-center gap-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 px-3 py-1.5 text-xs font-semibold text-slate-200 border border-slate-700 transition-colors"
               >
                 <Download className="h-3.5 w-3.5 text-emerald-400" />
                 <span>Export 4-Year Backup (JSON)</span>
               </button>
 
-              <label className="flex items-center gap-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 px-3 py-1.5 text-xs font-semibold text-slate-200 border border-slate-700 cursor-pointer transition">
+              <label className="flex items-center gap-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 px-3 py-1.5 text-xs font-semibold text-slate-200 border border-slate-700 cursor-pointer transition-colors">
                 <Upload className="h-3.5 w-3.5 text-blue-400" />
                 <span>Restore from Backup</span>
                 <input

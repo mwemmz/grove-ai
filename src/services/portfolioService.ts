@@ -45,7 +45,7 @@ export const portfolioService = {
     md += `---\n\n`;
 
     md += `## 🎓 Education\n`;
-    md += `**${cv.education.degree}** — *${cv.education.institution}* (${cv.education.years})\n`;
+    md += `**${cv.education.degree}**, *${cv.education.institution}* (${cv.education.years})\n`;
     md += `*Honors:* ${cv.education.gpaOrHonors}\n\n`;
 
     md += `### Rigorous Coursework Timeline:\n`;
@@ -62,7 +62,7 @@ export const portfolioService = {
         md += `### ${cat}\n`;
         catSkills.forEach(s => {
           const notesRef = s.evidenceNotes.map(n => `[${n.courseCode}: ${n.title}]`).join(', ');
-          md += `- **${s.name}** (${s.level}) — *First acquired Year ${s.firstAcquiredYear}*\n`;
+          md += `- **${s.name}** (${s.level}), *First acquired Year ${s.firstAcquiredYear}*\n`;
           if (notesRef) {
             md += `  - *Coursework Evidence:* ${notesRef}\n`;
           }

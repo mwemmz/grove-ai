@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+@theme {
+  --default-transition-duration: 150ms;
+  --default-transition-timing-function: cubic-bezier(0.23, 1, 0.32, 1);
+}
+
 @layer base {
   :root {
     --bg-base: #08090d;
@@ -7,14 +12,13 @@
     --bg-card: #131722;
     --border-subtle: rgba(255, 255, 255, 0.07);
     --border-hover: rgba(52, 211, 153, 0.35);
-    
-    /* Emil Kowalski's Precision Motion Curves */
-    --ease-out-quad: cubic-bezier(0.25, 1, 0.5, 1);
+
+    /* Strong custom easing curves (Emil Kowalski) */
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
     --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
-    --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+    --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
     --duration-fast: 150ms;
     --duration-normal: 220ms;
-    --duration-slow: 350ms;
   }
 
   * {
@@ -52,15 +56,13 @@
   }
 }
 
-/* Emil's Tactile Press Rules: Scale 0.97 on active press */
+/* Tactile press: instant scale feedback, strong ease-out */
 button, [role="button"], .interactive-press {
-  transition: transform 120ms cubic-bezier(0.25, 1, 0.5, 1), opacity 120ms ease-out, background-color 150ms ease-out, border-color 150ms ease-out;
-  transform: translateZ(0);
-  will-change: transform;
+  transition: transform 120ms cubic-bezier(0.23, 1, 0.32, 1), background-color 150ms ease, border-color 150ms ease;
 }
 
 button:active:not(:disabled), [role="button"]:active:not(:disabled), .interactive-press:active {
-  transform: scale(0.97) translateZ(0);
+  transform: scale(0.97);
 }
 
 button:disabled, [role="button"]:disabled {
@@ -69,7 +71,14 @@ button:disabled, [role="button"]:disabled {
   transform: none !important;
 }
 
-/* Hardware-Accelerated Animations */
+/* Touch-safe hover lift: never fires false hovers on tap */
+@media (hover: hover) and (pointer: fine) {
+  .hover-lift:hover {
+    transform: translateY(-2px);
+  }
+}
+
+/* Entrance animations: scale(0.96) + opacity, never from nothing */
 @keyframes fadeInScale {
   from {
     opacity: 0;
@@ -92,14 +101,12 @@ button:disabled, [role="button"]:disabled {
   }
 }
 
-@keyframes ringPulse {
-  0%, 100% {
-    transform: scale(1);
-    opacity: 0.6;
+@keyframes fadeIn {
+  from {
+    opacity: 0;
   }
-  50% {
-    transform: scale(1.08);
-    opacity: 0.95;
+  to {
+    opacity: 1;
   }
 }
 
@@ -108,13 +115,11 @@ button:disabled, [role="button"]:disabled {
 }
 
 .animate-slide-up {
-  animation: slideUpFade 200ms var(--ease-out-quad) forwards;
+  animation: slideUpFade 200ms var(--ease-out) forwards;
 }
 
-.ring-pulse-slow {
-  animation: ringPulse 3.5s ease-in-out infinite;
-  transform: translateZ(0);
-  will-change: transform, opacity;
+.animate-fade-in {
+  animation: fadeIn 180ms var(--ease-out) forwards;
 }
 
 /* Custom Scrollbars */
@@ -140,9 +145,6 @@ button:disabled, [role="button"]:disabled {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
-  }
-  .ring-pulse-slow {
-    animation: none !important;
   }
 }
 

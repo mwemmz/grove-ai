@@ -93,7 +93,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({
         <div className="flex items-center gap-1 rounded-xl bg-slate-950 p-1 border border-slate-800 shrink-0">
           <button
             onClick={() => setActiveSubTab('showcase')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
               activeSubTab === 'showcase'
                 ? 'bg-emerald-600 text-white'
                 : 'text-slate-400 hover:text-white'
@@ -103,7 +103,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({
           </button>
           <button
             onClick={() => setActiveSubTab('cv-preview')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
               activeSubTab === 'cv-preview'
                 ? 'bg-emerald-600 text-white'
                 : 'text-slate-400 hover:text-white'
@@ -113,7 +113,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({
           </button>
           <button
             onClick={() => setActiveSubTab('markdown')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
               activeSubTab === 'markdown'
                 ? 'bg-emerald-600 text-white'
                 : 'text-slate-400 hover:text-white'
@@ -182,7 +182,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({
                 <div
                   key={idx}
                   onClick={() => setSelectedEvidenceSkill(skill)}
-                  className="cursor-pointer rounded-xl bg-slate-950/60 hover:bg-slate-950 border border-slate-800/80 hover:border-emerald-500/40 p-4 transition flex flex-col justify-between group"
+                  className="cursor-pointer rounded-xl bg-slate-950/60 hover:bg-slate-950 border border-slate-800/80 hover:border-emerald-500/40 p-4 transition-colors flex flex-col justify-between group"
                 >
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
@@ -194,7 +194,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({
                       </span>
                     </div>
 
-                    <h4 className="text-xs font-bold text-slate-100 group-hover:text-emerald-300 transition">
+                    <h4 className="text-xs font-bold text-slate-100 group-hover:text-emerald-300 transition-colors">
                       {skill.name}
                     </h4>
 
@@ -205,7 +205,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({
 
                   <div className="mt-3 pt-2 border-t border-slate-800/60 flex items-center justify-between text-[11px] text-emerald-400">
                     <span>{skill.evidenceNotes.length} notes cited as proof</span>
-                    <ArrowUpRight className="h-3.5 w-3.5 text-slate-500 group-hover:text-emerald-400 transition" />
+                    <ArrowUpRight className="h-3.5 w-3.5 text-slate-500 group-hover:text-emerald-400 transition-colors" />
                   </div>
                 </div>
               ))}
@@ -280,14 +280,14 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({
           <div className="flex justify-end gap-2">
             <button
               onClick={handlePrint}
-              className="flex items-center gap-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white px-3.5 py-1.5 text-xs font-semibold border border-slate-700 transition"
+              className="flex items-center gap-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white px-3.5 py-1.5 text-xs font-semibold border border-slate-700 transition-colors"
             >
               <Download className="h-3.5 w-3.5" />
               <span>Print / Save as PDF</span>
             </button>
             <button
               onClick={handleCopy}
-              className="flex items-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-1.5 text-xs font-semibold shadow transition"
+              className="flex items-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-1.5 text-xs font-semibold shadow transition-colors"
             >
               {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
               <span>{copied ? 'Copied Markdown' : 'Copy CV'}</span>
@@ -312,7 +312,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({
                 Education & Degree-Long Curriculum
               </h2>
               <div className="text-sm font-bold text-slate-800">
-                {cvData.education.degree} — {cvData.education.institution}
+                {cvData.education.degree}, {cvData.education.institution}
               </div>
               <div className="text-xs text-emerald-700 font-medium">
                 {cvData.education.gpaOrHonors}
@@ -387,7 +387,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({
             </p>
             <button
               onClick={handleCopy}
-              className="flex items-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 text-xs font-semibold shadow transition"
+              className="flex items-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 text-xs font-semibold shadow transition-colors"
             >
               {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
               <span>{copied ? 'Copied to Clipboard!' : 'Copy Raw Markdown'}</span>
@@ -402,7 +402,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({
 
       {/* Evidence Drawer Modal */}
       {selectedEvidenceSkill && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
           <div className="w-full max-w-xl rounded-2xl bg-[#0f121a] border border-white/[0.08] p-6 shadow-2xl shadow-black/80 text-slate-200 animate-enter">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
@@ -430,7 +430,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({
                         onOpenNoteDetail(fullNote);
                       }
                     }}
-                    className="cursor-pointer rounded-xl bg-slate-950/80 hover:bg-slate-950 border border-slate-800/80 hover:border-emerald-500/50 p-3.5 transition flex items-center justify-between group"
+                    className="cursor-pointer rounded-xl bg-slate-950/80 hover:bg-slate-950 border border-slate-800/80 hover:border-emerald-500/50 p-3.5 transition-colors flex items-center justify-between group"
                   >
                     <div>
                       <div className="flex items-center gap-2 mb-1">

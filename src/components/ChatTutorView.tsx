@@ -151,7 +151,7 @@ Try asking about any topic or tap one of the prompts below!`,
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4.25rem)] max-w-5xl mx-auto w-full px-4 sm:px-6 py-4">
+    <div className="flex flex-col h-[calc(100dvh-7.75rem)] sm:h-[calc(100dvh-4.25rem)] max-w-5xl mx-auto w-full px-4 sm:px-6 py-4">
       
       {/* Toast Feedback Notification */}
       {feedbackToast && (
@@ -162,7 +162,7 @@ Try asking about any topic or tap one of the prompts below!`,
       )}
 
       {/* Chat Messages Scroll Area */}
-      <div className="flex-1 overflow-y-auto space-y-6 pr-2">
+      <div className="flex-1 overflow-y-auto overscroll-contain space-y-6 pr-2">
         {messages.map((msg) => (
           <div
             key={msg.id}
@@ -418,7 +418,7 @@ Try asking about any topic or tap one of the prompts below!`,
           <button
             type="submit"
             disabled={!input.trim() || isLoading}
-            className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:hover:bg-emerald-600 text-white shadow-md transition-colors"
+            className="flex h-11 w-11 sm:h-9 sm:w-9 items-center justify-center rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:hover:bg-emerald-600 text-white shadow-md transition-colors"
           >
             <Send className="h-4 w-4" />
           </button>

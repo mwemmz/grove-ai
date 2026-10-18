@@ -27,7 +27,7 @@ import { setTokenProvider } from './lib/api';
 
 function LoadingScreen({ label }: { label: string }) {
   return (
-    <div className="min-h-screen bg-[#090b10] text-slate-100 flex flex-col items-center justify-center gap-4 font-sans">
+    <div className="min-h-dvh bg-[#090b10] text-slate-100 flex flex-col items-center justify-center gap-4 font-sans">
       <TreePine className="h-10 w-10 text-emerald-400 animate-pulse" />
       <p className="text-sm text-slate-400">{label}</p>
     </div>
@@ -36,7 +36,7 @@ function LoadingScreen({ label }: { label: string }) {
 
 function SignInScreen() {
   return (
-    <div className="min-h-screen bg-[#090b10] text-slate-100 flex items-center justify-center font-sans">
+    <div className="min-h-dvh bg-[#090b10] text-slate-100 flex items-center justify-center font-sans">
       <div className="w-full max-w-md rounded-2xl bg-[#0f121a] border border-white/[0.08] p-8 text-center shadow-2xl shadow-black/60">
         <TreePine className="h-10 w-10 text-emerald-400 mx-auto mb-4" />
         <h1 className="text-2xl font-bold text-white mb-2">Grove</h1>
@@ -193,7 +193,7 @@ function GroveApp() {
   }
 
   return (
-    <div className="min-h-screen bg-[#090b10] text-slate-100 flex flex-col font-sans selection:bg-emerald-500/30 selection:text-emerald-200">
+    <div className="min-h-dvh bg-[#090b10] text-slate-100 flex flex-col font-sans selection:bg-emerald-500/30 selection:text-emerald-200">
       {/* Top Navbar */}
       <Header
         activeTab={activeTab}

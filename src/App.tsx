@@ -9,6 +9,8 @@ import { PeerTutoringView } from './components/PeerTutoringView';
 import { LearningProfileView } from './components/LearningProfileView';
 import { PortfolioView } from './components/PortfolioView';
 import { QuizView } from './components/QuizView';
+import { StudyView, StudyPreset } from './components/StudyView';
+import { PlannerView } from './components/PlannerView';
 import { SettingsModal } from './components/SettingsModal';
 import {
   Note,
@@ -90,6 +92,7 @@ function GroveApp() {
 
   const [selectedNoteForDetail, setSelectedNoteForDetail] = useState<Note | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [studyPreset, setStudyPreset] = useState<StudyPreset | null>(null);
 
   // Skips the auto-save effects for the initial post-hydration commit.
   const skipInitialSync = useRef(true);
@@ -183,6 +186,11 @@ function GroveApp() {
     setActiveTab('remember');
   };
 
+  const handleStartSession = (preset: StudyPreset) => {
+    setStudyPreset(preset);
+    setActiveTab('study');
+  };
+
   const handleLaunchTopicQuiz = (_topic: string) => {
     setActiveTab('quiz');
   };
@@ -203,7 +211,13 @@ function GroveApp() {
           onYearChange={handleYearChange}
           onOpenSettings={() => setIsSettingsOpen(true)}
         />
-        <Tabs active={activeTab} onChange={setActiveTab} />
+        <Tabs
+          active={activeTab}
+          onChange={(tab) => {
+            setStudyPreset(null);
+            setActiveTab(tab);
+          }}
+        />
 
         <main className="app-main space-y-5">
           {activeTab === 'remember' && (
@@ -222,6 +236,20 @@ function GroveApp() {
                 setSelectedNoteForDetail={setSelectedNoteForDetail}
               />
             </>
+          )}
+
+          {activeTab === 'study' && (
+            <StudyView
+              notes={notes}
+              courses={courses}
+              flashcards={flashcards}
+              setFlashcards={setFlashcards}
+              preset={studyPreset}
+            />
+          )}
+
+          {activeTab === 'plan' && (
+            <PlannerView courses={courses} profile={profile} onStartSession={handleStartSession} />
           )}
 
           {activeTab === 'blueprints' && (

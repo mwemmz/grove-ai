@@ -2,10 +2,12 @@ import React from 'react';
 import { Settings } from 'lucide-react';
 import { Note } from '../types';
 
-export type AppTab = 'remember' | 'profile' | 'portfolio' | 'quiz' | 'blueprints' | 'tutoring';
+export type AppTab = 'remember' | 'study' | 'plan' | 'profile' | 'portfolio' | 'quiz' | 'blueprints' | 'tutoring';
 
 const TABS: { id: AppTab; label: string }[] = [
   { id: 'remember', label: 'Remember' },
+  { id: 'study', label: 'Study' },
+  { id: 'plan', label: 'Plan' },
   { id: 'profile', label: 'How I learn' },
   { id: 'portfolio', label: 'Portfolio' },
   { id: 'quiz', label: 'Recall' },

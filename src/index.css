@@ -4,31 +4,41 @@
   --default-transition-duration: 150ms;
   --default-transition-timing-function: cubic-bezier(0.23, 1, 0.32, 1);
 
-  /* Calm palette: one accent, neutral surfaces with a faint green cast */
-  --color-bg: #0d1110;
-  --color-surface: #141a18;
-  --color-raised: #1a2220;
-  --color-line: #232d2a;
-  --color-text: #e8eeeb;
-  --color-muted: #8f9c97;
-  --color-accent: #4cc79f;
-  --color-accent-strong: #2f9e7c;
-  --color-warn: #d9a441;
+  --font-sans: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Young Serif", Georgia, serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
 
-  /* Views not yet redesigned still use slate-*; retint them to the same neutrals */
-  --color-slate-950: #0b0f0e;
-  --color-slate-900: #141a18;
-  --color-slate-800: #1f2926;
-  --color-slate-700: #2a3532;
-  --color-slate-600: #4a5753;
-  --color-slate-500: #6f7c77;
-  --color-slate-400: #8f9c97;
-  --color-slate-300: #b4bfba;
-  --color-slate-200: #d3dbd7;
-  --color-slate-100: #e8eeeb;
+  /* Grove palette: deep green-black, one mint accent, warm gold for small marks */
+  --color-bg: #0e1512;
+  --color-surface: #151f1a;
+  --color-raised: #1b2b24;
+  --color-line: #26352d;
+  --color-text: #e5ede7;
+  --color-muted: #92a59a;
+  --color-accent: #5fc2a2;
+  --color-accent-strong: #5fc2a2;
+  --color-ink: #08140f;
+  --color-warn: #e0a94a;
+
+  /* Views still using slate-* pick up the same greens */
+  --color-slate-950: #0b110e;
+  --color-slate-900: #151f1a;
+  --color-slate-800: #1b2b24;
+  --color-slate-700: #26352d;
+  --color-slate-600: #43574c;
+  --color-slate-500: #6b8176;
+  --color-slate-400: #92a59a;
+  --color-slate-300: #b6c5bc;
+  --color-slate-200: #d3ded7;
+  --color-slate-100: #e5ede7;
 }
 
 @layer base {
+  h1, h2, h3 {
+    font-family: var(--font-display);
+    font-weight: 400;
+    text-wrap: balance;
+  }
   :root {
     --bg-base: #08090d;
     --bg-surface: #0e1117;
@@ -51,7 +61,7 @@
   body {
     margin: 0;
     padding: 0;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-family: var(--font-sans);
     background-color: var(--color-bg);
     color: var(--color-text);
     font-size: 15px;
@@ -73,7 +83,7 @@
   /* Accessible Focus Rings */
   button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 2px var(--color-bg), 0 0 0 4px rgba(76, 199, 159, 0.7);
+    box-shadow: 0 0 0 2px var(--color-bg), 0 0 0 4px rgba(95, 194, 162, 0.75);
   }
 }
 
@@ -83,6 +93,11 @@
   input, select, textarea {
     font-size: 16px;
   }
+}
+
+/* Young Serif has one weight: keep Tailwind font-semibold from faux-bolding headings */
+h1, h2, h3 {
+  font-weight: 400;
 }
 
 /* Tap targets respond instantly (no double-tap zoom delay) */

@@ -56,7 +56,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({
   const categories = Array.from(new Set(skills.map((s) => s.category)));
 
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-8 px-4 py-6 sm:px-6">
+    <div className="w-full space-y-6">
       <PageHeader
         title="Portfolio & CV"
         subtitle="Built from your notes. Each skill links back to the notes that back it up."

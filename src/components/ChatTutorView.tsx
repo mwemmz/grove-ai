@@ -1,9 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ArrowUp } from 'lucide-react';
 import { Note, LearningProfile, ChatMessage } from '../types';
 import { aiService } from '../services/aiService';
 import { storage } from '../services/storage';
-import { Disclosure, Toast, Inline, field } from './ui';
+import { Disclosure, Toast, Inline, field, labelCls, primaryBtn, panel, chip } from './ui';
 
 interface ChatTutorViewProps {
   notes: Note[];
@@ -17,6 +16,7 @@ const STARTER_PROMPTS = [
   'Compare B+ Trees with Hash Tables for indexing',
   'Explain Raft log replication in my preferred style',
 ];
+const PLACEHOLDER = 'Where did I learn about pointers, and how does it connect to what we do now?';
 
 const ADAPT_ACTIONS: { id: 'too-long' | 'analogy' | 'code' | 'lost' | 'quiz'; label: string }[] = [
   { id: 'too-long', label: 'Shorter' },
@@ -82,21 +82,15 @@ export const ChatTutorView: React.FC<ChatTutorViewProps> = ({
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
-  const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     storage.saveChatHistory(messages);
   }, [messages]);
 
-  // A new answer scrolls to its first line so you read from the top; everything else follows the bottom.
-  useEffect(() => {
-    const last = messages[messages.length - 1];
-    if (last?.sender === 'assistant' && !isLoading) {
-      document.getElementById(last.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    } else {
-      endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
-    }
-  }, [messages, isLoading]);
+  const flash = (message: string) => {
+    setToast(message);
+    setTimeout(() => setToast(null), 3000);
+  };
 
   const handleSend = async (textToSend?: string) => {
     const query = (textToSend ?? input).trim();
@@ -108,7 +102,7 @@ export const ChatTutorView: React.FC<ChatTutorViewProps> = ({
     setIsLoading(true);
 
     try {
-      await new Promise((r) => setTimeout(r, 500));
+      await new Promise((r) => setTimeout(r, 400));
       const payload = await aiService.askGrove(query, notes, profile);
 
       setProfile((prev) => {
@@ -132,8 +126,7 @@ export const ChatTutorView: React.FC<ChatTutorViewProps> = ({
       ]);
     } catch (err) {
       console.error(err);
-      setToast('Something went wrong. Try asking again.');
-      setTimeout(() => setToast(null), 3000);
+      flash('Something went wrong. Try asking again.');
     } finally {
       setIsLoading(false);
     }
@@ -146,8 +139,7 @@ export const ChatTutorView: React.FC<ChatTutorViewProps> = ({
       messages[messages.length - 1]?.text.slice(0, 40)
     );
     setProfile(updatedProfile);
-    setToast(feedbackMessage);
-    setTimeout(() => setToast(null), 3000);
+    flash(feedbackMessage);
     if (action === 'quiz') handleSend('Generate an active-recall conceptual quiz question based on this topic.');
   };
 
@@ -156,174 +148,140 @@ export const ChatTutorView: React.FC<ChatTutorViewProps> = ({
     storage.saveChatHistory([]);
   };
 
-  const lastAssistantId = [...messages].reverse().find((m) => m.sender === 'assistant')?.id;
-  const firstName = profile.studentName.split(' ')[0];
+  // Only the latest exchange is on screen, like a workbench. Earlier ones stay saved.
+  const last = messages[messages.length - 1];
+  const answer = last?.sender === 'assistant' ? last : undefined;
+  const question = answer ? [...messages].reverse().find((m) => m.sender === 'user') : undefined;
+  const connections = answer?.yearConnections ?? [];
 
   return (
-    <div className="mx-auto flex h-full w-full max-w-3xl flex-col px-4 sm:px-6">
+    <section className={`${panel} space-y-4`} aria-label="Ask Grove">
       <Toast message={toast} />
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          handleSend();
+        }}
+        className="space-y-3"
+      >
+        <label htmlFor="ask" className={labelCls}>
+          Ask anything. Grove answers from your own notes first.
+        </label>
+        <textarea
+          id="ask"
+          rows={3}
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleSend();
+          }}
+          placeholder={PLACEHOLDER}
+          className={`${field} min-h-[84px] resize-y`}
+        />
+        <div className="flex flex-wrap items-center gap-3">
+          <button type="submit" disabled={!input.trim() || isLoading} className={primaryBtn}>
+            {isLoading ? 'Looking through your notes…' : 'Ask Grove'}
+          </button>
+          {messages.length > 0 && !isLoading && (
+            <button type="button" onClick={clearChat} className="min-h-10 px-1 text-sm text-muted hover:text-text">
+              Clear
+            </button>
+          )}
+        </div>
+      </form>
 
-      <div className="flex-1 overflow-y-auto overscroll-contain py-6">
-        {messages.length === 0 && !isLoading ? (
-          <div className="flex min-h-full flex-col justify-center gap-8 pb-8">
-            <div>
-              <h1 className="text-3xl font-semibold tracking-tight text-text">Hi {firstName}.</h1>
-              <p className="mt-2 max-w-md text-muted">
-                Ask about anything from your degree. Grove answers from your own notes and shows where each answer comes from.
-              </p>
-            </div>
-            <div className="flex flex-col items-start gap-2">
-              {STARTER_PROMPTS.map((prompt) => (
-                <button
-                  key={prompt}
-                  onClick={() => handleSend(prompt)}
-                  className="min-h-11 rounded-xl bg-surface px-4 py-2 text-left text-sm text-text ring-1 ring-line transition-colors hover:bg-raised"
-                >
-                  {prompt}
-                </button>
-              ))}
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-8">
-            {messages.map((msg) => {
-              if (msg.sender === 'user') {
+      {!answer && !isLoading && (
+        <div className="flex flex-wrap gap-2" aria-label="Suggestions">
+          {STARTER_PROMPTS.map((prompt) => (
+            <button
+              key={prompt}
+              onClick={() => handleSend(prompt)}
+              className="min-h-9 rounded-full bg-raised px-3.5 py-1 text-left text-sm text-text hover:brightness-125"
+            >
+              {prompt}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {answer && !isLoading && (
+        <div className="space-y-4 border-t border-line pt-4 animate-slide-up">
+          {question && <p className="text-sm text-muted">You asked: {question.text}</p>}
+          <MessageBody text={answer.text} />
+
+          {answer.citedNotes && answer.citedNotes.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {answer.citedNotes.map((c) => {
+                const full = notes.find((n) => n.id === c.noteId);
                 return (
-                  <div key={msg.id} className="flex justify-end">
-                    <div className="max-w-[85%] rounded-2xl bg-raised px-4 py-2.5 text-[15px] leading-7 text-text animate-slide-up">
-                      {msg.text}
-                    </div>
-                  </div>
+                  <button key={c.noteId} onClick={() => full && onOpenNoteDetail?.(full)} className={`${chip} hover:brightness-125`}>
+                    Y{c.year} · {c.courseCode} · {c.title}
+                  </button>
                 );
-              }
+              })}
+            </div>
+          )}
 
-              const connections = msg.yearConnections ?? [];
-              const isLast = msg.id === lastAssistantId;
-              return (
-                <div key={msg.id} id={msg.id} className="scroll-mt-2 space-y-4 animate-slide-up">
-                  <MessageBody text={msg.text} />
-
-                  {connections.length > 0 && (
-                    <div className="rounded-xl bg-surface p-4">
-                      <p className="text-sm text-muted">
-                        Builds on Year {connections[0].earlierYear} · {connections[0].earlierCourse}
-                      </p>
-                      <p className="mt-1 font-medium text-text">{connections[0].earlierTopic}</p>
-                      <p className="mt-1 text-sm leading-6 text-muted">{connections[0].connectionText}</p>
-                      {connections.length > 1 && (
-                        <div className="mt-2">
-                          <Disclosure summary={`${connections.length - 1} more ${connections.length === 2 ? 'connection' : 'connections'}`}>
-                            <div className="space-y-3">
-                              {connections.slice(1).map((c, i) => (
-                                <div key={i}>
-                                  <p className="text-sm text-muted">Year {c.earlierYear} · {c.earlierCourse}</p>
-                                  <p className="font-medium text-text">{c.earlierTopic}</p>
-                                  <p className="text-sm leading-6 text-muted">{c.connectionText}</p>
-                                </div>
-                              ))}
-                            </div>
-                          </Disclosure>
+          {connections.length > 0 && (
+            <div className="rounded-md bg-bg p-4 ring-1 ring-line">
+              <p className="font-mono text-xs uppercase tracking-wider text-accent">
+                Builds on year {connections[0].earlierYear} · {connections[0].earlierCourse}
+              </p>
+              <p className="mt-1 font-medium text-text">{connections[0].earlierTopic}</p>
+              <p className="mt-1 text-sm leading-6 text-muted">{connections[0].connectionText}</p>
+              {connections.length > 1 && (
+                <div className="mt-2">
+                  <Disclosure summary={`${connections.length - 1} more ${connections.length === 2 ? 'connection' : 'connections'}`}>
+                    <div className="space-y-3">
+                      {connections.slice(1).map((c, i) => (
+                        <div key={i}>
+                          <p className="font-mono text-xs text-muted">Year {c.earlierYear} · {c.earlierCourse}</p>
+                          <p className="font-medium text-text">{c.earlierTopic}</p>
+                          <p className="text-sm leading-6 text-muted">{c.connectionText}</p>
                         </div>
-                      )}
-                    </div>
-                  )}
-
-                  {msg.citedNotes && msg.citedNotes.length > 0 && (
-                    <Disclosure summary={`From your notes (${msg.citedNotes.length})`}>
-                      <div className="flex flex-wrap gap-2">
-                        {msg.citedNotes.map((c) => {
-                          const full = notes.find((n) => n.id === c.noteId);
-                          return (
-                            <button
-                              key={c.noteId}
-                              onClick={() => full && onOpenNoteDetail?.(full)}
-                              className="min-h-9 max-w-full rounded-lg bg-surface px-3 text-left text-sm text-text ring-1 ring-line hover:bg-raised"
-                            >
-                              <span className="text-muted">Y{c.year} · {c.courseCode} · </span>
-                              <span className="truncate">{c.title}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </Disclosure>
-                  )}
-
-                  {msg.seniorTips && msg.seniorTips.length > 0 && (
-                    <Disclosure summary={`Tips from seniors (${msg.seniorTips.length})`}>
-                      <div className="space-y-3">
-                        {msg.seniorTips.map((tip, i) => (
-                          <div key={i} className="rounded-xl bg-surface p-4">
-                            <p className="text-sm text-muted">
-                              {tip.authorName} · {tip.courseCode}, cleared with {tip.authorGrade}
-                            </p>
-                            <p className="mt-1 text-sm leading-6 text-text">{tip.tip}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </Disclosure>
-                  )}
-
-                  {isLast && !isLoading && (
-                    <div className="flex flex-wrap gap-2 pt-1" aria-label="Adjust how Grove answers">
-                      {ADAPT_ACTIONS.map((a) => (
-                        <button
-                          key={a.id}
-                          onClick={() => handleFeedback(a.id)}
-                          className="min-h-9 rounded-lg px-3 text-sm text-muted ring-1 ring-line transition-colors hover:bg-surface hover:text-text"
-                        >
-                          {a.label}
-                        </button>
                       ))}
                     </div>
-                  )}
+                  </Disclosure>
                 </div>
-              );
-            })}
+              )}
+            </div>
+          )}
 
-            {isLoading && (
-              <p className="flex items-center gap-2 text-sm text-muted" role="status">
-                <span className="h-2 w-2 animate-pulse rounded-full bg-accent" />
-                Looking through your notes…
-              </p>
-            )}
-          </div>
-        )}
-        <div ref={endRef} />
-      </div>
+          {answer.seniorTips && answer.seniorTips.length > 0 && (
+            <Disclosure summary={`Tips from seniors (${answer.seniorTips.length})`}>
+              <div className="space-y-3">
+                {answer.seniorTips.map((tip, i) => (
+                  <div key={i} className="rounded-md bg-bg p-4 ring-1 ring-line">
+                    <p className="font-mono text-xs text-muted">
+                      {tip.authorName} · {tip.courseCode}, cleared with {tip.authorGrade}
+                    </p>
+                    <p className="mt-1 text-sm leading-6 text-text">{tip.tip}</p>
+                  </div>
+                ))}
+              </div>
+            </Disclosure>
+          )}
 
-      <div className="pb-4 pt-2">
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            handleSend();
-          }}
-          className="flex items-center gap-2"
-        >
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask about anything in your degree"
-            aria-label="Ask Grove"
-            className={`${field} h-12 flex-1 rounded-xl bg-surface px-4`}
-          />
-          <button
-            type="submit"
-            disabled={!input.trim() || isLoading}
-            aria-label="Send"
-            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-accent-strong text-white transition-colors hover:bg-accent hover:text-bg disabled:opacity-40"
-          >
-            <ArrowUp className="h-5 w-5" />
-          </button>
-        </form>
-        {messages.length > 0 && (
-          <div className="mt-1 flex justify-end">
-            <button onClick={clearChat} className="min-h-9 px-1 text-sm text-muted hover:text-text">
-              Clear conversation
-            </button>
+          <div className="flex flex-wrap gap-1.5" aria-label="Adjust how Grove answers">
+            {ADAPT_ACTIONS.map((a) => (
+              <button
+                key={a.id}
+                onClick={() => handleFeedback(a.id)}
+                className="min-h-8 rounded-md px-2.5 text-[13px] text-text ring-1 ring-line hover:bg-raised"
+              >
+                {a.label}
+              </button>
+            ))}
           </div>
-        )}
-      </div>
-    </div>
+        </div>
+      )}
+
+      {isLoading && (
+        <p className="flex items-center gap-2 text-sm text-muted" role="status">
+          <span className="h-2 w-2 animate-pulse rounded-full bg-accent" />
+          Looking through your notes…
+        </p>
+      )}
+    </section>
   );
 };

@@ -119,7 +119,7 @@ export const QuizView: React.FC<QuizViewProps> = ({
   };
 
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-6 px-4 py-6 sm:px-6">
+    <div className="w-full space-y-6">
       
       <PageHeader
         title="Recall"
@@ -229,10 +229,10 @@ export const QuizView: React.FC<QuizViewProps> = ({
 
               <button
                 onClick={() => handleScore('easy')}
-                className="min-h-14 rounded-xl bg-accent-strong hover:bg-accent hover:text-bg text-white p-3 text-center transition-colors"
+                className="min-h-14 rounded-xl bg-accent text-ink hover:brightness-110 p-3 text-center transition-colors"
               >
                 <div className="text-sm font-medium">Easy</div>
-                <div className="text-xs text-white/70">+14 days</div>
+                <div className="text-xs text-ink/70">+14 days</div>
               </button>
             </div>
           ) : (
@@ -258,7 +258,7 @@ export const QuizView: React.FC<QuizViewProps> = ({
           <div className="pt-3">
             <button
               onClick={resetSession}
-              className="min-h-11 rounded-xl bg-accent-strong px-6 text-sm font-semibold text-white transition-colors hover:bg-accent hover:text-bg"
+              className="min-h-11 rounded-xl bg-accent px-6 text-sm font-semibold text-ink transition-[filter] hover:brightness-110"
             >
               Go again
             </button>

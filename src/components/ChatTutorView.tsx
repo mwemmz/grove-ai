@@ -245,6 +245,16 @@ export const ChatTutorView: React.FC<ChatTutorViewProps> = ({
         <div className="space-y-4 border-t border-line pt-4 animate-slide-up">
           {question && <p className="text-sm text-muted">You asked: {question.text}</p>}
           <MessageBody text={answer.text} />
+          {(() => {
+            const tag = answer.appliedProfileAttributes?.find((a) => a.startsWith('Answered by') || a.startsWith('AI engine unavailable'));
+            if (!tag) return null;
+            const failed = tag.startsWith('AI engine unavailable');
+            return (
+              <p role="status" className={`text-xs ${failed ? 'text-warn' : 'text-muted'}`}>
+                {tag}
+              </p>
+            );
+          })()}
 
           {answer.citedNotes && answer.citedNotes.length > 0 && (
             <div className="flex flex-wrap gap-2">

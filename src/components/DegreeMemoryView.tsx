@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
+import { FileUp } from 'lucide-react';
 import { Note, Course, AcademicYear } from '../types';
 import { storage } from '../services/storage';
+import { ACCEPT, extractText } from '../services/fileText';
 import { Modal, Inline, field, labelCls, primaryBtn, panel } from './ui';
 
 interface DegreeMemoryViewProps {
@@ -41,6 +43,11 @@ export const DegreeMemoryView: React.FC<DegreeMemoryViewProps> = ({
   const [newYear, setNewYear] = useState<AcademicYear>(4);
   const [newContent, setNewContent] = useState('');
 
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [dragging, setDragging] = useState(false);
+  const [reading, setReading] = useState(false);
+  const [uploadMsg, setUploadMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
   const q = query.trim().toLowerCase();
   const filtered = notes.filter((n) => {
     if (!q) return true;
@@ -53,28 +60,70 @@ export const DegreeMemoryView: React.FC<DegreeMemoryViewProps> = ({
 
   const courseOf = (id: string) => courses.find((c) => c.id === id);
 
+  const makeNote = (title: string, content: string, i = 0): Note => {
+    const course = courseOf(newCourseId);
+    const now = new Date().toISOString();
+    return {
+      id: `note-${Date.now()}-${i}`,
+      courseId: newCourseId,
+      year: course ? course.year : newYear,
+      title: title.trim(),
+      content: content.trim(),
+      summary: content.trim().replace(/\s+/g, ' ').slice(0, 140),
+      tags: autoTags(`${title} ${content}`),
+      keyTakeaways: [],
+      createdAt: now,
+      updatedAt: now,
+      masteryScore: 85,
+    };
+  };
+
+  /** One file fills the form so it can be reviewed; several files are saved straight away. */
+  const handleFiles = async (list: FileList | File[]) => {
+    const files = Array.from(list);
+    if (!files.length) return;
+    setReading(true);
+    setUploadMsg(null);
+    const done: { title: string; text: string; truncated: boolean }[] = [];
+    const problems: string[] = [];
+    for (const f of files) {
+      try {
+        done.push(await extractText(f));
+      } catch (err) {
+        problems.push(err instanceof Error ? err.message : `${f.name}: could not be read.`);
+      }
+    }
+    setReading(false);
+    if (done.length === 1) {
+      setNewTitle(done[0].title);
+      setNewContent(done[0].text);
+    } else if (done.length > 1) {
+      const created = done.map((d, i) => makeNote(d.title, d.text, i));
+      const updated = [...created, ...notes];
+      setNotes(updated);
+      storage.saveNotes(updated);
+    }
+    const trunc = done.some((d) => d.truncated) ? ' Very long files were shortened.' : '';
+    const okText =
+      done.length === 1
+        ? `Read “${done[0].title}”. Check it, then save.${trunc}`
+        : done.length > 1
+          ? `Added ${done.length} notes to ${courseOf(newCourseId)?.code ?? 'your grove'}.${trunc}`
+          : '';
+    setUploadMsg({ ok: done.length > 0 && problems.length === 0, text: [okText, ...problems].filter(Boolean).join(' ') });
+    if (fileRef.current) fileRef.current.value = '';
+  };
+
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTitle.trim() || !newContent.trim()) return;
-    const course = courseOf(newCourseId);
-    const created: Note = {
-      id: `note-${Date.now()}`,
-      courseId: newCourseId,
-      year: course ? course.year : newYear,
-      title: newTitle.trim(),
-      content: newContent.trim(),
-      summary: newContent.trim().slice(0, 140),
-      tags: autoTags(`${newTitle} ${newContent}`),
-      keyTakeaways: [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      masteryScore: 85,
-    };
+    const created = makeNote(newTitle, newContent);
     const updated = [created, ...notes];
     setNotes(updated);
     storage.saveNotes(updated);
     setNewTitle('');
     setNewContent('');
+    setUploadMsg(null);
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
   };
@@ -114,6 +163,36 @@ export const DegreeMemoryView: React.FC<DegreeMemoryViewProps> = ({
             </select>
           </div>
         )}
+        <div>
+          <span className={labelCls}>Upload notes</span>
+          <input
+            ref={fileRef}
+            id="n-file"
+            type="file"
+            multiple
+            accept={ACCEPT}
+            className="sr-only"
+            onChange={(e) => e.target.files && void handleFiles(e.target.files)}
+          />
+          <label
+            htmlFor="n-file"
+            onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+            onDragLeave={() => setDragging(false)}
+            onDrop={(e) => { e.preventDefault(); setDragging(false); void handleFiles(e.dataTransfer.files); }}
+            className={`flex cursor-pointer items-center gap-3 rounded-md border border-dashed px-3 py-3 text-sm focus-within:border-accent ${
+              dragging ? 'border-accent bg-raised text-text' : 'border-line text-muted hover:bg-raised hover:text-text'
+            }`}
+          >
+            <FileUp aria-hidden className="h-5 w-5 shrink-0 text-accent" />
+            <span className="min-w-0">
+              {reading ? 'Reading…' : 'Choose files or drop them here'}
+              <span className="block text-xs text-muted">PDF, Word, text, Markdown or CSV. Read on your device, up to 8 MB each.</span>
+            </span>
+          </label>
+          {uploadMsg && (
+            <p role="status" className={`mt-2 text-xs ${uploadMsg.ok ? 'text-accent' : 'text-warn'}`}>{uploadMsg.text}</p>
+          )}
+        </div>
         <div>
           <label htmlFor="n-title" className={labelCls}>Title</label>
           <input id="n-title" type="text" required value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder="What is this note about?" className={field} />

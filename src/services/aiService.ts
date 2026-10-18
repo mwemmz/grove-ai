@@ -1,5 +1,6 @@
 import { Note, LearningProfile, AcademicYear, MemoryLogEntry, StudentTier } from '../types';
 import { storage } from './storage';
+import { PROVIDERS, buildSystemPrompt, buildUserPrompt, generate } from './llmService';
 
 export interface AIResponsePayload {
   text: string;
@@ -177,8 +178,44 @@ export const aiService = {
     }
 
     // Default intelligent synthesized answer adapted to user style
-    const resp = this.generateAdaptiveResponse(question, topNotes, profile, citedNotes, connections, appliedAttributes);
+    const greeting = /^\s*(hi|hello|hey|yo|good (morning|afternoon|evening)|thanks?|thank you)\b[\s!.?]*$/i.test(question);
+    const resp: AIResponsePayload =
+      topNotes.length > 0
+        ? this.generateAdaptiveResponse(question, topNotes, profile, citedNotes, connections, appliedAttributes)
+        : {
+            text: greeting
+              ? `Hi${profile.studentName ? ` ${profile.studentName.split(' ')[0]}` : ''}! Ask me about something you have studied, like "How does Raft log replication work?", and I will answer from your notes.`
+              : `I could not find a note about that, so I will not guess. Try different words from your notes, or add a note about it under "Add to your grove". Connect an AI engine in Settings and I can also answer from general knowledge, clearly marked as not from your notes.`,
+            citedNotes: [],
+            yearConnections: [],
+            appliedProfileAttributes: appliedAttributes,
+          };
     resp.seniorTips = matchingSeniorTips;
+
+    // A real model answers when the student has connected a key; the local answer is the safety net.
+    const provider = storage.getApiProvider();
+    const key = storage.getApiKey(provider);
+    if (provider === 'mock' || !key) {
+      resp.appliedProfileAttributes = ['Answered by Local Grove. Add an AI key in Settings for fuller answers.', ...resp.appliedProfileAttributes];
+    }
+    if (provider !== 'mock' && key) {
+      const def = PROVIDERS.find((p) => p.id === provider);
+      const model = storage.getApiModel(provider) || def?.model || '';
+      try {
+        const grounding = relevant.slice(0, 5).map((r) => r.note);
+        const text = await generate({
+          provider, key, model,
+          system: buildSystemPrompt(profile),
+          user: buildUserPrompt(question, grounding),
+        });
+        if (text) {
+          resp.text = text;
+          resp.appliedProfileAttributes = [`Answered by ${def?.label ?? provider}`, ...resp.appliedProfileAttributes];
+        }
+      } catch (err) {
+        resp.appliedProfileAttributes = [`AI engine unavailable, used local answer (${err instanceof Error ? err.message : 'unknown error'})`, ...resp.appliedProfileAttributes];
+      }
+    }
     return resp;
   },
 

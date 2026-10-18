@@ -1,5 +1,6 @@
 import { ThemePicker } from './ThemePicker';
-import React, { useState } from 'react';
+import { PROVIDERS, testKey, type Provider } from '../services/llmService';
+import React, { useEffect, useState } from 'react';
 import { 
   X, 
   Settings, 
@@ -32,13 +33,25 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   setProfile,
   onResetDemo,
 }) => {
-  const [provider, setProvider] = useState<'mock' | 'gemini' | 'openai'>(() => storage.getApiProvider());
-  const [apiKey, setApiKey] = useState(() => storage.getApiKey());
+  const [provider, setProvider] = useState<Provider>(() => storage.getApiProvider());
+  const [keys, setKeys] = useState<Record<string, string>>(() => Object.fromEntries(PROVIDERS.map((p) => [p.id, storage.getApiKey(p.id)])));
+  const [models, setModels] = useState<Record<string, string>>(() => Object.fromEntries(PROVIDERS.map((p) => [p.id, storage.getApiModel(p.id)])));
+  const [showKey, setShowKey] = useState(false);
+  const [test, setTest] = useState<{ state: 'idle' | 'busy' | 'ok' | 'fail'; msg: string }>({ state: 'idle', msg: '' });
+  const apiKey = keys[provider] ?? '';
+  const def = PROVIDERS.find((p) => p.id === provider)!;
   const [name, setName] = useState(profile.studentName);
   const [degree, setDegree] = useState(profile.degreeName);
   const [university, setUniversity] = useState(profile.university);
   const [year, setYear] = useState(profile.currentYear);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -54,10 +67,25 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     setProfile(updated);
     storage.saveProfile(updated);
     storage.saveApiProvider(provider);
-    storage.saveApiKey(apiKey.trim());
+    PROVIDERS.forEach((p) => {
+      if (p.id === 'mock') return;
+      storage.saveApiKey((keys[p.id] ?? '').trim(), p.id);
+      storage.saveApiModel((models[p.id] ?? '').trim(), p.id);
+    });
 
     setToastMessage('Settings successfully saved!');
     setTimeout(() => setToastMessage(null), 2500);
+  };
+
+  const handleTest = async () => {
+    if (provider === 'mock') return;
+    setTest({ state: 'busy', msg: 'Checking…' });
+    try {
+      await testKey(provider, apiKey.trim(), (models[provider] || def.model).trim());
+      setTest({ state: 'ok', msg: 'Connected. Save settings to use it.' });
+    } catch (err) {
+      setTest({ state: 'fail', msg: err instanceof Error ? err.message : 'Could not connect.' });
+    }
   };
 
   const handleDownloadBackup = async () => {
@@ -188,40 +216,78 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               AI Intelligence Engine
             </h3>
 
-            <div className="grid grid-cols-3 gap-2">
-              {[
-                { id: 'mock', label: 'Local Grove AI', sub: 'Zero setup / Offline' },
-                { id: 'gemini', label: 'Google Gemini', sub: 'Bring your key' },
-                { id: 'openai', label: 'OpenAI GPT-4', sub: 'Bring your key' },
-              ].map(p => (
+            <div role="radiogroup" aria-label="AI engine" className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {PROVIDERS.map((p) => (
                 <button
                   type="button"
+                  role="radio"
+                  aria-checked={provider === p.id}
                   key={p.id}
-                  onClick={() => setProvider(p.id as any)}
-                  className={`p-2.5 rounded-lg border text-left transition-colors ${
-                    provider === p.id
-                      ? 'bg-emerald-500/10 border-emerald-500/60 text-text'
-                      : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
+                  onClick={() => { setProvider(p.id); setTest({ state: 'idle', msg: '' }); setShowKey(false); }}
+                  className={`rounded-lg border p-2.5 text-left ${
+                    provider === p.id ? 'border-accent bg-raised text-text' : 'border-line text-muted hover:bg-raised hover:text-text'
                   }`}
                 >
                   <div className="text-xs font-bold">{p.label}</div>
-                  <div className="text-xs text-slate-500 mt-0.5">{p.sub}</div>
+                  <div className="mt-0.5 text-xs text-muted">{p.sub}</div>
                 </button>
               ))}
             </div>
 
-            {provider !== 'mock' && (
-              <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1">
-                  {provider.toUpperCase()} API Key
-                </label>
-                <input
-                  type="password"
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  placeholder="sk-..."
-                  className="w-full rounded-lg bg-slate-900 border border-slate-700/80 px-3 py-1.5 text-xs text-text font-mono focus:outline-none focus:border-emerald-500"
-                />
+            {provider === 'mock' ? (
+              <p className="text-xs text-muted">Answers come from your notes with built-in rules. Add a key to get a real AI model answering from them.</p>
+            ) : (
+              <div className="space-y-3">
+                <div>
+                  <label htmlFor="ai-key" className="mb-1 block text-xs font-medium text-slate-400">{def.label} API key</label>
+                  <div className="flex gap-2">
+                    <input
+                      id="ai-key"
+                      type={showKey ? 'text' : 'password'}
+                      autoComplete="off"
+                      spellCheck={false}
+                      value={apiKey}
+                      onChange={(e) => { setKeys({ ...keys, [provider]: e.target.value }); setTest({ state: 'idle', msg: '' }); }}
+                      placeholder={def.keyHint}
+                      className="min-w-0 flex-1 rounded-lg border border-slate-700/80 bg-slate-900 px-3 py-1.5 font-mono text-xs text-text focus:border-emerald-500 focus:outline-none"
+                    />
+                    <button type="button" onClick={() => setShowKey((v) => !v)} className="rounded-lg border border-line px-3 text-xs text-muted hover:bg-raised hover:text-text">
+                      {showKey ? 'Hide' : 'Show'}
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <label htmlFor="ai-model" className="mb-1 block text-xs font-medium text-slate-400">Model</label>
+                  <input
+                    id="ai-model"
+                    type="text"
+                    spellCheck={false}
+                    value={models[provider] ?? ''}
+                    onChange={(e) => setModels({ ...models, [provider]: e.target.value })}
+                    placeholder={def.model}
+                    className="w-full rounded-lg border border-slate-700/80 bg-slate-900 px-3 py-1.5 font-mono text-xs text-text focus:border-emerald-500 focus:outline-none"
+                  />
+                  <p className="mt-1 text-xs text-muted">Leave blank to use {def.model}. Change it if the provider retires that name.</p>
+                </div>
+                <div className="flex flex-wrap items-center gap-3">
+                  <button type="button" onClick={() => void handleTest()} disabled={!apiKey.trim() || test.state === 'busy'} className="rounded-lg border border-line px-3 py-1.5 text-xs font-semibold text-text hover:bg-raised">
+                    Test key
+                  </button>
+                  {def.keyUrl && (
+                    <a href={def.keyUrl} target="_blank" rel="noreferrer" className="text-xs text-accent underline-offset-2 hover:underline">Get a key</a>
+                  )}
+                  {apiKey && (
+                    <button type="button" onClick={() => { setKeys({ ...keys, [provider]: '' }); setTest({ state: 'idle', msg: '' }); }} className="text-xs text-muted hover:text-text">
+                      Remove key
+                    </button>
+                  )}
+                  {test.msg && (
+                    <span role="status" className={`text-xs ${test.state === 'ok' ? 'text-accent' : test.state === 'fail' ? 'text-warn' : 'text-muted'}`}>{test.msg}</span>
+                  )}
+                </div>
+                <p className="text-xs leading-relaxed text-muted">
+                  Your key stays in this browser and goes only to {def.label}. When you ask a question, the question and the few notes that match it are sent there to write the answer. Use a key with a spending limit, and remove it on a shared computer.
+                </p>
               </div>
             )}
           </div>

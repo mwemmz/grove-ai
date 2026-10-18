@@ -36,6 +36,10 @@ import { apiGet, apiPost, apiPut } from '../lib/api';
 
 const API_KEY = 'grove_api_key_v1';
 const API_PROVIDER = 'grove_api_provider_v1';
+const currentProvider = (): 'mock' | 'anthropic' | 'gemini' | 'openai' => {
+  const p = localStorage.getItem(API_PROVIDER);
+  return p === 'anthropic' || p === 'gemini' || p === 'openai' ? p : 'mock';
+};
 
 interface DataCache {
   courses: Course[];
@@ -317,19 +321,31 @@ export const storage = {
   },
 
   // --- LLM provider settings (client-only secrets) ---
-  getApiKey(): string {
-    return localStorage.getItem(API_KEY) || '';
+  // One key and one model per provider, so switching provider never sends the wrong key.
+  getApiKey(provider: string = currentProvider()): string {
+    return localStorage.getItem(`${API_KEY}_${provider}`) || (provider === 'gemini' || provider === 'openai' ? localStorage.getItem(API_KEY) || '' : '');
   },
 
-  saveApiKey(key: string): void {
-    localStorage.setItem(API_KEY, key);
+  saveApiKey(key: string, provider: string = currentProvider()): void {
+    if (key) localStorage.setItem(`${API_KEY}_${provider}`, key);
+    else localStorage.removeItem(`${API_KEY}_${provider}`);
   },
 
-  getApiProvider(): 'mock' | 'gemini' | 'openai' {
-    return (localStorage.getItem(API_PROVIDER) as 'mock' | 'gemini' | 'openai') || 'mock';
+  getApiModel(provider: string = currentProvider()): string {
+    return localStorage.getItem(`grove_api_model_v1_${provider}`) || '';
   },
 
-  saveApiProvider(provider: 'mock' | 'gemini' | 'openai'): void {
+  saveApiModel(model: string, provider: string = currentProvider()): void {
+    if (model) localStorage.setItem(`grove_api_model_v1_${provider}`, model);
+    else localStorage.removeItem(`grove_api_model_v1_${provider}`);
+  },
+
+  getApiProvider(): 'mock' | 'anthropic' | 'gemini' | 'openai' {
+    const p = localStorage.getItem(API_PROVIDER);
+    return p === 'anthropic' || p === 'gemini' || p === 'openai' ? p : 'mock';
+  },
+
+  saveApiProvider(provider: 'mock' | 'anthropic' | 'gemini' | 'openai'): void {
     localStorage.setItem(API_PROVIDER, provider);
   },
 

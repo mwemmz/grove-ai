@@ -35,6 +35,7 @@ function read<T>(key: string, fallback: T): T {
 function write(key: string, value: unknown): void {
   try {
     localStorage.setItem(key, JSON.stringify(value));
+    window.dispatchEvent(new Event('grove-study-changed'));
   } catch {
     /* storage blocked: the app still works for this visit */
   }

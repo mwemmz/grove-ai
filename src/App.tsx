@@ -1,8 +1,11 @@
 import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { useAuth, SignInButton } from '@clerk/react';
 import { TreePine } from 'lucide-react';
-import { Header, Tabs, AppTab } from './components/Header';
-import { ChatTutorView } from './components/ChatTutorView';
+import { AppTab, TAB_LABEL } from './components/Header';
+import { Shell } from './components/Shell';
+import { Sidebar } from './components/Sidebar';
+import { ProgressPanel } from './components/ProgressPanel';
+import { ChatTutorView, NEW_VIEW } from './components/ChatTutorView';
 import { DegreeMemoryView } from './components/DegreeMemoryView';
 import { StudyBlueprintsView } from './components/StudyBlueprintsView';
 import { PeerTutoringView } from './components/PeerTutoringView';
@@ -17,6 +20,7 @@ import {
   Note,
   Course,
   LearningProfile,
+  ChatMessage,
   Flashcard,
   PortfolioSkill,
   PortfolioProject,
@@ -26,6 +30,7 @@ import {
   TutorRequest,
 } from './types';
 import { storage } from './services/storage';
+import { aiService } from './services/aiService';
 import { setTokenProvider } from './lib/api';
 
 function LoadingScreen({ label }: { label: string }) {
@@ -95,6 +100,11 @@ function GroveApp() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [studyPreset, setStudyPreset] = useState<StudyPreset | null>(null);
 
+  // Conversation history lives here so the sidebar, the progress panel and the Ask box all agree.
+  const [chat, setChat] = useState<ChatMessage[]>([]);
+  const [chatView, setChatView] = useState<string | null>(null);
+  const seededChat = useRef(false);
+
   // Skips the auto-save effects for the initial post-hydration commit.
   const skipInitialSync = useRef(true);
 
@@ -112,6 +122,8 @@ function GroveApp() {
       setBlueprints(storage.getBlueprints());
       setTutors(storage.getTutors());
       setTutorRequests(storage.getTutorRequests());
+      // Older saved chats began with a long welcome message; drop it.
+      setChat(storage.getChatHistory().filter((m) => !m.id.startsWith('welcome')));
       setIsDataReady(true);
     });
     return () => {
@@ -142,6 +154,11 @@ function GroveApp() {
 
   useEffect(() => {
     if (skipInitialSync.current) return;
+    storage.saveChatHistory(chat);
+  }, [chat]);
+
+  useEffect(() => {
+    if (skipInitialSync.current) return;
     storage.saveSeniorComments(seniorComments);
   }, [seniorComments]);
 
@@ -167,6 +184,40 @@ function GroveApp() {
       skipInitialSync.current = false;
     }
   }, [isDataReady]);
+
+  // A brand-new account starts with a few example questions so the history is not empty.
+  useEffect(() => {
+    if (!isDataReady || seededChat.current) return;
+    seededChat.current = true;
+    if (chat.length > 0 || notes.length === 0) return;
+    (async () => {
+      const starters = [
+        'Where did I first learn about mutual exclusion and locks?',
+        'Compare B+ Trees with Hash Tables for indexing',
+        'How does Raft log replication work?',
+      ];
+      const seeded: ChatMessage[] = [];
+      for (const [i, q] of starters.entries()) {
+        const payload = await aiService.askGrove(q, notes, profile);
+        const stamp = new Date(Date.now() - (starters.length - i) * 3600_000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        seeded.push(
+          { id: `user-seed-${i}`, sender: 'user', text: q, timestamp: stamp },
+          {
+            id: `assistant-seed-${i}`,
+            sender: 'assistant',
+            text: payload.text,
+            timestamp: stamp,
+            citedNotes: payload.citedNotes,
+            yearConnections: payload.yearConnections,
+            seniorTips: payload.seniorTips,
+            appliedProfileAttributes: payload.appliedProfileAttributes,
+          }
+        );
+      }
+      setChat(seeded);
+      setChatView(NEW_VIEW);
+    })();
+  }, [isDataReady, chat.length, notes, profile]);
 
   const handleResetDemo = async () => {
     await storage.resetAllToDemo();
@@ -203,27 +254,86 @@ function GroveApp() {
   const handleYearChange = (year: number) =>
     setProfile((prev) => ({ ...prev, currentYear: year as LearningProfile['currentYear'] }));
 
-  return (
-    <div className="app-shell min-h-dvh bg-bg font-sans text-text selection:bg-accent/30">
-      <div className="mx-auto w-full max-w-[900px] px-4 pb-16 pt-6">
-        <Header
-          notes={notes}
-          year={profile.currentYear}
-          onYearChange={handleYearChange}
-          onOpenSettings={() => setIsSettingsOpen(true)}
-        />
-        <Tabs
-          active={activeTab}
-          onChange={(tab) => {
-            setStudyPreset(null);
-            setActiveTab(tab);
-          }}
-        />
+  const goTo = (tab: AppTab) => {
+    setStudyPreset(null);
+    setActiveTab(tab);
+  };
 
-        <main className="app-main space-y-5">
+  const openNoteById = (id: string) => {
+    const note = notes.find((n) => n.id === id);
+    if (note) handleOpenNoteDetail(note);
+  };
+
+  // Each answered question becomes one line in the sidebar, newest first.
+  const recents = chat
+    .map((m, i) => ({ m, i }))
+    .filter(({ m, i }) => m.sender === 'assistant' && chat[i - 1]?.sender === 'user')
+    .map(({ m, i }) => ({ id: m.id, text: chat[i - 1].text }))
+    .reverse()
+    .slice(0, 8);
+
+  const shownAnswer =
+    chatView === NEW_VIEW
+      ? undefined
+      : chatView
+        ? chat.find((m) => m.id === chatView)
+        : chat[chat.length - 1]?.sender === 'assistant'
+          ? chat[chat.length - 1]
+          : undefined;
+  const sources = (shownAnswer?.citedNotes ?? []).map((c) => ({
+    noteId: c.noteId,
+    courseCode: c.courseCode,
+    year: c.year,
+    title: c.title,
+  }));
+
+  return (
+    <>
+      <Shell
+        title={TAB_LABEL[activeTab]}
+        sidebar={(api) => (
+          <Sidebar
+            tab={activeTab}
+            onTab={goTo}
+            recents={recents}
+            activeRecentId={activeTab === 'remember' && shownAnswer ? shownAnswer.id : null}
+            onRecent={(id) => {
+              setChatView(id);
+              goTo('remember');
+            }}
+            onNew={() => {
+              setChatView(NEW_VIEW);
+              goTo('remember');
+            }}
+            name={profile.studentName}
+            year={profile.currentYear}
+            onSettings={() => setIsSettingsOpen(true)}
+            afterChoose={api.closeIfDrawer}
+            onClose={api.close}
+          />
+        )}
+        panel={(api) => (
+          <ProgressPanel
+            notes={notes}
+            year={profile.currentYear}
+            onYearChange={handleYearChange}
+            sources={sources}
+            onOpenNote={openNoteById}
+            onTab={goTo}
+            onStartSession={handleStartSession}
+            afterChoose={api.closeIfDrawer}
+            onClose={api.close}
+          />
+        )}
+      >
+        <div className="space-y-5">
           {activeTab === 'remember' && (
             <>
               <ChatTutorView
+                messages={chat}
+                setMessages={setChat}
+                viewId={chatView}
+                setViewId={setChatView}
                 notes={notes}
                 profile={profile}
                 setProfile={setProfile}
@@ -297,8 +407,8 @@ function GroveApp() {
           {activeTab === 'quiz' && (
             <QuizView flashcards={flashcards} setFlashcards={setFlashcards} notes={notes} />
           )}
-        </main>
-      </div>
+        </div>
+      </Shell>
 
       <SettingsModal
         isOpen={isSettingsOpen}
@@ -307,7 +417,7 @@ function GroveApp() {
         setProfile={setProfile}
         onResetDemo={handleResetDemo}
       />
-    </div>
+    </>
   );
 }
 

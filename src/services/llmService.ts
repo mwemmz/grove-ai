@@ -29,11 +29,12 @@ export function buildSystemPrompt(profile: LearningProfile): string {
   ].filter(Boolean).join('\n');
 }
 
-export function buildUserPrompt(question: string, notes: Note[]): string {
+export function buildUserPrompt(question: string, notes: Note[], previous?: { question: string; answer: string }): string {
   const block = notes.length
     ? notes.map((n, i) => `NOTE ${i + 1}: ${n.title} (Year ${n.year}, ${n.courseId})\n${clip(n.content, 1800)}`).join('\n\n---\n\n')
     : '(no matching notes found)';
-  return `Student's notes:\n\n${block}\n\nQuestion: ${question}`;
+  const prior = previous ? `Previous exchange (for follow-ups):\nStudent: ${clip(previous.question, 300)}\nGrove: ${clip(previous.answer, 1500)}\n\n` : '';
+  return `Student's notes:\n\n${block}\n\n${prior}Question: ${question}`;
 }
 
 async function post(url: string, headers: Record<string, string>, body: unknown): Promise<unknown> {
@@ -80,9 +81,19 @@ export async function generate(r: LLMRequest): Promise<string> {
     const j = (await post(
       `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(r.model)}:generateContent`,
       { 'x-goog-api-key': r.key },
-      { systemInstruction: { parts: [{ text: r.system }] }, contents: [{ role: 'user', parts: [{ text: r.user }] }], generationConfig: { maxOutputTokens: max } },
-    )) as { candidates?: { content?: { parts?: { text?: string }[] } }[] };
-    return (j.candidates?.[0]?.content?.parts ?? []).map((p) => p.text ?? '').join('').trim();
+      {
+        systemInstruction: { parts: [{ text: r.system }] },
+        contents: [{ role: 'user', parts: [{ text: r.user }] }],
+        // Gemini 2.5 Flash "thinks" by default and thinking tokens count against maxOutputTokens, which can leave an empty answer.
+        generationConfig: { maxOutputTokens: max, ...(/flash/i.test(r.model) ? { thinkingConfig: { thinkingBudget: 0 } } : {}) },
+      },
+    )) as { candidates?: { finishReason?: string; content?: { parts?: { text?: string }[] } }[]; promptFeedback?: { blockReason?: string } };
+    const out = (j.candidates?.[0]?.content?.parts ?? []).map((p) => p.text ?? '').join('').trim();
+    if (!out) {
+      if (j.promptFeedback?.blockReason) throw new LLMError(`Gemini blocked this prompt (${j.promptFeedback.blockReason}).`);
+      throw new LLMError(`Gemini returned no text${j.candidates?.[0]?.finishReason ? ` (${j.candidates[0].finishReason})` : ''}. Try a different model name.`);
+    }
+    return out;
   }
   const j = (await post(
     'https://api.openai.com/v1/chat/completions',
@@ -94,6 +105,6 @@ export async function generate(r: LLMRequest): Promise<string> {
 
 /** Cheap round trip used by the "Test key" button. */
 export async function testKey(provider: LiveProvider, key: string, model: string): Promise<void> {
-  const text = await generate({ provider, key, model, system: 'Reply with the single word: ready', user: 'ping', maxTokens: 16 });
+  const text = await generate({ provider, key, model, system: 'Reply with the single word: ready', user: 'ping', maxTokens: 64 });
   if (!text) throw new LLMError('The provider answered with nothing. Check the model name.');
 }

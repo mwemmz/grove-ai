@@ -132,7 +132,8 @@ export const ChatTutorView: React.FC<ChatTutorViewProps> = ({
 
     try {
       await new Promise((r) => setTimeout(r, 400));
-      const payload = await aiService.askGrove(query, notes, profile);
+      const previous = answer && question ? { question: question.text, answer: answer.text } : undefined;
+      const payload = await aiService.askGrove(query, notes, profile, { previous });
 
       setProfile((prev) => {
         const updated = { ...prev, totalQuestionsAsked: prev.totalQuestionsAsked + 1 };
@@ -169,7 +170,7 @@ export const ChatTutorView: React.FC<ChatTutorViewProps> = ({
     );
     setProfile(updatedProfile);
     flash(feedbackMessage);
-    if (action === 'quiz') handleSend('Generate an active-recall conceptual quiz question based on this topic.');
+    if (action === 'quiz') handleSend(question ? `Quiz me with one short question on: ${question.text}` : 'Generate an active-recall conceptual quiz question based on this topic.');
   };
 
   const clearChat = () => {

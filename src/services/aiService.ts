@@ -122,8 +122,10 @@ export const aiService = {
   async askGrove(
     question: string,
     allNotes: Note[],
-    profile: LearningProfile
+    profile: LearningProfile,
+    opts: { live?: boolean; previous?: { question: string; answer: string } } = {}
   ): Promise<AIResponsePayload> {
+    const live = opts.live !== false; // demo seeding passes live:false so it never spends the student's key
     const qLower = question.toLowerCase();
     const relevant = this.findRelevantNotes(question, allNotes);
     const topNotes = relevant.slice(0, 3).map(r => r.note);
@@ -174,6 +176,7 @@ export const aiService = {
     if (isHistoryQuery) {
       const resp = this.generateTimelineResponse(question, allNotes, profile, citedNotes, connections, appliedAttributes);
       resp.seniorTips = matchingSeniorTips;
+      resp.appliedProfileAttributes = ['Answered by Local Grove (timeline from your notes)', ...resp.appliedProfileAttributes];
       return resp;
     }
 
@@ -195,10 +198,10 @@ export const aiService = {
     // A real model answers when the student has connected a key; the local answer is the safety net.
     const provider = storage.getApiProvider();
     const key = storage.getApiKey(provider);
-    if (provider === 'mock' || !key) {
+    if (provider === 'mock' || !key || !live) {
       resp.appliedProfileAttributes = ['Answered by Local Grove. Add an AI key in Settings for fuller answers.', ...resp.appliedProfileAttributes];
     }
-    if (provider !== 'mock' && key) {
+    if (provider !== 'mock' && key && live) {
       const def = PROVIDERS.find((p) => p.id === provider);
       const model = storage.getApiModel(provider) || def?.model || '';
       try {
@@ -206,7 +209,7 @@ export const aiService = {
         const text = await generate({
           provider, key, model,
           system: buildSystemPrompt(profile),
-          user: buildUserPrompt(question, grounding),
+          user: buildUserPrompt(question, grounding, opts.previous),
         });
         if (text) {
           resp.text = text;

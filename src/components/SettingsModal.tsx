@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { LearningProfile } from '../types';
 import { storage } from '../services/storage';
+import { SignOutButton } from '@clerk/react';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -30,8 +31,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   setProfile,
   onResetDemo,
 }) => {
-  if (!isOpen) return null;
-
   const [provider, setProvider] = useState<'mock' | 'gemini' | 'openai'>(() => storage.getApiProvider());
   const [apiKey, setApiKey] = useState(() => storage.getApiKey());
   const [name, setName] = useState(profile.studentName);
@@ -39,6 +38,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [university, setUniversity] = useState(profile.university);
   const [year, setYear] = useState(profile.currentYear);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  if (!isOpen) return null;
 
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,8 +59,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     setTimeout(() => setToastMessage(null), 2500);
   };
 
-  const handleDownloadBackup = () => {
-    const json = storage.exportBackupJson();
+  const handleDownloadBackup = async () => {
+    const json = await storage.exportBackupJson();
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -74,9 +75,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       const content = event.target?.result as string;
-      if (content && storage.importBackupJson(content)) {
+      if (content && (await storage.importBackupJson(content))) {
         setProfile(storage.getProfile());
         setToastMessage('Backup successfully imported! Reloading...');
         setTimeout(() => {
@@ -251,19 +252,31 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
           {/* Danger Zone: Reset to Demo */}
           <div className="pt-2 flex items-center justify-between border-t border-slate-800/80">
-            <button
-              type="button"
-              onClick={() => {
-                if (window.confirm('Reset all notes, portfolio, and profile to the initial 4-year demo dataset?')) {
-                  onResetDemo();
-                  onClose();
-                }
-              }}
-              className="text-xs text-rose-400 hover:text-rose-300 flex items-center gap-1.5"
-            >
-              <RefreshCw className="h-3.5 w-3.5" />
-              <span>Reset to 4-Year Demo Data</span>
-            </button>
+            <div className="flex items-center gap-4">
+              <button
+                type="button"
+                onClick={() => {
+                  if (window.confirm('Reset all notes, portfolio, and profile to the initial 4-year demo dataset?')) {
+                    onResetDemo();
+                    onClose();
+                  }
+                }}
+                className="text-xs text-rose-400 hover:text-rose-300 flex items-center gap-1.5"
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+                <span>Reset to 4-Year Demo Data</span>
+              </button>
+
+              <SignOutButton>
+                <button
+                  type="button"
+                  className="text-xs text-slate-400 hover:text-slate-200 flex items-center gap-1.5"
+                >
+                  <ShieldCheck className="h-3.5 w-3.5" />
+                  <span>Sign Out</span>
+                </button>
+              </SignOutButton>
+            </div>
 
             <button
               type="submit"

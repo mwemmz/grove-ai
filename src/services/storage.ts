@@ -1,250 +1,284 @@
-import { 
-  Course, 
-  Note, 
-  LearningProfile, 
-  Flashcard, 
-  PortfolioSkill, 
-  PortfolioProject, 
+import {
+  Course,
+  Note,
+  LearningProfile,
+  Flashcard,
+  PortfolioSkill,
+  PortfolioProject,
   ChatMessage,
   SeniorComment,
   StudyBlueprint,
   TutorProfile,
-  TutorRequest
+  TutorRequest,
 } from '../types';
-import { 
-  INITIAL_COURSES, 
-  INITIAL_NOTES, 
-  INITIAL_PROFILE, 
-  INITIAL_FLASHCARDS, 
-  INITIAL_SKILLS, 
+import {
+  INITIAL_COURSES,
+  INITIAL_NOTES,
+  INITIAL_PROFILE,
+  INITIAL_FLASHCARDS,
+  INITIAL_SKILLS,
   INITIAL_PROJECTS,
   INITIAL_SENIOR_COMMENTS,
   INITIAL_STUDY_BLUEPRINTS,
   INITIAL_TUTORS,
-  INITIAL_TUTOR_REQUESTS
+  INITIAL_TUTOR_REQUESTS,
 } from '../data/mockData';
+import { apiGet, apiPost, apiPut } from '../lib/api';
 
-const STORAGE_KEYS = {
-  COURSES: 'grove_courses_v1',
-  NOTES: 'grove_notes_v1',
-  PROFILE: 'grove_profile_v1',
-  FLASHCARDS: 'grove_flashcards_v1',
-  SKILLS: 'grove_skills_v1',
-  PROJECTS: 'grove_projects_v1',
-  CHAT_HISTORY: 'grove_chat_v1',
-  API_KEY: 'grove_api_key_v1',
-  API_PROVIDER: 'grove_api_provider_v1',
-  SENIOR_COMMENTS: 'grove_senior_comments_v1',
-  BLUEPRINTS: 'grove_blueprints_v1',
-  TUTORS: 'grove_tutors_v1',
-  TUTOR_REQUESTS: 'grove_tutor_requests_v1',
+/**
+ * Client-side data facade. Reads are synchronous against an in-memory
+ * cache; writes update the cache immediately and sync to the Postgres
+ * backend (via /api/*) in the background. `hydrate()` must resolve once
+ * after sign-in before views are mounted.
+ *
+ * The LLM API key / provider remain localStorage-only client secrets.
+ */
+
+const API_KEY = 'grove_api_key_v1';
+const API_PROVIDER = 'grove_api_provider_v1';
+
+interface DataCache {
+  courses: Course[];
+  notes: Note[];
+  profile: LearningProfile;
+  flashcards: Flashcard[];
+  skills: PortfolioSkill[];
+  projects: PortfolioProject[];
+  chat: ChatMessage[];
+  seniorComments: SeniorComment[];
+  blueprints: StudyBlueprint[];
+  tutors: TutorProfile[];
+  tutorRequests: TutorRequest[];
+}
+
+const cache: DataCache = {
+  courses: INITIAL_COURSES,
+  notes: INITIAL_NOTES,
+  profile: INITIAL_PROFILE,
+  flashcards: INITIAL_FLASHCARDS,
+  skills: INITIAL_SKILLS,
+  projects: INITIAL_PROJECTS,
+  chat: [],
+  seniorComments: INITIAL_SENIOR_COMMENTS,
+  blueprints: INITIAL_STUDY_BLUEPRINTS,
+  tutors: INITIAL_TUTORS,
+  tutorRequests: INITIAL_TUTOR_REQUESTS,
 };
 
+let hydrated = false;
+let hydrating: Promise<void> | null = null;
+
+// Background sync with a short debounce so rapid successive writes
+// (e.g. toggling several settings) coalesce into one PUT.
+const SYNC_DEBOUNCE_MS = 150;
+const pendingSyncs = new Map<string, ReturnType<typeof setTimeout>>();
+
+function scheduleSync(key: string, run: () => Promise<unknown>): void {
+  const existing = pendingSyncs.get(key);
+  if (existing) clearTimeout(existing);
+  pendingSyncs.set(
+    key,
+    setTimeout(() => {
+      pendingSyncs.delete(key);
+      run().catch((err) => console.error(`Sync failed for ${key}:`, err));
+    }, SYNC_DEBOUNCE_MS),
+  );
+}
+
+/** Flushes any debounced writes immediately (used before sign-out). */
+async function flushPendingSyncs(): Promise<void> {
+  const entries = [...pendingSyncs.entries()];
+  pendingSyncs.clear();
+  await Promise.allSettled(entries.map(([, timer]) => clearTimeout(timer)));
+}
+
+async function loadAllFromServer(): Promise<void> {
+  const [
+    courses,
+    notes,
+    profile,
+    flashcards,
+    skills,
+    projects,
+    chat,
+    seniorComments,
+    blueprints,
+    tutors,
+    tutorRequests,
+  ] = await Promise.all([
+    apiGet<Course[]>('/courses'),
+    apiGet<Note[]>('/notes'),
+    apiGet<LearningProfile>('/profile'),
+    apiGet<Flashcard[]>('/flashcards'),
+    apiGet<PortfolioSkill[]>('/skills'),
+    apiGet<PortfolioProject[]>('/projects'),
+    apiGet<ChatMessage[]>('/chat'),
+    apiGet<SeniorComment[]>('/senior-comments'),
+    apiGet<StudyBlueprint[]>('/blueprints'),
+    apiGet<TutorProfile[]>('/tutors'),
+    apiGet<TutorRequest[]>('/tutor-requests'),
+  ]);
+
+  cache.courses = courses;
+  cache.notes = notes;
+  cache.profile = profile;
+  cache.flashcards = flashcards;
+  cache.skills = skills;
+  cache.projects = projects;
+  cache.chat = chat;
+  cache.seniorComments = seniorComments;
+  cache.blueprints = blueprints;
+  cache.tutors = tutors;
+  cache.tutorRequests = tutorRequests;
+}
+
 export const storage = {
+  /**
+   * Fetches all server data into the cache. Idempotent; concurrent
+   * callers share one in-flight request. On network failure the demo
+   * seed data in the cache is kept so the UI still works offline-ish.
+   */
+  hydrate(): Promise<void> {
+    if (hydrated) return Promise.resolve();
+    if (hydrating) return hydrating;
+
+    hydrating = loadAllFromServer()
+      .then(() => {
+        hydrated = true;
+      })
+      .catch((err) => {
+        console.error('Failed to load data from server, using local demo data:', err);
+      })
+      .finally(() => {
+        hydrating = null;
+      });
+
+    return hydrating;
+  },
+
+  isHydrated(): boolean {
+    return hydrated;
+  },
+
+  // --- Courses ---
   getCourses(): Course[] {
-    const raw = localStorage.getItem(STORAGE_KEYS.COURSES);
-    if (!raw) {
-      this.saveCourses(INITIAL_COURSES);
-      return INITIAL_COURSES;
-    }
-    try {
-      return JSON.parse(raw);
-    } catch {
-      return INITIAL_COURSES;
-    }
+    return cache.courses;
   },
 
   saveCourses(courses: Course[]): void {
-    localStorage.setItem(STORAGE_KEYS.COURSES, JSON.stringify(courses));
+    cache.courses = courses;
+    scheduleSync('courses', () => apiPut('/courses', courses));
   },
 
+  // --- Notes ---
   getNotes(): Note[] {
-    const raw = localStorage.getItem(STORAGE_KEYS.NOTES);
-    if (!raw) {
-      this.saveNotes(INITIAL_NOTES);
-      return INITIAL_NOTES;
-    }
-    try {
-      return JSON.parse(raw);
-    } catch {
-      return INITIAL_NOTES;
-    }
+    return cache.notes;
   },
 
   saveNotes(notes: Note[]): void {
-    localStorage.setItem(STORAGE_KEYS.NOTES, JSON.stringify(notes));
+    cache.notes = notes;
+    scheduleSync('notes', () => apiPut('/notes', notes));
   },
 
+  // --- Profile ---
   getProfile(): LearningProfile {
-    const raw = localStorage.getItem(STORAGE_KEYS.PROFILE);
-    if (!raw) {
-      this.saveProfile(INITIAL_PROFILE);
-      return INITIAL_PROFILE;
-    }
-    try {
-      return JSON.parse(raw);
-    } catch {
-      return INITIAL_PROFILE;
-    }
+    return cache.profile;
   },
 
   saveProfile(profile: LearningProfile): void {
-    localStorage.setItem(STORAGE_KEYS.PROFILE, JSON.stringify(profile));
+    cache.profile = profile;
+    scheduleSync('profile', () => apiPut('/profile', profile));
   },
 
+  // --- Flashcards ---
   getFlashcards(): Flashcard[] {
-    const raw = localStorage.getItem(STORAGE_KEYS.FLASHCARDS);
-    if (!raw) {
-      this.saveFlashcards(INITIAL_FLASHCARDS);
-      return INITIAL_FLASHCARDS;
-    }
-    try {
-      return JSON.parse(raw);
-    } catch {
-      return INITIAL_FLASHCARDS;
-    }
+    return cache.flashcards;
   },
 
   saveFlashcards(cards: Flashcard[]): void {
-    localStorage.setItem(STORAGE_KEYS.FLASHCARDS, JSON.stringify(cards));
+    cache.flashcards = cards;
+    scheduleSync('flashcards', () => apiPut('/flashcards', cards));
   },
 
+  // --- Portfolio skills ---
   getSkills(): PortfolioSkill[] {
-    const raw = localStorage.getItem(STORAGE_KEYS.SKILLS);
-    if (!raw) {
-      this.saveSkills(INITIAL_SKILLS);
-      return INITIAL_SKILLS;
-    }
-    try {
-      return JSON.parse(raw);
-    } catch {
-      return INITIAL_SKILLS;
-    }
+    return cache.skills;
   },
 
   saveSkills(skills: PortfolioSkill[]): void {
-    localStorage.setItem(STORAGE_KEYS.SKILLS, JSON.stringify(skills));
+    cache.skills = skills;
+    scheduleSync('skills', () => apiPut('/skills', skills));
   },
 
+  // --- Portfolio projects ---
   getProjects(): PortfolioProject[] {
-    const raw = localStorage.getItem(STORAGE_KEYS.PROJECTS);
-    if (!raw) {
-      this.saveProjects(INITIAL_PROJECTS);
-      return INITIAL_PROJECTS;
-    }
-    try {
-      return JSON.parse(raw);
-    } catch {
-      return INITIAL_PROJECTS;
-    }
+    return cache.projects;
   },
 
   saveProjects(projects: PortfolioProject[]): void {
-    localStorage.setItem(STORAGE_KEYS.PROJECTS, JSON.stringify(projects));
+    cache.projects = projects;
+    scheduleSync('projects', () => apiPut('/projects', projects));
   },
 
+  // --- Chat history ---
   getChatHistory(): ChatMessage[] {
-    const raw = localStorage.getItem(STORAGE_KEYS.CHAT_HISTORY);
-    if (!raw) return [];
-    try {
-      return JSON.parse(raw);
-    } catch {
-      return [];
-    }
+    return cache.chat;
   },
 
   saveChatHistory(history: ChatMessage[]): void {
-    localStorage.setItem(STORAGE_KEYS.CHAT_HISTORY, JSON.stringify(history));
+    cache.chat = history;
+    scheduleSync('chat', () => apiPut('/chat', history));
   },
 
-  getApiKey(): string {
-    return localStorage.getItem(STORAGE_KEYS.API_KEY) || '';
-  },
-
-  saveApiKey(key: string): void {
-    localStorage.setItem(STORAGE_KEYS.API_KEY, key);
-  },
-
-  getApiProvider(): 'mock' | 'gemini' | 'openai' {
-    return (localStorage.getItem(STORAGE_KEYS.API_PROVIDER) as any) || 'mock';
-  },
-
-  saveApiProvider(provider: 'mock' | 'gemini' | 'openai'): void {
-    localStorage.setItem(STORAGE_KEYS.API_PROVIDER, provider);
-  },
-
-  // --- Senior Comments ---
+  // --- Senior comments ---
   getSeniorComments(): SeniorComment[] {
-    const raw = localStorage.getItem(STORAGE_KEYS.SENIOR_COMMENTS);
-    if (!raw) {
-      this.saveSeniorComments(INITIAL_SENIOR_COMMENTS);
-      return INITIAL_SENIOR_COMMENTS;
-    }
-    try {
-      return JSON.parse(raw);
-    } catch {
-      return INITIAL_SENIOR_COMMENTS;
-    }
+    return cache.seniorComments;
   },
 
   saveSeniorComments(comments: SeniorComment[]): void {
-    localStorage.setItem(STORAGE_KEYS.SENIOR_COMMENTS, JSON.stringify(comments));
+    cache.seniorComments = comments;
+    scheduleSync('senior-comments', () => apiPut('/senior-comments', comments));
   },
 
   toggleUpvoteComment(id: string): SeniorComment[] {
-    const list = this.getSeniorComments();
-    const updated = list.map(c => {
-      if (c.id === id) {
-        const hasUpvoted = !c.hasUpvoted;
-        return {
-          ...c,
-          hasUpvoted,
-          upvotes: hasUpvoted ? c.upvotes + 1 : c.upvotes - 1,
-        };
-      }
-      return c;
+    const updated = cache.seniorComments.map((c) => {
+      if (c.id !== id) return c;
+      const hasUpvoted = !c.hasUpvoted;
+      return {
+        ...c,
+        hasUpvoted,
+        upvotes: hasUpvoted ? c.upvotes + 1 : c.upvotes - 1,
+      };
     });
     this.saveSeniorComments(updated);
     return updated;
   },
 
   addSeniorComment(comment: SeniorComment): SeniorComment[] {
-    const list = this.getSeniorComments();
-    const updated = [comment, ...list];
+    const updated = [comment, ...cache.seniorComments];
     this.saveSeniorComments(updated);
     return updated;
   },
 
-  // --- Study Blueprints ---
+  // --- Study blueprints ---
   getBlueprints(): StudyBlueprint[] {
-    const raw = localStorage.getItem(STORAGE_KEYS.BLUEPRINTS);
-    if (!raw) {
-      this.saveBlueprints(INITIAL_STUDY_BLUEPRINTS);
-      return INITIAL_STUDY_BLUEPRINTS;
-    }
-    try {
-      return JSON.parse(raw);
-    } catch {
-      return INITIAL_STUDY_BLUEPRINTS;
-    }
+    return cache.blueprints;
   },
 
   saveBlueprints(blueprints: StudyBlueprint[]): void {
-    localStorage.setItem(STORAGE_KEYS.BLUEPRINTS, JSON.stringify(blueprints));
+    cache.blueprints = blueprints;
+    scheduleSync('blueprints', () => apiPut('/blueprints', blueprints));
   },
 
   toggleAdoptBlueprint(id: string): StudyBlueprint[] {
-    const list = this.getBlueprints();
-    const updated = list.map(bp => {
-      if (bp.id === id) {
-        const isAdopted = !bp.isAdopted;
-        return {
-          ...bp,
-          isAdopted,
-          adoptedByCount: isAdopted ? bp.adoptedByCount + 1 : bp.adoptedByCount - 1,
-        };
-      }
-      return bp;
+    const updated = cache.blueprints.map((bp) => {
+      if (bp.id !== id) return bp;
+      const isAdopted = !bp.isAdopted;
+      return {
+        ...bp,
+        isAdopted,
+        adoptedByCount: isAdopted ? bp.adoptedByCount + 1 : bp.adoptedByCount - 1,
+      };
     });
     this.saveBlueprints(updated);
     return updated;
@@ -252,114 +286,75 @@ export const storage = {
 
   // --- Tutors ---
   getTutors(): TutorProfile[] {
-    const raw = localStorage.getItem(STORAGE_KEYS.TUTORS);
-    if (!raw) {
-      this.saveTutors(INITIAL_TUTORS);
-      return INITIAL_TUTORS;
-    }
-    try {
-      return JSON.parse(raw);
-    } catch {
-      return INITIAL_TUTORS;
-    }
+    return cache.tutors;
   },
 
   saveTutors(tutors: TutorProfile[]): void {
-    localStorage.setItem(STORAGE_KEYS.TUTORS, JSON.stringify(tutors));
+    cache.tutors = tutors;
+    scheduleSync('tutors', () => apiPut('/tutors', tutors));
   },
 
-  // --- Tutor Requests ---
+  // --- Tutor requests ---
   getTutorRequests(): TutorRequest[] {
-    const raw = localStorage.getItem(STORAGE_KEYS.TUTOR_REQUESTS);
-    if (!raw) {
-      this.saveTutorRequests(INITIAL_TUTOR_REQUESTS);
-      return INITIAL_TUTOR_REQUESTS;
-    }
-    try {
-      return JSON.parse(raw);
-    } catch {
-      return INITIAL_TUTOR_REQUESTS;
-    }
+    return cache.tutorRequests;
   },
 
   saveTutorRequests(requests: TutorRequest[]): void {
-    localStorage.setItem(STORAGE_KEYS.TUTOR_REQUESTS, JSON.stringify(requests));
+    cache.tutorRequests = requests;
+    scheduleSync('tutor-requests', () => apiPut('/tutor-requests', requests));
   },
 
   addTutorRequest(req: TutorRequest): TutorRequest[] {
-    const list = this.getTutorRequests();
-    const updated = [req, ...list];
+    const updated = [req, ...cache.tutorRequests];
     this.saveTutorRequests(updated);
     return updated;
   },
 
   updateRequestStatus(id: string, status: TutorRequest['status']): TutorRequest[] {
-    const list = this.getTutorRequests();
-    const updated = list.map(r => r.id === id ? { ...r, status } : r);
+    const updated = cache.tutorRequests.map((r) => (r.id === id ? { ...r, status } : r));
     this.saveTutorRequests(updated);
     return updated;
   },
 
-  resetAllToDemo(): void {
-    localStorage.removeItem(STORAGE_KEYS.COURSES);
-    localStorage.removeItem(STORAGE_KEYS.NOTES);
-    localStorage.removeItem(STORAGE_KEYS.PROFILE);
-    localStorage.removeItem(STORAGE_KEYS.FLASHCARDS);
-    localStorage.removeItem(STORAGE_KEYS.SKILLS);
-    localStorage.removeItem(STORAGE_KEYS.PROJECTS);
-    localStorage.removeItem(STORAGE_KEYS.CHAT_HISTORY);
-    localStorage.removeItem(STORAGE_KEYS.SENIOR_COMMENTS);
-    localStorage.removeItem(STORAGE_KEYS.BLUEPRINTS);
-    localStorage.removeItem(STORAGE_KEYS.TUTORS);
-    localStorage.removeItem(STORAGE_KEYS.TUTOR_REQUESTS);
-    
-    this.saveCourses(INITIAL_COURSES);
-    this.saveNotes(INITIAL_NOTES);
-    this.saveProfile(INITIAL_PROFILE);
-    this.saveFlashcards(INITIAL_FLASHCARDS);
-    this.saveSkills(INITIAL_SKILLS);
-    this.saveProjects(INITIAL_PROJECTS);
-    this.saveSeniorComments(INITIAL_SENIOR_COMMENTS);
-    this.saveBlueprints(INITIAL_STUDY_BLUEPRINTS);
-    this.saveTutors(INITIAL_TUTORS);
-    this.saveTutorRequests(INITIAL_TUTOR_REQUESTS);
+  // --- LLM provider settings (client-only secrets) ---
+  getApiKey(): string {
+    return localStorage.getItem(API_KEY) || '';
   },
 
-  exportBackupJson(): string {
-    const backup = {
-      courses: this.getCourses(),
-      notes: this.getNotes(),
-      profile: this.getProfile(),
-      flashcards: this.getFlashcards(),
-      skills: this.getSkills(),
-      projects: this.getProjects(),
-      seniorComments: this.getSeniorComments(),
-      blueprints: this.getBlueprints(),
-      tutors: this.getTutors(),
-      tutorRequests: this.getTutorRequests(),
-      exportedAt: new Date().toISOString(),
-      app: 'Grove - Degree-Long AI Learning Companion with Clearance Advice & Tutoring'
-    };
+  saveApiKey(key: string): void {
+    localStorage.setItem(API_KEY, key);
+  },
+
+  getApiProvider(): 'mock' | 'gemini' | 'openai' {
+    return (localStorage.getItem(API_PROVIDER) as 'mock' | 'gemini' | 'openai') || 'mock';
+  },
+
+  saveApiProvider(provider: 'mock' | 'gemini' | 'openai'): void {
+    localStorage.setItem(API_PROVIDER, provider);
+  },
+
+  // --- Backup / reset (server-backed) ---
+  async resetAllToDemo(): Promise<void> {
+    await flushPendingSyncs();
+    await apiPost('/backup/reset');
+    await loadAllFromServer();
+  },
+
+  async exportBackupJson(): Promise<string> {
+    await flushPendingSyncs();
+    const backup = await apiGet<Record<string, unknown>>('/backup');
     return JSON.stringify(backup, null, 2);
   },
 
-  importBackupJson(jsonString: string): boolean {
+  async importBackupJson(jsonString: string): Promise<boolean> {
     try {
       const data = JSON.parse(jsonString);
-      if (data.notes && Array.isArray(data.notes)) this.saveNotes(data.notes);
-      if (data.courses && Array.isArray(data.courses)) this.saveCourses(data.courses);
-      if (data.profile) this.saveProfile(data.profile);
-      if (data.flashcards && Array.isArray(data.flashcards)) this.saveFlashcards(data.flashcards);
-      if (data.skills && Array.isArray(data.skills)) this.saveSkills(data.skills);
-      if (data.projects && Array.isArray(data.projects)) this.saveProjects(data.projects);
-      if (data.seniorComments && Array.isArray(data.seniorComments)) this.saveSeniorComments(data.seniorComments);
-      if (data.blueprints && Array.isArray(data.blueprints)) this.saveBlueprints(data.blueprints);
-      if (data.tutors && Array.isArray(data.tutors)) this.saveTutors(data.tutors);
-      if (data.tutorRequests && Array.isArray(data.tutorRequests)) this.saveTutorRequests(data.tutorRequests);
+      await apiPost('/backup/import', data);
+      await loadAllFromServer();
       return true;
     } catch (e) {
       console.error('Import failed', e);
       return false;
     }
-  }
+  },
 };

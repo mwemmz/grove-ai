@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm';
-import { db } from './db';
+import { db } from './db.js';
 import {
   chatMessages,
   courses,
@@ -12,7 +12,7 @@ import {
   studyBlueprints,
   tutorRequests,
   tutors,
-} from '../../src/server/db/schema';
+} from '../../src/server/db/schema.js';
 import type {
   ChatMessage,
   Course,
@@ -25,7 +25,7 @@ import type {
   StudyBlueprint,
   TutorProfile,
   TutorRequest,
-} from '../../src/types';
+} from '../../src/types/index.js';
 import {
   fromBlueprintRow,
   fromChatRow,
@@ -48,7 +48,7 @@ import {
   toSkillValues,
   toTutorRequestValues,
   toTutorValues,
-} from './serialize';
+} from './serialize.js';
 import {
   INITIAL_COURSES,
   INITIAL_FLASHCARDS,
@@ -60,7 +60,7 @@ import {
   INITIAL_STUDY_BLUEPRINTS,
   INITIAL_TUTORS,
   INITIAL_TUTOR_REQUESTS,
-} from '../../src/data/mockData';
+} from '../../src/data/mockData.js';
 
 export async function listCourses(userId: string): Promise<Course[]> {
   const rows = await db.select().from(courses).where(eq(courses.userId, userId));

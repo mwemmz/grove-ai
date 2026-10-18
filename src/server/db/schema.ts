@@ -14,7 +14,7 @@ import type {
   StudentTier,
   TopicMastery,
   WeeklyMilestone,
-} from '../../types';
+} from '../../types/index.js';
 
 /**
  * All application data is scoped per user (user_id FK). Community-style

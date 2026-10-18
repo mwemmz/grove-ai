@@ -1,7 +1,7 @@
 import 'dotenv/config';
-import { db } from '../api/_lib/db';
-import { users } from '../src/server/db/schema';
-import { seedUserData } from '../api/_lib/collections';
+import { db } from '../api/_lib/db.js';
+import { users } from '../src/server/db/schema.js';
+import { seedUserData } from '../api/_lib/collections.js';
 import { eq } from 'drizzle-orm';
 
 /**

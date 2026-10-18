@@ -1,9 +1,9 @@
 import { createClerkClient, verifyToken } from '@clerk/backend';
 import { eq } from 'drizzle-orm';
-import { db, DbUser } from './db';
-import { users } from '../../src/server/db/schema';
-import { ApiError, HandlerReq } from './http';
-import { seedUserData } from './collections';
+import { db, DbUser } from './db.js';
+import { users } from '../../src/server/db/schema.js';
+import { ApiError, HandlerReq } from './http.js';
+import { seedUserData } from './collections.js';
 
 function getClerkClient() {
   const secretKey = process.env.CLERK_SECRET_KEY;

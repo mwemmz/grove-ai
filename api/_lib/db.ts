@@ -1,6 +1,6 @@
 import { Pool } from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
-import * as schema from '../../src/server/db/schema';
+import * as schema from '../../src/server/db/schema.js';
 
 export type Db = typeof db;
 export type DbUser = schema.User;

@@ -1,5 +1,5 @@
-import { handleRequest } from './_lib/router';
-import { ApiError, HandlerReq, HandlerRes } from './_lib/http';
+import { handleRequest } from './_lib/router.js';
+import { ApiError, HandlerReq, HandlerRes } from './_lib/http.js';
 
 type VercelReq = {
   method?: string;

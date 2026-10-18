@@ -22,8 +22,8 @@ import {
   replaceTutors,
   resetUserData,
   saveProfile,
-} from './collections';
-import { ApiError } from './http';
+} from './collections.js';
+import { ApiError } from './http.js';
 import type {
   ChatMessage,
   Course,
@@ -36,7 +36,7 @@ import type {
   StudyBlueprint,
   TutorProfile,
   TutorRequest,
-} from '../../src/types';
+} from '../../src/types/index.js';
 
 export interface BackupPayload {
   courses?: Course[];

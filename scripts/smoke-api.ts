@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import handler from '../api/[[...slug]]';
+import handler from '../api/[[...slug]].js';
 
 const out: { status?: number; body?: string } = {};
 

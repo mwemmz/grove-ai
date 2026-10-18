@@ -9,7 +9,7 @@ import {
   StudyBlueprint,
   TutorProfile,
   TutorRequest
-} from '../types';
+} from '../types/index.js';
 
 export const INITIAL_COURSES: Course[] = [
   // Year 1

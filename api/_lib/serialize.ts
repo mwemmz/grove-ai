@@ -13,7 +13,7 @@ import type {
   StudyBlueprint,
   TutorProfile,
   TutorRequest,
-} from '../../src/types';
+} from '../../src/types/index.js';
 import type {
   ChatMessageRow,
   CourseRow,
@@ -26,7 +26,7 @@ import type {
   StudyBlueprintRow,
   TutorRequestRow,
   TutorRow,
-} from '../../src/server/db/schema';
+} from '../../src/server/db/schema.js';
 
 const year = (n: number): AcademicYear => n as AcademicYear;
 

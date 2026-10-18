@@ -1,5 +1,5 @@
-import { ApiError, HandlerReq, HandlerRes, json, requireArrayBody, requireObjectBody } from './http';
-import { requireUser } from './auth';
+import { ApiError, HandlerReq, HandlerRes, json, requireArrayBody, requireObjectBody } from './http.js';
+import { requireUser } from './auth.js';
 import {
   getProfile,
   listBlueprints,
@@ -23,8 +23,8 @@ import {
   replaceTutorRequests,
   replaceTutors,
   saveProfile,
-} from './collections';
-import { exportBackup, importBackup, resetBackup } from './backup';
+} from './collections.js';
+import { exportBackup, importBackup, resetBackup } from './backup.js';
 import type {
   ChatMessage,
   Course,
@@ -37,7 +37,7 @@ import type {
   StudyBlueprint,
   TutorProfile,
   TutorRequest,
-} from '../../src/types';
+} from '../../src/types/index.js';
 
 type RouteHandler = (req: HandlerReq, res: HandlerRes, userId: string) => Promise<void>;
 

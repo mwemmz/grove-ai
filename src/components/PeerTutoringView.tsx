@@ -203,7 +203,7 @@ export const PeerTutoringView: React.FC<PeerTutoringViewProps> = ({
 
             <button
               onClick={() => setIsAdviceModalOpen(true)}
-              className="flex items-center gap-1.5 rounded-xl bg-teal-600 hover:bg-teal-500 text-white px-3.5 py-1.5 text-xs font-semibold shadow transition-colors self-start sm:self-auto"
+              className="flex items-center gap-1.5 rounded-xl bg-teal-600 hover:bg-teal-500 text-on-accent px-3.5 py-1.5 text-xs font-semibold shadow transition-colors self-start sm:self-auto"
             >
               <Plus className="h-4 w-4" />
               <span>Leave Clearance Advice</span>
@@ -233,7 +233,7 @@ export const PeerTutoringView: React.FC<PeerTutoringViewProps> = ({
                     </span>
                   </div>
 
-                  <h3 className="text-sm font-bold text-white">
+                  <h3 className="text-sm font-bold text-text">
                     {comment.topic}
                   </h3>
 
@@ -300,7 +300,7 @@ export const PeerTutoringView: React.FC<PeerTutoringViewProps> = ({
                 <div>
                   <div className="flex items-start justify-between">
                     <div>
-                      <h3 className="text-base font-bold text-white flex items-center gap-2">
+                      <h3 className="text-base font-bold text-text flex items-center gap-2">
                         {tutor.name}
                         <span className="text-xs font-bold text-teal-400 bg-teal-500/10 px-1.5 py-0.5 rounded border border-teal-500/20">
                           Year {tutor.currentYear} Senior
@@ -330,7 +330,7 @@ export const PeerTutoringView: React.FC<PeerTutoringViewProps> = ({
                           key={i}
                           className="rounded bg-slate-800/80 px-2 py-0.5 text-xs text-slate-300 border border-slate-700/60 flex items-center gap-1"
                         >
-                          <span className="font-bold text-white">{cc.courseCode}</span>
+                          <span className="font-bold text-text">{cc.courseCode}</span>
                           <span className="text-amber-300 font-bold">({cc.grade})</span>
                         </span>
                       ))}
@@ -346,7 +346,7 @@ export const PeerTutoringView: React.FC<PeerTutoringViewProps> = ({
 
                   <button
                     onClick={() => handleOpenRequestModal(tutor)}
-                    className="flex items-center gap-1.5 rounded-xl bg-teal-600 hover:bg-teal-500 text-white px-3.5 py-1.5 text-xs font-semibold shadow transition-colors"
+                    className="flex items-center gap-1.5 rounded-xl bg-teal-600 hover:bg-teal-500 text-on-accent px-3.5 py-1.5 text-xs font-semibold shadow transition-colors"
                   >
                     <Send className="h-3 w-3" />
                     <span>Request Tutor</span>
@@ -362,7 +362,7 @@ export const PeerTutoringView: React.FC<PeerTutoringViewProps> = ({
       {activeTab === 'requests' && (
         <div className="space-y-4">
           <div className="flex items-center justify-between bg-slate-900/60 border border-slate-800 p-3 rounded-xl">
-            <h3 className="text-xs font-bold text-white flex items-center gap-2">
+            <h3 className="text-xs font-bold text-text flex items-center gap-2">
               <Clock className="h-4 w-4 text-teal-400" />
               Active Peer Tutoring Exchange Queue
             </h3>
@@ -379,10 +379,10 @@ export const PeerTutoringView: React.FC<PeerTutoringViewProps> = ({
               >
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
-                    <span className="rounded bg-slate-800 px-2 py-0.5 text-xs font-mono font-bold text-white">
+                    <span className="rounded bg-slate-800 px-2 py-0.5 text-xs font-mono font-bold text-text">
                       {req.courseCode}
                     </span>
-                    <h4 className="text-sm font-bold text-white">{req.topic}</h4>
+                    <h4 className="text-sm font-bold text-text">{req.topic}</h4>
                     <span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${
                       req.urgency === 'midterm-prep' ? 'bg-amber-500/10 text-amber-300 border-amber-500/20' :
                       req.urgency === 'assignment-deadline' ? 'bg-rose-500/10 text-rose-300 border-rose-500/20' :
@@ -425,7 +425,7 @@ export const PeerTutoringView: React.FC<PeerTutoringViewProps> = ({
                       <>
                         <button
                           onClick={() => handleUpdateStatus(req.id, 'accepted')}
-                          className="px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold"
+                          className="px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-on-accent text-xs font-semibold"
                         >
                           Accept
                         </button>
@@ -456,15 +456,15 @@ export const PeerTutoringView: React.FC<PeerTutoringViewProps> = ({
       {/* Leave Advice Modal */}
       {isAdviceModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
-          <div className="w-full max-w-lg max-h-[85dvh] overflow-y-auto rounded-2xl bg-[#0f121a] border border-white/[0.08] p-6 shadow-2xl shadow-black/80 text-slate-200 animate-enter">
+          <div className="w-full max-w-lg max-h-[85dvh] overflow-y-auto rounded-2xl bg-surface border border-line p-6 shadow-2xl shadow-black/40 text-slate-200 animate-enter">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="text-base font-bold text-white flex items-center gap-2">
+              <h3 className="text-base font-bold text-text flex items-center gap-2">
                 <GraduationCap className="h-5 w-5 text-teal-400" />
                 Leave Course Clearance Advice
               </h3>
               <button
                 onClick={() => setIsAdviceModalOpen(false)}
-                className="h-7 w-7 rounded-lg bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center"
+                className="h-7 w-7 rounded-lg bg-slate-800 text-slate-400 hover:text-text flex items-center justify-center"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -551,7 +551,7 @@ export const PeerTutoringView: React.FC<PeerTutoringViewProps> = ({
                 </button>
                 <button
                   type="submit"
-                  className="rounded-xl bg-teal-600 hover:bg-teal-500 text-white px-5 py-2 text-xs font-semibold"
+                  className="rounded-xl bg-teal-600 hover:bg-teal-500 text-on-accent px-5 py-2 text-xs font-semibold"
                 >
                   Publish Advice
                 </button>
@@ -564,15 +564,15 @@ export const PeerTutoringView: React.FC<PeerTutoringViewProps> = ({
       {/* Request 1-on-1 Tutoring Modal */}
       {isRequestModalOpen && selectedTutorForRequest && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
-          <div className="w-full max-w-lg max-h-[85dvh] overflow-y-auto rounded-2xl bg-[#0f121a] border border-white/[0.08] p-6 shadow-2xl shadow-black/80 text-slate-200 animate-enter">
+          <div className="w-full max-w-lg max-h-[85dvh] overflow-y-auto rounded-2xl bg-surface border border-line p-6 shadow-2xl shadow-black/40 text-slate-200 animate-enter">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="text-base font-bold text-white flex items-center gap-2">
+              <h3 className="text-base font-bold text-text flex items-center gap-2">
                 <Send className="h-4 w-4 text-teal-400" />
                 Request 1-on-1 Tutoring from {selectedTutorForRequest.name}
               </h3>
               <button
                 onClick={() => setIsRequestModalOpen(false)}
-                className="h-7 w-7 rounded-lg bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center"
+                className="h-7 w-7 rounded-lg bg-slate-800 text-slate-400 hover:text-text flex items-center justify-center"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -685,7 +685,7 @@ export const PeerTutoringView: React.FC<PeerTutoringViewProps> = ({
                 </button>
                 <button
                   type="submit"
-                  className="rounded-xl bg-teal-600 hover:bg-teal-500 text-white px-5 py-2 text-xs font-semibold"
+                  className="rounded-xl bg-teal-600 hover:bg-teal-500 text-on-accent px-5 py-2 text-xs font-semibold"
                 >
                   Send Request
                 </button>

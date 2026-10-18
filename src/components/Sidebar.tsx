@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { ChevronDown, Plus, Settings, TreePine, X } from 'lucide-react';
+import { ChevronDown, Palette, Plus, Settings, TreePine, X } from 'lucide-react';
+import { ThemePicker } from './ThemePicker';
 import { AppTab, MORE_NAV, NavItem, PRIMARY_NAV } from './Header';
 
 export interface Recent {
@@ -37,6 +38,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   afterChoose,
   onClose,
 }) => {
+  const [themesOpen, setThemesOpen] = useState(false);
   const activeInMore = MORE_NAV.some((n) => n.id === tab);
   const [moreOpen, setMoreOpen] = useState(activeInMore);
   const showMore = moreOpen || activeInMore;
@@ -138,6 +140,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
         )}
       </div>
 
+      {themesOpen && (
+        <div className="shrink-0 border-t border-line p-3">
+          <ThemePicker compact />
+        </div>
+      )}
       <div className="flex shrink-0 items-center gap-3 border-t border-line p-3">
         <span
           aria-hidden
@@ -149,6 +156,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <p className="truncate text-sm font-medium text-text">{name || 'Student'}</p>
           <p className="font-mono text-xs text-muted">Year {year}</p>
         </div>
+        <button
+          onClick={() => setThemesOpen((v) => !v)}
+          aria-label="Colour theme"
+          aria-expanded={themesOpen}
+          className={`flex h-10 w-10 items-center justify-center rounded-md hover:bg-raised hover:text-text ${themesOpen ? 'bg-raised text-text' : 'text-muted'}`}
+        >
+          <Palette className="h-[18px] w-[18px]" />
+        </button>
         <button
           onClick={() => {
             onSettings();

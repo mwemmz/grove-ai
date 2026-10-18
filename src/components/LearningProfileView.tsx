@@ -99,7 +99,7 @@ export const LearningProfileView: React.FC<LearningProfileViewProps> = ({
     .join(' · ');
 
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-10 px-4 py-6 sm:px-6">
+    <div className="w-full space-y-8">
       <Toast message={toast} />
 
       <PageHeader
@@ -236,7 +236,7 @@ export const LearningProfileView: React.FC<LearningProfileViewProps> = ({
                       aria-checked={log.isActive}
                       aria-label={log.isActive ? 'Turn off this observation' : 'Turn on this observation'}
                       onClick={() => toggleLog(log.id)}
-                      className={`relative h-6 w-11 rounded-full transition-colors ${log.isActive ? 'bg-accent-strong' : 'bg-raised'}`}
+                      className={`relative h-6 w-11 rounded-full transition-colors ${log.isActive ? 'bg-accent' : 'bg-raised'}`}
                     >
                       <span
                         className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all ${log.isActive ? 'left-[22px]' : 'left-0.5'}`}

@@ -1,8 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { useAuth, SignInButton } from '@clerk/react';
 import { TreePine } from 'lucide-react';
-import { Header, BottomNav, AppTab } from './components/Header';
-import { Segmented } from './components/ui';
+import { Header, Tabs, AppTab } from './components/Header';
 import { ChatTutorView } from './components/ChatTutorView';
 import { DegreeMemoryView } from './components/DegreeMemoryView';
 import { StudyBlueprintsView } from './components/StudyBlueprintsView';
@@ -10,6 +9,9 @@ import { PeerTutoringView } from './components/PeerTutoringView';
 import { LearningProfileView } from './components/LearningProfileView';
 import { PortfolioView } from './components/PortfolioView';
 import { QuizView } from './components/QuizView';
+import { StudyView, StudyPreset } from './components/StudyView';
+import { PlannerView } from './components/PlannerView';
+const VisualsView = lazy(() => import('./components/VisualsView').then((m) => ({ default: m.VisualsView })));
 import { SettingsModal } from './components/SettingsModal';
 import {
   Note,
@@ -40,12 +42,12 @@ function SignInScreen() {
     <div className="min-h-dvh bg-bg text-text flex items-center justify-center px-4 font-sans">
       <div className="w-full max-w-sm text-center">
         <TreePine className="h-9 w-9 text-accent mx-auto mb-5" />
-        <h1 className="text-3xl font-semibold tracking-tight mb-2">Grove</h1>
+        <h1 className="font-display text-4xl tracking-tight mb-2">Grove</h1>
         <p className="text-muted mb-8">
           A study companion that remembers your whole degree.
         </p>
         <SignInButton mode="modal">
-          <button className="w-full min-h-11 rounded-lg bg-accent-strong hover:bg-accent hover:text-bg text-white font-semibold transition-colors">
+          <button className="w-full min-h-11 rounded-md bg-accent text-ink font-semibold hover:brightness-110 transition-[filter]">
             Sign in
           </button>
         </SignInButton>
@@ -73,7 +75,7 @@ function AuthGate() {
 }
 
 function GroveApp() {
-  const [activeTab, setActiveTab] = useState<AppTab>('chat');
+  const [activeTab, setActiveTab] = useState<AppTab>('remember');
   const [isDataReady, setIsDataReady] = useState(false);
 
   const [notes, setNotes] = useState<Note[]>([]);
@@ -91,6 +93,7 @@ function GroveApp() {
 
   const [selectedNoteForDetail, setSelectedNoteForDetail] = useState<Note | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [studyPreset, setStudyPreset] = useState<StudyPreset | null>(null);
 
   // Skips the auto-save effects for the initial post-hydration commit.
   const skipInitialSync = useRef(true);
@@ -181,7 +184,12 @@ function GroveApp() {
 
   const handleOpenNoteDetail = (note: Note) => {
     setSelectedNoteForDetail(note);
-    setActiveTab('notes');
+    setActiveTab('remember');
+  };
+
+  const handleStartSession = (preset: StudyPreset) => {
+    setStudyPreset(preset);
+    setActiveTab('study');
   };
 
   const handleLaunchTopicQuiz = (_topic: string) => {
@@ -192,105 +200,105 @@ function GroveApp() {
     return <LoadingScreen label="Loading your degree memory..." />;
   }
 
-  const youView = activeTab === 'profile' || activeTab === 'portfolio';
-  const communityView = activeTab === 'blueprints' || activeTab === 'tutoring';
+  const handleYearChange = (year: number) =>
+    setProfile((prev) => ({ ...prev, currentYear: year as LearningProfile['currentYear'] }));
 
   return (
-    <div className="app-shell h-dvh bg-bg text-text flex flex-col font-sans selection:bg-accent/30">
-      <Header
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        onOpenSettings={() => setIsSettingsOpen(true)}
-      />
+    <div className="app-shell min-h-dvh bg-bg font-sans text-text selection:bg-accent/30">
+      <div className="mx-auto w-full max-w-[900px] px-4 pb-16 pt-6">
+        <Header
+          notes={notes}
+          year={profile.currentYear}
+          onYearChange={handleYearChange}
+          onOpenSettings={() => setIsSettingsOpen(true)}
+        />
+        <Tabs
+          active={activeTab}
+          onChange={(tab) => {
+            setStudyPreset(null);
+            setActiveTab(tab);
+          }}
+        />
 
-      <main className="app-main flex-1 min-h-0 overflow-y-auto">
-        {youView && (
-          <div className="mx-auto w-full max-w-3xl px-4 pt-5 sm:px-6">
-            <Segmented
-              label="You"
-              value={activeTab as 'profile' | 'portfolio'}
-              onChange={setActiveTab}
-              options={[
-                { id: 'profile', label: 'How I learn' },
-                { id: 'portfolio', label: 'Portfolio & CV' },
-              ]}
+        <main className="app-main space-y-5">
+          {activeTab === 'remember' && (
+            <>
+              <ChatTutorView
+                notes={notes}
+                profile={profile}
+                setProfile={setProfile}
+                onOpenNoteDetail={handleOpenNoteDetail}
+              />
+              <DegreeMemoryView
+                notes={notes}
+                setNotes={setNotes}
+                courses={courses}
+                selectedNoteForDetail={selectedNoteForDetail}
+                setSelectedNoteForDetail={setSelectedNoteForDetail}
+              />
+            </>
+          )}
+
+          {activeTab === 'visuals' && (
+            <Suspense fallback={<p className="py-6 text-sm text-muted" role="status">Loading visuals…</p>}>
+              <VisualsView />
+            </Suspense>
+          )}
+
+          {activeTab === 'study' && (
+            <StudyView
+              notes={notes}
+              courses={courses}
+              flashcards={flashcards}
+              setFlashcards={setFlashcards}
+              preset={studyPreset}
             />
-          </div>
-        )}
-        {communityView && (
-          <div className="mx-auto w-full max-w-5xl px-4 pt-5 sm:px-6">
-            <Segmented
-              label="Community"
-              value={activeTab as 'blueprints' | 'tutoring'}
-              onChange={setActiveTab}
-              options={[
-                { id: 'blueprints', label: 'Study blueprints' },
-                { id: 'tutoring', label: 'Peer tutoring' },
-              ]}
+          )}
+
+          {activeTab === 'plan' && (
+            <PlannerView courses={courses} profile={profile} onStartSession={handleStartSession} />
+          )}
+
+          {activeTab === 'blueprints' && (
+            <StudyBlueprintsView blueprints={blueprints} setBlueprints={setBlueprints} />
+          )}
+
+          {activeTab === 'tutoring' && (
+            <PeerTutoringView
+              seniorComments={seniorComments}
+              setSeniorComments={setSeniorComments}
+              tutors={tutors}
+              setTutors={setTutors}
+              tutorRequests={tutorRequests}
+              setTutorRequests={setTutorRequests}
+              courses={courses}
             />
-          </div>
-        )}
+          )}
 
-        {activeTab === 'chat' && (
-          <ChatTutorView
-            notes={notes}
-            profile={profile}
-            setProfile={setProfile}
-            onOpenNoteDetail={handleOpenNoteDetail}
-          />
-        )}
+          {activeTab === 'profile' && (
+            <LearningProfileView
+              profile={profile}
+              setProfile={setProfile}
+              onLaunchTopicQuiz={handleLaunchTopicQuiz}
+            />
+          )}
 
-        {activeTab === 'notes' && (
-          <DegreeMemoryView
-            notes={notes}
-            setNotes={setNotes}
-            courses={courses}
-            selectedNoteForDetail={selectedNoteForDetail}
-            setSelectedNoteForDetail={setSelectedNoteForDetail}
-          />
-        )}
+          {activeTab === 'portfolio' && (
+            <PortfolioView
+              profile={profile}
+              skills={skills}
+              projects={projects}
+              courses={courses}
+              notes={notes}
+              onOpenNoteDetail={handleOpenNoteDetail}
+            />
+          )}
 
-        {activeTab === 'blueprints' && (
-          <StudyBlueprintsView blueprints={blueprints} setBlueprints={setBlueprints} />
-        )}
-
-        {activeTab === 'tutoring' && (
-          <PeerTutoringView
-            seniorComments={seniorComments}
-            setSeniorComments={setSeniorComments}
-            tutors={tutors}
-            setTutors={setTutors}
-            tutorRequests={tutorRequests}
-            setTutorRequests={setTutorRequests}
-            courses={courses}
-          />
-        )}
-
-        {activeTab === 'profile' && (
-          <LearningProfileView
-            profile={profile}
-            setProfile={setProfile}
-            onLaunchTopicQuiz={handleLaunchTopicQuiz}
-          />
-        )}
-
-        {activeTab === 'portfolio' && (
-          <PortfolioView
-            profile={profile}
-            skills={skills}
-            projects={projects}
-            courses={courses}
-            notes={notes}
-            onOpenNoteDetail={handleOpenNoteDetail}
-          />
-        )}
-
-        {activeTab === 'quiz' && (
-          <QuizView flashcards={flashcards} setFlashcards={setFlashcards} notes={notes} />
-        )}
-      </main>
-
-      <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
+          {activeTab === 'quiz' && (
+            <QuizView flashcards={flashcards} setFlashcards={setFlashcards} notes={notes} />
+          )}
+        </main>
+      </div>
 
       <SettingsModal
         isOpen={isSettingsOpen}

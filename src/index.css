@@ -10,6 +10,7 @@
 
   /* Grove palette: deep green-black, one mint accent, warm gold for small marks */
   --color-bg: #0e1512;
+  --color-side: #0b110e;
   --color-surface: #151f1a;
   --color-raised: #1b2b24;
   --color-line: #26352d;

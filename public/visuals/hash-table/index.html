@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=1280, height=720" />
+<meta data-composition-id="hash-table" data-width="1280" data-height="720" />
+<title>Hash table</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@500;600;700&family=Young+Serif&display=swap" rel="stylesheet" media="print" onload="this.media=\'all\'" />
+<link rel="stylesheet" href="../base.css" />
+<script src="../gsap.min.js"></script>
+<style>
+  .c { width: 150px; height: 54px; font-size: 26px; border-radius: 10px; opacity: 0; }
+</style>
+</head>
+<body>
+<div id="stage" data-composition-id="hash-table" data-width="1280" data-height="720">
+  <div id="cap">
+    <div class="step" id="c1">1 · Hash the key <small>A hash function turns the key into a bucket number. "Ada" becomes <em>3</em>.</small></div>
+    <div class="step" id="c2">2 · Insert another <small>"Bob" hashes to 5, so it goes straight into bucket 5.</small></div>
+    <div class="step" id="c3">3 · Collision <small>"Eve" also hashes to 3. Chaining links it after Ada in the same bucket.</small></div>
+    <div class="step" id="c4">4 · Look up "Eve" <small>Hash to bucket 3, then walk the short chain until the key matches.</small></div>
+  </div>
+
+  <svg id="wires" viewBox="0 0 1280 720">
+    <g fill="none" stroke="#2f4439" stroke-width="4" stroke-linecap="round">
+      <path id="w3" d="M770 365 H796" opacity="0" />
+      <path id="w5" d="M770 497 H796" opacity="0" />
+      <path id="w35" d="M960 365 H986" opacity="0" />
+    </g>
+    <g stroke="#2f4439" fill="#2f4439" stroke-width="2" stroke-linejoin="round">
+      <path id="h3" d="M786 356 L800 365 L786 374 Z" opacity="0" />
+      <path id="h5" d="M786 488 L800 497 L786 506 Z" opacity="0" />
+      <path id="h35" d="M976 356 L990 365 L976 374 Z" opacity="0" />
+    </g>
+  </svg>
+
+  <div class="lbl" style="left:640px; top:112px;">buckets</div>
+  <div class="lbl" style="left:590px; top:157px;">0</div>
+  <div class="node" id="b0" style="left:640px; top:140px; width:130px; height:54px; border-radius:10px;"></div>
+  <div class="lbl" style="left:590px; top:223px;">1</div>
+  <div class="node" id="b1" style="left:640px; top:206px; width:130px; height:54px; border-radius:10px;"></div>
+  <div class="lbl" style="left:590px; top:289px;">2</div>
+  <div class="node" id="b2" style="left:640px; top:272px; width:130px; height:54px; border-radius:10px;"></div>
+  <div class="lbl" style="left:590px; top:355px;">3</div>
+  <div class="node" id="b3" style="left:640px; top:338px; width:130px; height:54px; border-radius:10px;"></div>
+  <div class="lbl" style="left:590px; top:421px;">4</div>
+  <div class="node" id="b4" style="left:640px; top:404px; width:130px; height:54px; border-radius:10px;"></div>
+  <div class="lbl" style="left:590px; top:487px;">5</div>
+  <div class="node" id="b5" style="left:640px; top:470px; width:130px; height:54px; border-radius:10px;"></div>
+  <div class="lbl" style="left:590px; top:553px;">6</div>
+  <div class="node" id="b6" style="left:640px; top:536px; width:130px; height:54px; border-radius:10px;"></div>
+
+  <div class="box" id="fn" style="left:250px; top:300px; width:310px; height:110px;"><h4>hash(key) % 7</h4><div class="val" id="fn-val" style="font-size:28px;">—</div></div>
+
+  <div class="node c" id="cAda" style="left:810px; top:338px;">Ada</div>
+  <div class="node c" id="cEve" style="left:1000px; top:338px;">Eve</div>
+  <div class="node c" id="cBob" style="left:810px; top:470px;">Bob</div>
+
+  <div class="chip" id="k1">Ada</div>
+  <div class="chip" id="k2">Bob</div>
+  <div class="chip" id="k3">Eve</div>
+  <div class="chip" id="k4">Eve</div>
+  <div class="chip warm" id="i1">3</div>
+  <div class="chip warm" id="i2">5</div>
+  <div class="chip warm" id="i3">3</div>
+  <div class="chip warm" id="i4">3</div>
+
+  <div class="tag warm" id="col" style="left:810px; top:292px;">collision: bucket 3 is taken</div>
+  <div class="tag" id="walk" style="left:810px; top:406px;">Ada ≠ Eve, next</div>
+  <div class="tag good" id="cost" style="left:60px; top:560px;">average O(1) · worst case O(n)</div>
+</div>
+
+<script src="../lib.js"></script>
+<script>
+  var tl = G.tl;
+  G.caps([[0, 4], [4, 8], [8, 12], [12, 16]]);
+  var CY = { 3: 365, 5: 497 };
+  function put(key, idx, chipK, chipI, at) {
+    G.chip(chipK, [[110, 270], [400, 270]], at, 0.7, 0);
+    G.glow('#fn', at + 0.7, 1.5);
+    G.txt('#fn-val', '"' + key + '" → ' + idx, at + 1.0);
+    G.chip(chipI, [[540, 355], [600, CY[idx]], [705, CY[idx]]], at + 1.5, 0.45, 0);
+    G.glow('#b' + idx, at + 2.2, 1.0);
+  }
+
+  /* 1 · Ada → 3 */
+  put('Ada', 3, '#k1', '#i1', 0.3);
+  tl.fromTo('#w3,#h3', { opacity: 0 }, { opacity: 1, duration: 0.3 }, 2.9);
+  G.pop('#cAda', 3.0);
+
+  /* 2 · Bob → 5 */
+  put('Bob', 5, '#k2', '#i2', 4.3);
+  tl.fromTo('#w5,#h5', { opacity: 0 }, { opacity: 1, duration: 0.3 }, 6.9);
+  G.pop('#cBob', 7.0);
+
+  /* 3 · Eve → 3 collides with Ada */
+  put('Eve', 3, '#k3', '#i3', 8.3);
+  G.glow('#b3', 10.5, 1.2, 'warn');
+  G.glow('#cAda', 10.5, 1.2, 'warn');
+  tl.to('#col', { opacity: 1, duration: 0.3 }, 10.5);
+  tl.fromTo('#w35,#h35', { opacity: 0 }, { opacity: 1, duration: 0.3 }, 11.2);
+  G.pop('#cEve', 11.3);
+  tl.to('#col', { opacity: 0, duration: 0.3 }, 11.7);
+
+  /* 4 · look up Eve */
+  G.chip('#k4', [[110, 270], [400, 270]], 12.2, 0.7, 0);
+  G.glow('#fn', 12.9, 1.0);
+  G.txt('#fn-val', '"Eve" → 3', 13.1);
+  G.chip('#i4', [[540, 355], [600, 365], [705, 365]], 13.2, 0.4, 0);
+  G.glow('#b3', 13.9, 0.8);
+  tl.to('#walk', { opacity: 1, duration: 0.3 }, 14.1);
+  G.glow('#cAda', 14.1, 0.9, 'warn');
+  G.txt('#walk', 'Eve found', 15.0);
+  G.glow('#cEve', 15.0, 0.9);
+  tl.to('#cost', { opacity: 1, duration: 0.4 }, 14.9);
+
+  G.end(16);
+  G.register('hash-table');
+</script>
+</body>
+</html>

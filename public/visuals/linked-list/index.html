@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=1280, height=720" />
+<meta data-composition-id="linked-list" data-width="1280" data-height="720" />
+<title>Linked list</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@500;600;700&family=Young+Serif&display=swap" rel="stylesheet" media="print" onload="this.media=\'all\'" />
+<link rel="stylesheet" href="../base.css" />
+<script src="../gsap.min.js"></script>
+<style>
+  #ll { position: absolute; inset: 0; }
+  .ln { width: 200px; height: 100px; justify-content: stretch; }
+  .ln .v { flex: 1; text-align: center; }
+  .ln .p { width: 70px; height: 100%; border-left: 2.5px solid #2f4439; display: flex; align-items: center; justify-content: center; }
+  .ln .p::after { content: ""; width: 14px; height: 14px; border-radius: 50%; background: #5fc2a2; }
+  .cmp { position: absolute; top: 160px; width: 560px; height: 320px; opacity: 0; padding: 22px 26px; }
+  .cmp h3 { font: 400 32px/1 "Young Serif", Georgia, serif; margin-bottom: 20px; }
+  .cmp p { font: 500 24px/1.3 "Figtree", sans-serif; color: #92a59a; margin-bottom: 16px; }
+  .cmp p b { display: block; color: #e5ede7; font: 600 24px/1.2 "JetBrains Mono", monospace; }
+  .cmp .good { color: #5fc2a2; }
+  .cmp .bad { color: #e0a94a; }
+</style>
+</head>
+<body>
+<div id="stage" data-composition-id="linked-list" data-width="1280" data-height="720">
+  <div id="cap">
+    <div class="step" id="c1">1 · Traverse <small>Start at the head and follow each next pointer. Finding 9 takes 3 hops.</small></div>
+    <div class="step" id="c2">2 · Insert 5 after 3 <small>Point the new node at 9, then point 3 at it. Only two pointers change.</small></div>
+    <div class="step" id="c3">3 · Delete the head <small>Move the head to the next node. Node 7 becomes unreachable.</small></div>
+    <div class="step" id="c4">4 · Why it matters <small>Lists are quick to change but slow to look up. Arrays are the opposite.</small></div>
+  </div>
+
+  <svg id="wires" viewBox="0 0 1280 720">
+    <g id="wl" fill="none" stroke="#2f4439" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+      <path id="w1" d="M290 300 H396" />
+      <path id="w2" d="M580 300 H686" />
+      <path id="w3" d="M870 300 H976" />
+      <path id="w2b" d="M575 322 V490 H541" />
+      <path id="w4" d="M755 490 H800 V364" />
+      <path id="wh" d="M220 206 V234" />
+    </g>
+    <g id="wl2" stroke="#2f4439" fill="#2f4439" stroke-width="2" stroke-linejoin="round">
+      <path id="h1" d="M382 291 L396 300 L382 309 Z" />
+      <path id="h2" d="M672 291 L686 300 L672 309 Z" />
+      <path id="h3" d="M962 291 L976 300 L962 309 Z" />
+      <path id="h2b" d="M527 481 L541 490 L527 499 Z" />
+      <path id="h4" d="M791 378 L800 364 L809 378 Z" />
+      <path id="hh" d="M211 230 L220 246 L229 230 Z" />
+    </g>
+  </svg>
+
+  <div id="ll">
+    <div class="tag good" id="head" style="left:160px; top:166px; opacity:1;">HEAD</div>
+    <div class="node ln" id="n1" style="left:120px; top:250px;"><span class="v">7</span><span class="p"></span></div>
+    <div class="node ln" id="n2" style="left:410px; top:250px;"><span class="v">3</span><span class="p"></span></div>
+    <div class="node ln" id="n3" style="left:700px; top:250px;"><span class="v">9</span><span class="p"></span></div>
+    <div class="node" id="nul" style="left:990px; top:276px; width:120px; height:48px; font-size:22px; color:#92a59a;">null</div>
+    <div class="node ln" id="n4" style="left:555px; top:440px; opacity:0;"><span class="v">5</span><span class="p"></span></div>
+    <div class="tag" id="hop" style="left:120px; top:396px;">looking for 9…</div>
+    <div class="tag warm" id="n-ins" style="left:850px; top:470px;">2 pointers changed</div>
+    <div class="tag warm" id="n-del" style="left:120px; top:380px;">7 is unreachable</div>
+  </div>
+
+  <div class="box cmp" id="cA" style="left:60px;"><h3>Array</h3>
+    <p>Read item 3<b class="good">instant · O(1)</b></p>
+    <p>Insert in the middle<b class="bad">shift everything · O(n)</b></p></div>
+  <div class="box cmp" id="cB" style="left:660px;"><h3>Linked list</h3>
+    <p>Read item 3<b class="bad">walk from the head · O(n)</b></p>
+    <p>Insert after a known node<b class="good">change 2 pointers · O(1)</b></p></div>
+</div>
+
+<script src="../lib.js"></script>
+<script>
+  var tl = G.tl;
+  G.caps([[0, 4], [4, 8], [8, 12], [12, 16]]);
+
+  /* 1 · traverse looking for 9 */
+  tl.fromTo('#hop', { opacity: 0 }, { opacity: 1, duration: 0.3 }, 0.4);
+  G.glow('#head', 0.4, 0.6);
+  G.glow('#n1', 1.0, 0.9, 'warn');
+  G.txt('#hop', '7 is not 9, follow next', 1.0);
+  G.wire('#w1,#h1', 1.6, 0.6);
+  G.glow('#n2', 1.9, 0.9, 'warn');
+  G.txt('#hop', '3 is not 9, follow next', 1.9);
+  G.wire('#w2,#h2', 2.5, 0.6);
+  G.glow('#n3', 2.8, 1.0);
+  G.txt('#hop', '9 found after 3 hops', 2.8);
+  tl.to('#hop', { opacity: 0, duration: 0.3 }, 3.7);
+
+  /* 2 · insert 5 after 3 */
+  tl.fromTo('#n4', { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.5 }, 4.4);
+  G.glow('#n4', 4.4, 1.0);
+  tl.fromTo('#w4,#h4', { opacity: 0 }, { opacity: 1, duration: 0.4 }, 5.2);
+  G.wire('#w4,#h4', 5.2, 1.2);
+  tl.to('#w2,#h2', { opacity: 0, duration: 0.4 }, 6.0);
+  tl.fromTo('#w2b,#h2b', { opacity: 0 }, { opacity: 1, duration: 0.4 }, 6.0);
+  G.wire('#w2b,#h2b', 6.0, 1.2);
+  tl.to('#n-ins', { opacity: 1, duration: 0.4 }, 6.6);
+  tl.to('#n-ins', { opacity: 0, duration: 0.3 }, 7.6);
+
+  /* 3 · delete the head */
+  tl.to('#w1,#h1', { opacity: 0, duration: 0.4 }, 8.3);
+  tl.to('#n1', { opacity: 0.25, duration: 0.5 }, 8.5);
+  tl.to('#head', { x: 290, duration: 0.7, ease: 'power2.inOut' }, 8.7);
+  tl.to('#wh,#hh', { x: 290, duration: 0.7, ease: 'power2.inOut' }, 8.7);
+  G.glow('#n2', 9.4, 1.0);
+  tl.to('#n-del', { opacity: 1, duration: 0.4 }, 9.6);
+
+  /* 4 · array vs list */
+  tl.to('#ll', { opacity: 0, duration: 0.5 }, 12.1);
+  tl.to('#wl,#wl2', { opacity: 0, duration: 0.5 }, 12.1);
+  tl.fromTo('#cA', { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.5 }, 12.7);
+  tl.fromTo('#cB', { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.5 }, 13.4);
+
+  G.end(16);
+  G.register('linked-list');
+</script>
+</body>
+</html>

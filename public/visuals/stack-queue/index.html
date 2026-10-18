@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=1280, height=720" />
+<meta data-composition-id="stack-queue" data-width="1280" data-height="720" />
+<title>Stack and queue</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@500;600;700&family=Young+Serif&display=swap" rel="stylesheet" media="print" onload="this.media=\'all\'" />
+<link rel="stylesheet" href="../base.css" />
+<script src="../gsap.min.js"></script>
+<style>
+  #stackbox { position: absolute; left: 110px; top: 160px; width: 300px; height: 430px; border: 3px solid #2f4439; border-top: none; border-radius: 0 0 16px 16px; background: #101a15; }
+  #queuebox { position: absolute; left: 560px; top: 326px; width: 650px; height: 128px; border: 3px solid #2f4439; border-left: none; border-right: none; background: #101a15; }
+  .s { left: 135px; width: 250px; height: 64px; }
+  .q { top: 348px; width: 140px; height: 84px; }
+</style>
+</head>
+<body>
+<div id="stage" data-composition-id="stack-queue" data-width="1280" data-height="720">
+  <div id="cap">
+    <div class="step" id="c1">1 · Push <small>A stack adds items on top. Push A, then B, then C.</small></div>
+    <div class="step" id="c2">2 · Pop <small>Pop removes the <em>newest</em> item. C was last in, so C is first out.</small></div>
+    <div class="step" id="c3">3 · Enqueue <small>A queue adds items at the back. Enqueue A, then B, then C.</small></div>
+    <div class="step" id="c4">4 · Dequeue <small>Dequeue removes the <em>oldest</em> item. A was first in, so A is first out.</small></div>
+    <div class="step" id="c5">5 · Compare <small>Same items, opposite order: stack is last in first out, queue is first in first out.</small></div>
+  </div>
+
+  <div id="stackbox"></div>
+  <div id="queuebox"></div>
+  <div class="lbl" style="left:110px; top:604px;">Stack · LIFO</div>
+  <div class="lbl" style="left:560px; top:488px;">Queue · FIFO</div>
+  <div class="lbl" id="back" style="left:572px; top:296px; opacity:0;">back</div>
+  <div class="lbl" id="front" style="left:1130px; top:296px; opacity:0;">front</div>
+
+  <div class="node s" id="sA" style="top:510px; opacity:0;">A</div>
+  <div class="node s" id="sB" style="top:438px; opacity:0;">B</div>
+  <div class="node s" id="sC" style="top:366px; opacity:0;">C</div>
+
+  <div class="node q" id="qA" style="left:1050px; opacity:0;">A</div>
+  <div class="node q" id="qB" style="left:890px; opacity:0;">B</div>
+  <div class="node q" id="qC" style="left:730px; opacity:0;">C</div>
+
+  <div class="tag good" id="top" style="left:430px; top:540px;">◂ top</div>
+  <div class="tag" id="sop" style="left:430px; top:190px;">push(A)</div>
+  <div class="tag" id="qop" style="left:800px; top:250px;">enqueue(A)</div>
+  <div class="tag warm" id="n-stack" style="left:430px; top:560px;">newest out first</div>
+  <div class="tag warm" id="n-queue" style="left:860px; top:560px;">oldest out first</div>
+</div>
+
+<script src="../lib.js"></script>
+<script>
+  var tl = G.tl;
+  G.caps([[0, 3], [3, 6], [6, 9], [9, 12], [12, 15]]);
+
+  /* 1 · push A, B, C */
+  G.glow('#stackbox', 0.2, 2.6);
+  ['A', 'B', 'C'].forEach(function (k, i) {
+    var at = 0.5 + i * 0.75;
+    tl.fromTo('#s' + k, { y: -260, opacity: 0 }, { y: 0, opacity: 1, duration: 0.55, ease: 'bounce.out' }, at);
+    G.txt('#sop', 'push(' + k + ')', at - 0.05);
+    tl.fromTo('#sop', { opacity: 0 }, { opacity: 1, duration: 0.2 }, at - 0.05);
+  });
+  tl.fromTo('#top', { opacity: 0, y: 40 }, { opacity: 1, y: 0, duration: 0.3 }, 0.5);
+  tl.to('#top', { y: -72, duration: 0.3 }, 1.25);
+  tl.to('#top', { y: -144, duration: 0.3 }, 2.0);
+
+  /* 2 · pop → C */
+  G.glow('#stackbox', 3.2, 2.5);
+  G.txt('#sop', 'pop() → C', 3.4);
+  tl.to('#sC', { y: -240, opacity: 0, duration: 0.8, ease: 'power2.in' }, 3.5);
+  tl.to('#top', { y: -72, duration: 0.3 }, 3.9);
+  tl.to('#sop', { opacity: 0, duration: 0.3 }, 5.5);
+
+  /* 3 · enqueue A, B, C */
+  G.fade('#back', 6.0);
+  G.fade('#front', 6.0);
+  G.glow('#queuebox', 6.2, 2.6);
+  [['A', 600], ['B', 440], ['C', 280]].forEach(function (p, i) {
+    var at = 6.4 + i * 0.8;
+    G.txt('#qop', 'enqueue(' + p[0] + ')', at - 0.05);
+    tl.fromTo('#qop', { opacity: 0 }, { opacity: 1, duration: 0.2 }, at - 0.05);
+    tl.fromTo('#q' + p[0], { x: -p[1], opacity: 0 }, { x: 0, opacity: 1, duration: 0.7, ease: 'power2.out' }, at);
+  });
+
+  /* 4 · dequeue → A */
+  G.glow('#queuebox', 9.2, 2.5);
+  G.txt('#qop', 'dequeue() → A', 9.4);
+  tl.to('#qop', { opacity: 1, duration: 0.2 }, 9.4);
+  tl.to('#qA', { x: 260, opacity: 0, duration: 0.8, ease: 'power2.in' }, 9.5);
+  tl.to('#qB', { x: 160, duration: 0.6, ease: 'power2.inOut' }, 10.1);
+  tl.to('#qC', { x: 160, duration: 0.6, ease: 'power2.inOut' }, 10.1);
+  tl.to('#qop', { opacity: 0, duration: 0.3 }, 11.6);
+
+  /* 5 · compare */
+  G.glow('#stackbox', 12.2, 2.4);
+  G.glow('#queuebox', 12.2, 2.4, 'warn');
+  tl.to('#n-stack', { opacity: 1, duration: 0.4 }, 12.4);
+  tl.to('#n-queue', { opacity: 1, duration: 0.4 }, 12.8);
+
+  G.end(15);
+  G.register('stack-queue');
+</script>
+</body>
+</html>

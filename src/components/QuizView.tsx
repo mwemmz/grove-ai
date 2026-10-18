@@ -1,18 +1,9 @@
 import React, { useState } from 'react';
-import { 
-  Repeat, 
-  RotateCw, 
-  Check, 
-  Sparkles, 
-  Flame, 
-  Award, 
-  BookOpen,
-  Plus,
-  X
-} from 'lucide-react';
+import { RotateCw, Award, Plus, X } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import { Flashcard, Note, AcademicYear } from '../types';
+import { Flashcard, Note } from '../types';
 import { storage } from '../services/storage';
+import { PageHeader, Segmented, Inline, quietBtn } from './ui';
 
 interface QuizViewProps {
   flashcards: Flashcard[];
@@ -61,12 +52,6 @@ export const QuizView: React.FC<QuizViewProps> = ({
       newInterval = Math.round(currentCard.interval * 2.2) + 7;
       newRepetition += 1;
       newStatus = 'mastered';
-      // Trigger confetti celebration!
-      confetti({
-        particleCount: 50,
-        spread: 60,
-        origin: { y: 0.7 }
-      });
     }
 
     const updatedCard: Flashcard = {
@@ -87,11 +72,9 @@ export const QuizView: React.FC<QuizViewProps> = ({
       setIsFlipped(false);
     } else {
       setSessionCompleted(true);
-      confetti({
-        particleCount: 120,
-        spread: 100,
-        origin: { y: 0.6 }
-      });
+      if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        confetti({ particleCount: 60, spread: 70, origin: { y: 0.6 } });
+      }
     }
   };
 
@@ -136,59 +119,31 @@ export const QuizView: React.FC<QuizViewProps> = ({
   };
 
   return (
-    <div className="max-w-4xl mx-auto w-full px-4 sm:px-6 py-6 space-y-6">
+    <div className="mx-auto w-full max-w-3xl space-y-6 px-4 py-6 sm:px-6">
       
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900/80 border border-slate-800 rounded-2xl p-6 shadow-xl">
-        <div>
-          <div className="flex items-center gap-2">
-            <Repeat className="h-5 w-5 text-emerald-400" />
-            <h2 className="text-xl font-bold text-white">Degree Spaced Recall</h2>
-          </div>
-          <p className="text-xs text-slate-400 mt-1">
-            Active recall flashcards generated directly from your 4-year degree notes using SuperMemo spaced repetition.
-          </p>
-        </div>
+      <PageHeader
+        title="Recall"
+        subtitle="Flashcards from your notes, timed to come back just before you would forget them."
+        action={
+          <button onClick={() => setIsCreateModalOpen(true)} className={quietBtn}>
+            <Plus className="h-4 w-4" />
+            Add flashcard
+          </button>
+        }
+      />
 
-        <button
-          onClick={() => setIsCreateModalOpen(true)}
-          className="flex items-center gap-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 px-3.5 py-2 text-xs font-semibold border border-slate-700 self-start sm:self-auto transition-colors"
-        >
-          <Plus className="h-3.5 w-3.5" />
-          <span>Add Flashcard</span>
-        </button>
-      </div>
-
-      {/* Year Filter Tabs */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1">
-        <button
-          onClick={() => { setSelectedYear('all'); resetSession(); }}
-          className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors shrink-0 ${
-            selectedYear === 'all'
-              ? 'bg-emerald-600 text-white'
-              : 'bg-slate-900 text-slate-400 border border-slate-800'
-          }`}
-        >
-          All Decks ({flashcards.length})
-        </button>
-
-        {[1, 2, 3, 4].map(yr => {
-          const count = flashcards.filter(c => c.year === yr).length;
-          return (
-            <button
-              key={yr}
-              onClick={() => { setSelectedYear(yr); resetSession(); }}
-              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors shrink-0 ${
-                selectedYear === yr
-                  ? 'bg-emerald-600 text-white'
-                  : 'bg-slate-900 text-slate-400 border border-slate-800'
-              }`}
-            >
-              Year {yr} ({count})
-            </button>
-          );
-        })}
-      </div>
+      <Segmented
+        label="Filter by year"
+        value={String(selectedYear)}
+        onChange={(v) => { setSelectedYear(v === 'all' ? 'all' : Number(v)); resetSession(); }}
+        options={[
+          { id: 'all', label: 'All' },
+          { id: '1', label: 'Year 1' },
+          { id: '2', label: 'Year 2' },
+          { id: '3', label: 'Year 3' },
+          { id: '4', label: 'Year 4' },
+        ]}
+      />
 
       {/* Card Arena */}
       {!sessionCompleted && currentCard ? (
@@ -197,24 +152,22 @@ export const QuizView: React.FC<QuizViewProps> = ({
           {/* Progress Tracker */}
           <div className="flex items-center justify-between text-xs text-slate-400 px-1">
             <span>Card {currentIndex + 1} of {activeDeck.length}</span>
-            <span className="font-mono text-emerald-400 font-bold">
-              Interval: {currentCard.interval} days
-            </span>
+            <span>Back in {currentCard.interval} {currentCard.interval === 1 ? 'day' : 'days'}</span>
           </div>
 
           {/* Flashcard Box */}
           <div
             onClick={handleFlip}
-            className="cursor-pointer min-h-[300px] sm:min-h-[340px] rounded-3xl bg-slate-900 border border-slate-800 hover:border-emerald-500/40 p-8 flex flex-col justify-between shadow-2xl transition-[background-color,border-color] duration-200 ease-out relative group"
+            className="cursor-pointer min-h-[300px] sm:min-h-[340px] rounded-2xl bg-surface hover:bg-raised p-6 sm:p-8 flex flex-col justify-between transition-colors duration-200 ease-out relative group"
           >
             {/* Card Header */}
             <div className="flex items-center justify-between">
-              <span className="rounded-md bg-emerald-500/10 text-emerald-400 text-xs font-bold px-2 py-0.5 border border-emerald-500/20">
+              <span className="text-sm text-muted">
                 Year {currentCard.year} · {currentCard.courseCode}
               </span>
               <span className="text-xs text-slate-500 flex items-center gap-1 group-hover:text-slate-300 transition-colors">
                 <RotateCw className="h-3.5 w-3.5" />
-                Click anywhere to flip
+                Tap to flip
               </span>
             </div>
 
@@ -222,28 +175,28 @@ export const QuizView: React.FC<QuizViewProps> = ({
             <div className="my-auto py-6 text-center max-w-xl mx-auto">
               {!isFlipped ? (
                 <div>
-                  <div className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-3">
-                    Question / Prompt
+                  <div className="text-sm text-muted mb-3">
+                    Question
                   </div>
                   <h3 className="text-lg sm:text-xl font-bold text-white leading-relaxed">
-                    {currentCard.front}
+                    <Inline text={currentCard.front} />
                   </h3>
                 </div>
               ) : (
                 <div className="animate-fade-in">
-                  <div className="text-[11px] font-bold text-emerald-400 uppercase tracking-widest mb-3">
-                    Answer & Mechanics
+                  <div className="text-sm text-accent mb-3">
+                    Answer
                   </div>
                   <p className="text-sm sm:text-base text-slate-200 leading-relaxed whitespace-pre-line">
-                    {currentCard.back}
+                    <Inline text={currentCard.back} />
                   </p>
                 </div>
               )}
             </div>
 
             {/* Card Footer */}
-            <div className="text-center text-[11px] text-slate-500 border-t border-slate-800/80 pt-3">
-              {!isFlipped ? 'Reveal solution to score recall' : 'Rate how easily you recalled this'}
+            <div className="text-center text-sm text-muted pt-3">
+              {!isFlipped ? 'Think of the answer, then flip' : 'How easily did you recall it?'}
             </div>
           </div>
 
@@ -252,46 +205,43 @@ export const QuizView: React.FC<QuizViewProps> = ({
             <div className="grid grid-cols-4 gap-2 pt-2 animate-fade-in">
               <button
                 onClick={() => handleScore('again')}
-                className="rounded-xl bg-slate-900 hover:bg-rose-950/60 border border-rose-500/30 text-rose-400 p-3 text-center transition-colors"
+                className="min-h-14 rounded-xl bg-surface ring-1 ring-line hover:bg-raised text-text p-3 text-center transition-colors"
               >
-                <div className="text-xs font-bold">Again</div>
-                <div className="text-[10px] text-slate-500">1 day</div>
+                <div className="text-sm font-medium">Again</div>
+                <div className="text-xs text-muted">1 day</div>
               </button>
 
               <button
                 onClick={() => handleScore('hard')}
-                className="rounded-xl bg-slate-900 hover:bg-amber-950/60 border border-amber-500/30 text-amber-400 p-3 text-center transition-colors"
+                className="min-h-14 rounded-xl bg-surface ring-1 ring-line hover:bg-raised text-text p-3 text-center transition-colors"
               >
-                <div className="text-xs font-bold">Hard</div>
-                <div className="text-[10px] text-slate-500">+2 days</div>
+                <div className="text-sm font-medium">Hard</div>
+                <div className="text-xs text-muted">+2 days</div>
               </button>
 
               <button
                 onClick={() => handleScore('good')}
-                className="rounded-xl bg-slate-900 hover:bg-blue-950/60 border border-blue-500/30 text-blue-400 p-3 text-center transition-colors"
+                className="min-h-14 rounded-xl bg-surface ring-1 ring-line hover:bg-raised text-text p-3 text-center transition-colors"
               >
-                <div className="text-xs font-bold">Good</div>
-                <div className="text-[10px] text-slate-500">+7 days</div>
+                <div className="text-sm font-medium">Good</div>
+                <div className="text-xs text-muted">+7 days</div>
               </button>
 
               <button
                 onClick={() => handleScore('easy')}
-                className="rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white p-3 text-center transition-colors shadow-lg shadow-emerald-900/30"
+                className="min-h-14 rounded-xl bg-accent-strong hover:bg-accent hover:text-bg text-white p-3 text-center transition-colors"
               >
-                <div className="text-xs font-bold flex items-center justify-center gap-1">
-                  <Sparkles className="h-3 w-3" />
-                  Easy
-                </div>
-                <div className="text-[10px] text-emerald-200">+14 days</div>
+                <div className="text-sm font-medium">Easy</div>
+                <div className="text-xs text-white/70">+14 days</div>
               </button>
             </div>
           ) : (
             <div className="text-center">
               <button
                 onClick={handleFlip}
-                className="rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 px-6 py-2.5 text-xs font-semibold shadow transition-colors"
+                className="min-h-11 rounded-xl bg-raised hover:bg-line text-text px-6 text-sm font-medium transition-colors"
               >
-                Show Solution (Spacebar or Click)
+                Show answer
               </button>
             </div>
           )}
@@ -299,20 +249,18 @@ export const QuizView: React.FC<QuizViewProps> = ({
         </div>
       ) : (
         /* Session Completed Screen */
-        <div className="rounded-3xl bg-slate-900 border border-slate-800 p-12 text-center space-y-4 shadow-2xl">
-          <div className="h-16 w-16 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center mx-auto">
-            <Award className="h-8 w-8" />
-          </div>
-          <h3 className="text-2xl font-bold text-white">Review Session Complete!</h3>
-          <p className="text-xs text-slate-400 max-w-md mx-auto">
-            You just reinforced degree-long retention. Spaced repetition intervals have been recalculated and saved to your profile.
+        <div className="rounded-2xl bg-surface p-10 text-center space-y-3">
+          <Award className="mx-auto h-8 w-8 text-accent" />
+          <h2 className="text-xl font-semibold text-text">Session done</h2>
+          <p className="mx-auto max-w-sm text-sm text-muted">
+            Your review dates are updated. The cards you found hard will come back sooner.
           </p>
-          <div className="pt-4">
+          <div className="pt-3">
             <button
               onClick={resetSession}
-              className="rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-2.5 text-xs font-semibold shadow-lg shadow-emerald-900/30 transition-colors"
+              className="min-h-11 rounded-xl bg-accent-strong px-6 text-sm font-semibold text-white transition-colors hover:bg-accent hover:text-bg"
             >
-              Start Another Round
+              Go again
             </button>
           </div>
         </div>

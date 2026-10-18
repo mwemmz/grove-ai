@@ -1,23 +1,8 @@
 import React, { useState } from 'react';
-import { 
-  Compass, 
-  Award, 
-  Clock, 
-  CheckCircle2, 
-  Calendar, 
-  BookmarkCheck, 
-  Sparkles, 
-  TrendingUp, 
-  Brain, 
-  User, 
-  Flame,
-  Zap,
-  Check,
-  Plus,
-  X
-} from 'lucide-react';
+import { Clock, CheckCircle2, Calendar, BookmarkCheck, Sparkles, TrendingUp, Plus, X } from 'lucide-react';
 import { StudyBlueprint, StudentTier, WorkEthicArchetype } from '../types';
 import { storage } from '../services/storage';
+import { PageHeader, Toast, quietBtn } from './ui';
 
 interface StudyBlueprintsViewProps {
   blueprints: StudyBlueprint[];
@@ -132,42 +117,20 @@ export const StudyBlueprintsView: React.FC<StudyBlueprintsViewProps> = ({
   };
 
   return (
-    <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 py-6 space-y-6">
+    <div className="mx-auto w-full max-w-5xl space-y-6 px-4 py-6 sm:px-6">
       
-      {/* Toast Notification */}
-      {toastMessage && (
-        <div className="fixed top-20 right-6 z-50 flex items-center gap-2 rounded-xl bg-emerald-500 text-slate-950 px-4 py-2 text-xs font-bold shadow-2xl animate-bounce">
-          <Check className="h-4 w-4" />
-          <span>{toastMessage}</span>
-        </div>
-      )}
+      <Toast message={toastMessage} />
 
-      {/* Top Banner */}
-      <div className="bg-gradient-to-r from-slate-900 via-slate-900 to-amber-950/30 border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="rounded-md bg-amber-500/20 px-2 py-0.5 text-xs font-bold text-amber-300 border border-amber-500/30">
-              Cohort Intelligence
-            </span>
-            <span className="text-xs text-slate-400">Replicable High-Performance Patterns</span>
-          </div>
-          <h1 className="text-2xl font-bold text-white mt-1 flex items-center gap-2">
-            <Compass className="h-6 w-6 text-amber-400" />
-            A+ Study Blueprints & Work Ethic Telemetry
-          </h1>
-          <p className="text-xs text-slate-400 mt-1 max-w-2xl">
-            Grove records the actual study rhythms, revision pacing, and weekly habits of students who cleared each course with an A+ or A, making them adoptable as a personalized roadmap for students taking the course next.
-          </p>
-        </div>
-
-        <button
-          onClick={() => setIsSubmitModalOpen(true)}
-          className="flex items-center gap-1.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white px-4 py-2 text-xs font-semibold shadow-lg shadow-amber-950/40 transition-colors self-start md:self-auto"
-        >
-          <Plus className="h-4 w-4" />
-          <span>Publish Course Blueprint</span>
-        </button>
-      </div>
+      <PageHeader
+        title="Study blueprints"
+        subtitle="How students who cleared each course with an A+ or A actually studied. Adopt one as your own plan."
+        action={
+          <button onClick={() => setIsSubmitModalOpen(true)} className={quietBtn}>
+            <Plus className="h-4 w-4" />
+            Publish yours
+          </button>
+        }
+      />
 
       {/* Filter Row */}
       <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-900/60 border border-slate-800/80 p-3 rounded-xl">
@@ -223,7 +186,7 @@ export const StudyBlueprintsView: React.FC<StudyBlueprintsViewProps> = ({
               }`}
             >
               <div className="flex items-center justify-between mb-2">
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${getTierColor(bp.studentTier)}`}>
+                <span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${getTierColor(bp.studentTier)}`}>
                   Tier {bp.studentTier} · {bp.overallGpa}
                 </span>
                 <span className="text-xs font-mono font-bold text-slate-300">
@@ -234,11 +197,11 @@ export const StudyBlueprintsView: React.FC<StudyBlueprintsViewProps> = ({
               <h4 className="text-sm font-bold text-white line-clamp-1">
                 {bp.studentName}’s {bp.courseCode} Roadmap
               </h4>
-              <p className="text-[11px] text-amber-400 font-medium mt-0.5">
+              <p className="text-xs text-amber-400 font-medium mt-0.5">
                 {bp.archetype}
               </p>
 
-              <div className="mt-3 pt-2.5 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
+              <div className="mt-3 pt-2.5 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
                 <span className="flex items-center gap-1">
                   <Clock className="h-3 w-3 text-slate-500" />
                   {bp.weeklyHours} hrs/wk
@@ -294,7 +257,7 @@ export const StudyBlueprintsView: React.FC<StudyBlueprintsViewProps> = ({
               {/* Work Ethic Telemetry Grid */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
                 <div className="rounded-xl bg-slate-950 p-3 border border-slate-800/80 text-center">
-                  <div className="text-[10px] text-slate-500 uppercase font-semibold">Weekly Study Time</div>
+                  <div className="text-xs text-slate-500 uppercase font-semibold">Weekly Study Time</div>
                   <div className="text-base font-bold text-white mt-1 flex items-center justify-center gap-1">
                     <Clock className="h-4 w-4 text-amber-400" />
                     {activeBlueprint.weeklyHours}h / wk
@@ -302,7 +265,7 @@ export const StudyBlueprintsView: React.FC<StudyBlueprintsViewProps> = ({
                 </div>
 
                 <div className="rounded-xl bg-slate-950 p-3 border border-slate-800/80 text-center">
-                  <div className="text-[10px] text-slate-500 uppercase font-semibold">Exam Prep Window</div>
+                  <div className="text-xs text-slate-500 uppercase font-semibold">Exam Prep Window</div>
                   <div className="text-base font-bold text-emerald-400 mt-1 flex items-center justify-center gap-1">
                     <Calendar className="h-4 w-4 text-emerald-400" />
                     {activeBlueprint.examPrepDaysBefore} days before
@@ -310,14 +273,14 @@ export const StudyBlueprintsView: React.FC<StudyBlueprintsViewProps> = ({
                 </div>
 
                 <div className="rounded-xl bg-slate-950 p-3 border border-slate-800/80 text-center">
-                  <div className="text-[10px] text-slate-500 uppercase font-semibold">Learner Archetype</div>
+                  <div className="text-xs text-slate-500 uppercase font-semibold">Learner Archetype</div>
                   <div className="text-xs font-bold text-white mt-1 truncate" title={activeBlueprint.archetype}>
                     {activeBlueprint.archetype}
                   </div>
                 </div>
 
                 <div className="rounded-xl bg-slate-950 p-3 border border-slate-800/80 text-center">
-                  <div className="text-[10px] text-slate-500 uppercase font-semibold">Active Recall Habit</div>
+                  <div className="text-xs text-slate-500 uppercase font-semibold">Active Recall Habit</div>
                   <div className="text-xs font-bold text-teal-400 mt-1 truncate" title={activeBlueprint.flashcardReviewCadence}>
                     Spaced Recall
                   </div>
@@ -370,19 +333,19 @@ export const StudyBlueprintsView: React.FC<StudyBlueprintsViewProps> = ({
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <span className="rounded bg-slate-800 px-2 py-0.5 text-[11px] font-mono font-bold text-amber-400">
+                        <span className="rounded bg-slate-800 px-2 py-0.5 text-xs font-mono font-bold text-amber-400">
                           Week {ms.week}
                         </span>
                         <h4 className="text-xs font-bold text-white">{ms.topic}</h4>
                       </div>
-                      <span className="text-[10px] text-slate-500 font-mono">
+                      <span className="text-xs text-slate-500 font-mono">
                         {ms.workloadHours} hrs required
                       </span>
                     </div>
 
                     <p className="text-xs text-slate-300 leading-normal">{ms.focus}</p>
 
-                    <div className="pt-1 flex items-start gap-1.5 text-[11px] text-emerald-400/90 font-medium bg-emerald-950/20 p-2 rounded-lg border border-emerald-500/20">
+                    <div className="pt-1 flex items-start gap-1.5 text-xs text-emerald-400/90 font-medium bg-emerald-950/20 p-2 rounded-lg border border-emerald-500/20">
                       <span className="font-bold shrink-0">Pro-Tip:</span>
                       <span>{ms.proTip}</span>
                     </div>

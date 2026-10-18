@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth, SignInButton } from '@clerk/react';
 import { TreePine } from 'lucide-react';
-import { Header, AppTab } from './components/Header';
+import { Header, BottomNav, AppTab } from './components/Header';
+import { Segmented } from './components/ui';
 import { ChatTutorView } from './components/ChatTutorView';
 import { DegreeMemoryView } from './components/DegreeMemoryView';
 import { StudyBlueprintsView } from './components/StudyBlueprintsView';
@@ -27,26 +28,25 @@ import { setTokenProvider } from './lib/api';
 
 function LoadingScreen({ label }: { label: string }) {
   return (
-    <div className="min-h-dvh bg-[#090b10] text-slate-100 flex flex-col items-center justify-center gap-4 font-sans">
-      <TreePine className="h-10 w-10 text-emerald-400 animate-pulse" />
-      <p className="text-sm text-slate-400">{label}</p>
+    <div className="min-h-dvh bg-bg text-text flex flex-col items-center justify-center gap-4 font-sans">
+      <TreePine className="h-9 w-9 text-accent animate-pulse" />
+      <p className="text-sm text-muted">{label}</p>
     </div>
   );
 }
 
 function SignInScreen() {
   return (
-    <div className="min-h-dvh bg-[#090b10] text-slate-100 flex items-center justify-center font-sans">
-      <div className="w-full max-w-md rounded-2xl bg-[#0f121a] border border-white/[0.08] p-8 text-center shadow-2xl shadow-black/60">
-        <TreePine className="h-10 w-10 text-emerald-400 mx-auto mb-4" />
-        <h1 className="text-2xl font-bold text-white mb-2">Grove</h1>
-        <p className="text-sm text-slate-400 mb-6">
-          Your degree-long AI learning companion. Sign in to load your degree memory, notes, and
-          portfolio from the cloud.
+    <div className="min-h-dvh bg-bg text-text flex items-center justify-center px-4 font-sans">
+      <div className="w-full max-w-sm text-center">
+        <TreePine className="h-9 w-9 text-accent mx-auto mb-5" />
+        <h1 className="text-3xl font-semibold tracking-tight mb-2">Grove</h1>
+        <p className="text-muted mb-8">
+          A study companion that remembers your whole degree.
         </p>
         <SignInButton mode="modal">
-          <button className="w-full rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold py-3 transition-colors">
-            Sign in to Grove
+          <button className="w-full min-h-11 rounded-lg bg-accent-strong hover:bg-accent hover:text-bg text-white font-semibold transition-colors">
+            Sign in
           </button>
         </SignInButton>
       </div>
@@ -192,19 +192,45 @@ function GroveApp() {
     return <LoadingScreen label="Loading your degree memory..." />;
   }
 
+  const youView = activeTab === 'profile' || activeTab === 'portfolio';
+  const communityView = activeTab === 'blueprints' || activeTab === 'tutoring';
+
   return (
-    <div className="min-h-dvh bg-[#090b10] text-slate-100 flex flex-col font-sans selection:bg-emerald-500/30 selection:text-emerald-200">
-      {/* Top Navbar */}
+    <div className="app-shell h-dvh bg-bg text-text flex flex-col font-sans selection:bg-accent/30">
       <Header
         activeTab={activeTab}
         setActiveTab={setActiveTab}
-        profile={profile}
-        totalNotes={notes.length}
         onOpenSettings={() => setIsSettingsOpen(true)}
       />
 
-      {/* Main View Container */}
-      <main className="flex-1 flex flex-col">
+      <main className="app-main flex-1 min-h-0 overflow-y-auto">
+        {youView && (
+          <div className="mx-auto w-full max-w-3xl px-4 pt-5 sm:px-6">
+            <Segmented
+              label="You"
+              value={activeTab as 'profile' | 'portfolio'}
+              onChange={setActiveTab}
+              options={[
+                { id: 'profile', label: 'How I learn' },
+                { id: 'portfolio', label: 'Portfolio & CV' },
+              ]}
+            />
+          </div>
+        )}
+        {communityView && (
+          <div className="mx-auto w-full max-w-5xl px-4 pt-5 sm:px-6">
+            <Segmented
+              label="Community"
+              value={activeTab as 'blueprints' | 'tutoring'}
+              onChange={setActiveTab}
+              options={[
+                { id: 'blueprints', label: 'Study blueprints' },
+                { id: 'tutoring', label: 'Peer tutoring' },
+              ]}
+            />
+          </div>
+        )}
+
         {activeTab === 'chat' && (
           <ChatTutorView
             notes={notes}
@@ -225,10 +251,7 @@ function GroveApp() {
         )}
 
         {activeTab === 'blueprints' && (
-          <StudyBlueprintsView
-            blueprints={blueprints}
-            setBlueprints={setBlueprints}
-          />
+          <StudyBlueprintsView blueprints={blueprints} setBlueprints={setBlueprints} />
         )}
 
         {activeTab === 'tutoring' && (
@@ -263,15 +286,12 @@ function GroveApp() {
         )}
 
         {activeTab === 'quiz' && (
-          <QuizView
-            flashcards={flashcards}
-            setFlashcards={setFlashcards}
-            notes={notes}
-          />
+          <QuizView flashcards={flashcards} setFlashcards={setFlashcards} notes={notes} />
         )}
       </main>
 
-      {/* Settings Modal */}
+      <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
+
       <SettingsModal
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}

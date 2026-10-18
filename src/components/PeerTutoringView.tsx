@@ -1,25 +1,8 @@
 import React, { useState } from 'react';
-import { 
-  Users, 
-  GraduationCap, 
-  MessageSquare, 
-  ThumbsUp, 
-  Star, 
-  Calendar, 
-  Clock, 
-  CheckCircle2, 
-  Plus, 
-  AlertTriangle, 
-  BookOpen, 
-  Send, 
-  Check, 
-  X,
-  Sparkles,
-  Award,
-  Filter
-} from 'lucide-react';
+import { GraduationCap, ThumbsUp, Star, Clock, Plus, Send, X } from 'lucide-react';
 import { SeniorComment, TutorProfile, TutorRequest, Course, StudentTier } from '../types';
 import { storage } from '../services/storage';
+import { PageHeader, Segmented, Toast } from './ui';
 
 interface PeerTutoringViewProps {
   seniorComments: SeniorComment[];
@@ -165,68 +148,25 @@ export const PeerTutoringView: React.FC<PeerTutoringViewProps> = ({
   };
 
   return (
-    <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 py-6 space-y-6">
+    <div className="mx-auto w-full max-w-5xl space-y-6 px-4 py-6 sm:px-6">
       
-      {/* Toast Notification */}
-      {toastMessage && (
-        <div className="fixed top-20 right-6 z-50 flex items-center gap-2 rounded-xl bg-emerald-500 text-slate-950 px-4 py-2 text-xs font-bold shadow-2xl animate-bounce">
-          <Check className="h-4 w-4" />
-          <span>{toastMessage}</span>
-        </div>
-      )}
+      <Toast message={toastMessage} />
 
-      {/* Top Banner */}
-      <div className="bg-gradient-to-r from-slate-900 via-slate-900 to-teal-950/30 border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="rounded-md bg-teal-500/20 px-2 py-0.5 text-xs font-bold text-teal-300 border border-teal-500/30">
-              Clearance Network
-            </span>
-            <span className="text-xs text-slate-400">Alumni & Peer Mentorship</span>
-          </div>
-          <h1 className="text-2xl font-bold text-white mt-1 flex items-center gap-2">
-            <Users className="h-6 w-6 text-teal-400" />
-            Peer Tutoring & Course Clearance Advice
-          </h1>
-          <p className="text-xs text-slate-400 mt-1 max-w-2xl">
-            Students who cleared a course leave battle-tested exam warnings and study tactics. Lower years can request 1-on-1 tutoring from high performers.
-          </p>
-        </div>
+      <PageHeader
+        title="Peer tutoring"
+        subtitle="Seniors who cleared a course share what to watch for. Ask a high performer for one-to-one help."
+      />
 
-        {/* Sub-tab Navigation */}
-        <div className="flex items-center gap-1 rounded-xl bg-slate-950 p-1 border border-slate-800 shrink-0">
-          <button
-            onClick={() => setActiveTab('advice')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
-              activeTab === 'advice'
-                ? 'bg-teal-600 text-white'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            Clearance Advice ({seniorComments.length})
-          </button>
-          <button
-            onClick={() => setActiveTab('tutors')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
-              activeTab === 'tutors'
-                ? 'bg-teal-600 text-white'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            Find a Tutor ({tutors.length})
-          </button>
-          <button
-            onClick={() => setActiveTab('requests')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
-              activeTab === 'requests'
-                ? 'bg-teal-600 text-white'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            Request Queue ({tutorRequests.length})
-          </button>
-        </div>
-      </div>
+      <Segmented
+        label="Peer tutoring sections"
+        value={activeTab}
+        onChange={setActiveTab}
+        options={[
+          { id: 'advice', label: `Advice (${seniorComments.length})` },
+          { id: 'tutors', label: `Tutors (${tutors.length})` },
+          { id: 'requests', label: `Requests (${tutorRequests.length})` },
+        ]}
+      />
 
       {/* TAB 1: CLEARANCE ADVICE & ANNOTATIONS */}
       {activeTab === 'advice' && (
@@ -283,12 +223,12 @@ export const PeerTutoringView: React.FC<PeerTutoringViewProps> = ({
                       <span className="rounded bg-slate-800 text-slate-200 text-xs font-mono font-bold px-2 py-0.5 border border-slate-700">
                         {comment.courseCode}
                       </span>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${getCategoryBadge(comment.category)}`}>
+                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${getCategoryBadge(comment.category)}`}>
                         {comment.category.replace('-', ' ')}
                       </span>
                     </div>
 
-                    <span className="text-[10px] text-amber-300 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20 font-bold">
+                    <span className="text-xs text-amber-300 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20 font-bold">
                       Cleared with {comment.authorGrade}
                     </span>
                   </div>
@@ -304,11 +244,11 @@ export const PeerTutoringView: React.FC<PeerTutoringViewProps> = ({
 
                 <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-500">
                   <div className="flex items-center gap-2">
-                    <div className="h-5 w-5 rounded-full bg-slate-800 flex items-center justify-center text-[10px] text-teal-400 font-bold">
+                    <div className="h-5 w-5 rounded-full bg-slate-800 flex items-center justify-center text-xs text-teal-400 font-bold">
                       {comment.authorName[0]}
                     </div>
                     <span className="text-slate-400 font-medium">{comment.authorName}</span>
-                    <span className="text-[10px] text-slate-600">· {comment.semesterCleared}</span>
+                    <span className="text-xs text-slate-600">· {comment.semesterCleared}</span>
                   </div>
 
                   <button
@@ -362,7 +302,7 @@ export const PeerTutoringView: React.FC<PeerTutoringViewProps> = ({
                     <div>
                       <h3 className="text-base font-bold text-white flex items-center gap-2">
                         {tutor.name}
-                        <span className="text-[10px] font-bold text-teal-400 bg-teal-500/10 px-1.5 py-0.5 rounded border border-teal-500/20">
+                        <span className="text-xs font-bold text-teal-400 bg-teal-500/10 px-1.5 py-0.5 rounded border border-teal-500/20">
                           Year {tutor.currentYear} Senior
                         </span>
                       </h3>
@@ -381,14 +321,14 @@ export const PeerTutoringView: React.FC<PeerTutoringViewProps> = ({
 
                   {/* Cleared Courses Pills */}
                   <div className="mt-3 pt-3 border-t border-slate-800 space-y-1.5">
-                    <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
+                    <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
                       Cleared Courses (Verified)
                     </div>
                     <div className="flex flex-wrap gap-1.5">
                       {tutor.clearedCourses.map((cc, i) => (
                         <span
                           key={i}
-                          className="rounded bg-slate-800/80 px-2 py-0.5 text-[10px] text-slate-300 border border-slate-700/60 flex items-center gap-1"
+                          className="rounded bg-slate-800/80 px-2 py-0.5 text-xs text-slate-300 border border-slate-700/60 flex items-center gap-1"
                         >
                           <span className="font-bold text-white">{cc.courseCode}</span>
                           <span className="text-amber-300 font-bold">({cc.grade})</span>
@@ -400,7 +340,7 @@ export const PeerTutoringView: React.FC<PeerTutoringViewProps> = ({
 
                 <div className="pt-3 border-t border-slate-800 flex items-center justify-between">
                   <div>
-                    <div className="text-[10px] text-slate-500 font-medium">Rate / Session</div>
+                    <div className="text-xs text-slate-500 font-medium">Rate / Session</div>
                     <div className="text-xs font-bold text-emerald-400">{tutor.hourlyRate}</div>
                   </div>
 
@@ -443,7 +383,7 @@ export const PeerTutoringView: React.FC<PeerTutoringViewProps> = ({
                       {req.courseCode}
                     </span>
                     <h4 className="text-sm font-bold text-white">{req.topic}</h4>
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${
                       req.urgency === 'midterm-prep' ? 'bg-amber-500/10 text-amber-300 border-amber-500/20' :
                       req.urgency === 'assignment-deadline' ? 'bg-rose-500/10 text-rose-300 border-rose-500/20' :
                       'bg-blue-500/10 text-blue-300 border-blue-500/20'

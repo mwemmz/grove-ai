@@ -199,7 +199,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   }`}
                 >
                   <div className="text-xs font-bold">{p.label}</div>
-                  <div className="text-[10px] text-slate-500 mt-0.5">{p.sub}</div>
+                  <div className="text-xs text-slate-500 mt-0.5">{p.sub}</div>
                 </button>
               ))}
             </div>

@@ -1,21 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { 
-  Send, 
-  Sparkles, 
-  TreePine, 
-  BookOpen, 
-  Check, 
-  ExternalLink,
-  Code,
-  Zap,
-  HelpCircle,
-  Compass,
-  Lightbulb,
-  GraduationCap
-} from 'lucide-react';
+import { ArrowUp } from 'lucide-react';
 import { Note, LearningProfile, ChatMessage } from '../types';
 import { aiService } from '../services/aiService';
 import { storage } from '../services/storage';
+import { Disclosure, Toast, Inline, field } from './ui';
 
 interface ChatTutorViewProps {
   notes: Note[];
@@ -25,11 +13,61 @@ interface ChatTutorViewProps {
 }
 
 const STARTER_PROMPTS = [
-  "Where did I first learn about mutual exclusion and locks?",
-  "How does my Year 4 Capstone event broker connect to Year 1 memory concepts?",
-  "Compare B+ Trees (CS302) with Hash Tables (CS103) for indexing",
-  "Explain Raft consensus log replication using my preferred code-first style",
+  'Where did I first learn about mutual exclusion and locks?',
+  'Compare B+ Trees with Hash Tables for indexing',
+  'Explain Raft log replication in my preferred style',
 ];
+
+const ADAPT_ACTIONS: { id: 'too-long' | 'analogy' | 'code' | 'lost' | 'quiz'; label: string }[] = [
+  { id: 'too-long', label: 'Shorter' },
+  { id: 'analogy', label: 'Use an analogy' },
+  { id: 'code', label: 'Show code' },
+  { id: 'lost', label: "I'm lost" },
+  { id: 'quiz', label: 'Quiz me' },
+];
+
+function MessageBody({ text }: { text: string }) {
+  return (
+    <div className="space-y-3 text-[15px] leading-7 text-text">
+      {text.split('\n\n').map((paragraph, i) => {
+        if (paragraph.startsWith('### ')) {
+          return (
+            <h3 key={i} className="pt-1 text-base font-semibold text-text">
+              <Inline text={paragraph.replace('### ', '')} />
+            </h3>
+          );
+        }
+        if (paragraph.startsWith('#### ')) {
+          return (
+            <h4 key={i} className="text-[15px] font-semibold text-text">
+              <Inline text={paragraph.replace('#### ', '')} />
+            </h4>
+          );
+        }
+        if (paragraph.startsWith('> ')) {
+          return (
+            <blockquote key={i} className="border-l-2 border-accent/60 pl-3 text-muted">
+              <Inline text={paragraph.replace('> ', '')} />
+            </blockquote>
+          );
+        }
+        if (paragraph.startsWith('```')) {
+          const code = paragraph.split('\n').slice(1, -1).join('\n');
+          return (
+            <pre key={i} className="overflow-x-auto rounded-lg bg-surface p-4 font-mono text-[13px] leading-6 text-text">
+              <code>{code}</code>
+            </pre>
+          );
+        }
+        return (
+          <p key={i} className="whitespace-pre-wrap">
+            <Inline text={paragraph} />
+          </p>
+        );
+      })}
+    </div>
+  );
+}
 
 export const ChatTutorView: React.FC<ChatTutorViewProps> = ({
   notes,
@@ -37,407 +75,255 @@ export const ChatTutorView: React.FC<ChatTutorViewProps> = ({
   setProfile,
   onOpenNoteDetail,
 }) => {
-  const [messages, setMessages] = useState<ChatMessage[]>(() => {
-    const saved = storage.getChatHistory();
-    if (saved.length > 0) return saved;
-
-    return [
-      {
-        id: 'welcome-1',
-        sender: 'assistant',
-        text: `Welcome back, **${profile.studentName.split(' ')[0]}**! I am **Grove**, your degree-long AI learning companion.
-
-I have indexed your notes from **Year 1 through Year 4** (${notes.length} comprehensive technical notes). 
-- When you ask a question, I cross-reference your entire degree history.
-- When an advanced Year 3 or 4 concept builds upon a Year 1 or 2 foundation, I will explicitly bridge them.
-- I continuously adapt to your preferred style: currently tuned to **${profile.explanationStyle.toUpperCase()}** and **${profile.answerLength.toUpperCase()}** answers.
-
-Try asking about any topic or tap one of the prompts below!`,
-        timestamp: 'Just now',
-        appliedProfileAttributes: [
-          `Style: ${profile.explanationStyle}`,
-          `Density: ${profile.answerLength}`,
-          `Degree: ${profile.degreeName}`,
-        ],
-      },
-    ];
-  });
-
+  // Older saved chats began with a long welcome message; drop it so the screen starts clean.
+  const [messages, setMessages] = useState<ChatMessage[]>(() =>
+    storage.getChatHistory().filter((m) => !m.id.startsWith('welcome'))
+  );
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [feedbackToast, setFeedbackToast] = useState<string | null>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [toast, setToast] = useState<string | null>(null);
+  const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     storage.saveChatHistory(messages);
   }, [messages]);
 
+  // A new answer scrolls to its first line so you read from the top; everything else follows the bottom.
+  useEffect(() => {
+    const last = messages[messages.length - 1];
+    if (last?.sender === 'assistant' && !isLoading) {
+      document.getElementById(last.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else {
+      endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    }
+  }, [messages, isLoading]);
+
   const handleSend = async (textToSend?: string) => {
-    const query = textToSend || input;
-    if (!query.trim() || isLoading) return;
+    const query = (textToSend ?? input).trim();
+    if (!query || isLoading) return;
 
-    const userMsg: ChatMessage = {
-      id: `user-${Date.now()}`,
-      sender: 'user',
-      text: query.trim(),
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    };
-
-    setMessages(prev => [...prev, userMsg]);
+    const now = () => new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    setMessages((prev) => [...prev, { id: `user-${Date.now()}`, sender: 'user', text: query, timestamp: now() }]);
     setInput('');
     setIsLoading(true);
 
     try {
-      // Simulate real-time retrieval & response latency
-      setTimeout(async () => {
-        const responsePayload = await aiService.askGrove(query, notes, profile);
+      await new Promise((r) => setTimeout(r, 500));
+      const payload = await aiService.askGrove(query, notes, profile);
 
-        const assistantMsg: ChatMessage = {
+      setProfile((prev) => {
+        const updated = { ...prev, totalQuestionsAsked: prev.totalQuestionsAsked + 1 };
+        storage.saveProfile(updated);
+        return updated;
+      });
+
+      setMessages((prev) => [
+        ...prev,
+        {
           id: `assistant-${Date.now()}`,
           sender: 'assistant',
-          text: responsePayload.text,
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          citedNotes: responsePayload.citedNotes,
-          yearConnections: responsePayload.yearConnections,
-          appliedProfileAttributes: responsePayload.appliedProfileAttributes,
-        };
-
-        // Increment question count in profile
-        setProfile(prev => {
-          const updated = {
-            ...prev,
-            totalQuestionsAsked: prev.totalQuestionsAsked + 1,
-          };
-          storage.saveProfile(updated);
-          return updated;
-        });
-
-        setMessages(prev => [...prev, assistantMsg]);
-        setIsLoading(false);
-      }, 700);
+          text: payload.text,
+          timestamp: now(),
+          citedNotes: payload.citedNotes,
+          yearConnections: payload.yearConnections,
+          seniorTips: payload.seniorTips,
+          appliedProfileAttributes: payload.appliedProfileAttributes,
+        },
+      ]);
     } catch (err) {
       console.error(err);
+      setToast('Something went wrong. Try asking again.');
+      setTimeout(() => setToast(null), 3000);
+    } finally {
       setIsLoading(false);
     }
   };
 
-  const handleFeedback = (action: 'too-long' | 'analogy' | 'code' | 'lost' | 'quiz') => {
+  const handleFeedback = (action: (typeof ADAPT_ACTIONS)[number]['id']) => {
     const { updatedProfile, feedbackMessage } = aiService.handleFeedbackPill(
       action,
       profile,
       messages[messages.length - 1]?.text.slice(0, 40)
     );
-
     setProfile(updatedProfile);
-    setFeedbackToast(feedbackMessage);
-    setTimeout(() => setFeedbackToast(null), 3500);
-
-    // If quiz requested, automatically prompt
-    if (action === 'quiz') {
-      handleSend("Generate an active-recall conceptual quiz question based on this topic.");
-    }
+    setToast(feedbackMessage);
+    setTimeout(() => setToast(null), 3000);
+    if (action === 'quiz') handleSend('Generate an active-recall conceptual quiz question based on this topic.');
   };
 
   const clearChat = () => {
-    const initialWelcome: ChatMessage = {
-      id: `welcome-${Date.now()}`,
-      sender: 'assistant',
-      text: `Chat reset. Ask me anything across your 4-year degree curriculum!`,
-      timestamp: 'Just now',
-    };
-    setMessages([initialWelcome]);
-    storage.saveChatHistory([initialWelcome]);
+    setMessages([]);
+    storage.saveChatHistory([]);
   };
 
-  return (
-    <div className="flex flex-col h-[calc(100dvh-7.75rem)] sm:h-[calc(100dvh-4.25rem)] max-w-5xl mx-auto w-full px-4 sm:px-6 py-4">
-      
-      {/* Toast Feedback Notification */}
-      {feedbackToast && (
-        <div className="fixed top-20 right-6 z-50 flex items-center gap-2 rounded-xl bg-emerald-500/90 text-slate-950 px-4 py-2.5 shadow-2xl font-medium text-sm animate-bounce">
-          <Check className="h-4 w-4" />
-          <span>{feedbackToast}</span>
-        </div>
-      )}
+  const lastAssistantId = [...messages].reverse().find((m) => m.sender === 'assistant')?.id;
+  const firstName = profile.studentName.split(' ')[0];
 
-      {/* Chat Messages Scroll Area */}
-      <div className="flex-1 overflow-y-auto overscroll-contain space-y-6 pr-2">
-        {messages.map((msg) => (
-          <div
-            key={msg.id}
-            className={`flex flex-col ${
-              msg.sender === 'user' ? 'items-end' : 'items-start'
-            }`}
-          >
-            {/* Sender Metadata */}
-            <div className="flex items-center gap-2 mb-1 px-1">
-              {msg.sender === 'assistant' ? (
-                <>
-                  <div className="h-5 w-5 rounded-md bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center">
-                    <TreePine className="h-3 w-3 text-emerald-400" />
+  return (
+    <div className="mx-auto flex h-full w-full max-w-3xl flex-col px-4 sm:px-6">
+      <Toast message={toast} />
+
+      <div className="flex-1 overflow-y-auto overscroll-contain py-6">
+        {messages.length === 0 && !isLoading ? (
+          <div className="flex min-h-full flex-col justify-center gap-8 pb-8">
+            <div>
+              <h1 className="text-3xl font-semibold tracking-tight text-text">Hi {firstName}.</h1>
+              <p className="mt-2 max-w-md text-muted">
+                Ask about anything from your degree. Grove answers from your own notes and shows where each answer comes from.
+              </p>
+            </div>
+            <div className="flex flex-col items-start gap-2">
+              {STARTER_PROMPTS.map((prompt) => (
+                <button
+                  key={prompt}
+                  onClick={() => handleSend(prompt)}
+                  className="min-h-11 rounded-xl bg-surface px-4 py-2 text-left text-sm text-text ring-1 ring-line transition-colors hover:bg-raised"
+                >
+                  {prompt}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-8">
+            {messages.map((msg) => {
+              if (msg.sender === 'user') {
+                return (
+                  <div key={msg.id} className="flex justify-end">
+                    <div className="max-w-[85%] rounded-2xl bg-raised px-4 py-2.5 text-[15px] leading-7 text-text animate-slide-up">
+                      {msg.text}
+                    </div>
                   </div>
-                  <span className="text-xs font-semibold text-emerald-400">Grove Degree AI</span>
-                  {msg.appliedProfileAttributes && (
-                    <div className="hidden sm:flex items-center gap-1.5 ml-2">
-                      {msg.appliedProfileAttributes.slice(0, 2).map((attr, idx) => (
-                        <span key={idx} className="text-[10px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded border border-slate-700/60">
-                          {attr}
-                        </span>
+                );
+              }
+
+              const connections = msg.yearConnections ?? [];
+              const isLast = msg.id === lastAssistantId;
+              return (
+                <div key={msg.id} id={msg.id} className="scroll-mt-2 space-y-4 animate-slide-up">
+                  <MessageBody text={msg.text} />
+
+                  {connections.length > 0 && (
+                    <div className="rounded-xl bg-surface p-4">
+                      <p className="text-sm text-muted">
+                        Builds on Year {connections[0].earlierYear} · {connections[0].earlierCourse}
+                      </p>
+                      <p className="mt-1 font-medium text-text">{connections[0].earlierTopic}</p>
+                      <p className="mt-1 text-sm leading-6 text-muted">{connections[0].connectionText}</p>
+                      {connections.length > 1 && (
+                        <div className="mt-2">
+                          <Disclosure summary={`${connections.length - 1} more ${connections.length === 2 ? 'connection' : 'connections'}`}>
+                            <div className="space-y-3">
+                              {connections.slice(1).map((c, i) => (
+                                <div key={i}>
+                                  <p className="text-sm text-muted">Year {c.earlierYear} · {c.earlierCourse}</p>
+                                  <p className="font-medium text-text">{c.earlierTopic}</p>
+                                  <p className="text-sm leading-6 text-muted">{c.connectionText}</p>
+                                </div>
+                              ))}
+                            </div>
+                          </Disclosure>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {msg.citedNotes && msg.citedNotes.length > 0 && (
+                    <Disclosure summary={`From your notes (${msg.citedNotes.length})`}>
+                      <div className="flex flex-wrap gap-2">
+                        {msg.citedNotes.map((c) => {
+                          const full = notes.find((n) => n.id === c.noteId);
+                          return (
+                            <button
+                              key={c.noteId}
+                              onClick={() => full && onOpenNoteDetail?.(full)}
+                              className="min-h-9 max-w-full rounded-lg bg-surface px-3 text-left text-sm text-text ring-1 ring-line hover:bg-raised"
+                            >
+                              <span className="text-muted">Y{c.year} · {c.courseCode} · </span>
+                              <span className="truncate">{c.title}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </Disclosure>
+                  )}
+
+                  {msg.seniorTips && msg.seniorTips.length > 0 && (
+                    <Disclosure summary={`Tips from seniors (${msg.seniorTips.length})`}>
+                      <div className="space-y-3">
+                        {msg.seniorTips.map((tip, i) => (
+                          <div key={i} className="rounded-xl bg-surface p-4">
+                            <p className="text-sm text-muted">
+                              {tip.authorName} · {tip.courseCode}, cleared with {tip.authorGrade}
+                            </p>
+                            <p className="mt-1 text-sm leading-6 text-text">{tip.tip}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </Disclosure>
+                  )}
+
+                  {isLast && !isLoading && (
+                    <div className="flex flex-wrap gap-2 pt-1" aria-label="Adjust how Grove answers">
+                      {ADAPT_ACTIONS.map((a) => (
+                        <button
+                          key={a.id}
+                          onClick={() => handleFeedback(a.id)}
+                          className="min-h-9 rounded-lg px-3 text-sm text-muted ring-1 ring-line transition-colors hover:bg-surface hover:text-text"
+                        >
+                          {a.label}
+                        </button>
                       ))}
                     </div>
                   )}
-                </>
-              ) : (
-                <span className="text-xs font-medium text-slate-400">You ({profile.studentName.split(' ')[0]})</span>
-              )}
-              <span className="text-[10px] text-slate-500">{msg.timestamp}</span>
-            </div>
-
-            {/* Bubble Body */}
-            <div
-              className={`rounded-2xl px-5 py-4 max-w-3xl text-sm leading-relaxed animate-slide-up ${
-                msg.sender === 'user'
-                  ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-tr-none shadow-lg shadow-emerald-950/30'
-                  : 'bg-slate-900/90 border border-white/[0.08] text-slate-200 rounded-tl-none shadow-xl'
-              }`}
-            >
-              {/* Formatted markdown text */}
-              <div className="space-y-3 whitespace-pre-wrap">
-                {msg.text.split('\n\n').map((paragraph, i) => {
-                  if (paragraph.startsWith('### ')) {
-                    return <h3 key={i} className="text-base font-bold text-emerald-300 mt-2">{paragraph.replace('### ', '')}</h3>;
-                  }
-                  if (paragraph.startsWith('#### ')) {
-                    return <h4 key={i} className="text-sm font-semibold text-slate-200 mt-2">{paragraph.replace('#### ', '')}</h4>;
-                  }
-                  if (paragraph.startsWith('> ')) {
-                    return (
-                      <blockquote key={i} className="border-l-2 border-emerald-500 pl-3 italic text-emerald-300/90 my-2 bg-emerald-950/20 py-1.5 rounded-r">
-                        {paragraph.replace('> ', '')}
-                      </blockquote>
-                    );
-                  }
-                  if (paragraph.startsWith('```')) {
-                    const lines = paragraph.split('\n');
-                    const code = lines.slice(1, -1).join('\n');
-                    return (
-                      <pre key={i} className="rounded-xl bg-slate-950 p-3.5 border border-slate-800 font-mono text-xs overflow-x-auto text-emerald-300 my-2">
-                        <code>{code}</code>
-                      </pre>
-                    );
-                  }
-                  return <p key={i} className="text-slate-200">{paragraph}</p>;
-                })}
-              </div>
-
-              {/* Cross-Year Connections Callout */}
-              {msg.yearConnections && msg.yearConnections.length > 0 && (
-                <div className="mt-4 pt-3 border-t border-slate-800/80">
-                  <div className="flex items-center gap-2 mb-2 text-xs font-semibold text-teal-400">
-                    <TreePine className="h-4 w-4" />
-                    <span>Degree-Long Memory Connection</span>
-                  </div>
-                  {msg.yearConnections.map((conn, idx) => (
-                    <div
-                      key={idx}
-                      className="rounded-xl bg-gradient-to-r from-teal-950/40 to-slate-900/80 border border-teal-500/20 p-3 text-xs text-slate-300 space-y-1"
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className="rounded bg-teal-500/20 px-1.5 py-0.5 text-[10px] font-bold text-teal-300 border border-teal-500/30">
-                          Year {conn.earlierYear} · {conn.earlierCourse}
-                        </span>
-                        <span className="font-semibold text-slate-200">{conn.earlierTopic}</span>
-                      </div>
-                      <p className="text-slate-400 leading-normal">{conn.connectionText}</p>
-                    </div>
-                  ))}
                 </div>
-              )}
+              );
+            })}
 
-              {/* Cited Notes Pill List */}
-              {msg.citedNotes && msg.citedNotes.length > 0 && (
-                <div className="mt-4 pt-3 border-t border-slate-800/80">
-                  <div className="flex items-center gap-2 mb-2 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-                    <BookOpen className="h-3.5 w-3.5 text-slate-400" />
-                    <span>Citations from your course notes ({msg.citedNotes.length})</span>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {msg.citedNotes.map((citation) => {
-                      const fullNote = notes.find(n => n.id === citation.noteId);
-                      return (
-                        <button
-                          key={citation.noteId}
-                          onClick={() => fullNote && onOpenNoteDetail && onOpenNoteDetail(fullNote)}
-                          className="flex items-center gap-1.5 rounded-lg bg-slate-800/90 hover:bg-slate-700/80 px-2.5 py-1 text-xs text-slate-300 border border-slate-700/60 transition-colors group"
-                        >
-                          <span className="rounded bg-emerald-500/20 text-emerald-400 text-[10px] font-bold px-1 py-0.2">
-                            Y{citation.year} · {citation.courseCode}
-                          </span>
-                          <span className="truncate max-w-[180px] text-slate-200 group-hover:text-emerald-300">
-                            {citation.title}
-                          </span>
-                          <ExternalLink className="h-3 w-3 text-slate-500 group-hover:text-slate-300" />
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* Vetted Senior Clearance Advice */}
-              {msg.seniorTips && msg.seniorTips.length > 0 && (
-                <div className="mt-4 pt-3 border-t border-slate-800/80">
-                  <div className="flex items-center gap-2 mb-2 text-xs font-semibold text-amber-400">
-                    <GraduationCap className="h-4 w-4" />
-                    <span>Battle-Tested Advice from Course Clearance Alumni</span>
-                  </div>
-                  <div className="space-y-2">
-                    {msg.seniorTips.map((tip, idx) => (
-                      <div
-                        key={idx}
-                        className="rounded-xl bg-amber-950/20 border border-amber-500/20 p-3 text-xs text-slate-300 space-y-1"
-                      >
-                        <div className="flex items-center gap-2">
-                          <span className="rounded bg-amber-500/20 text-amber-300 text-[10px] font-bold px-1.5 py-0.5 border border-amber-500/30">
-                            {tip.courseCode} · Cleared with {tip.authorGrade}
-                          </span>
-                          <span className="font-semibold text-slate-200">{tip.authorName}</span>
-                        </div>
-                        <p className="text-slate-300 leading-normal italic">{tip.tip}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Dynamic Feedback Adaptation Pills (only on assistant messages) */}
-              {msg.sender === 'assistant' && msg.id !== 'welcome-1' && (
-                <div className="mt-4 pt-3 border-t border-slate-800/60 flex flex-wrap items-center gap-1.5">
-                  <span className="text-[10px] text-slate-500 mr-1 font-medium">Adapt tutor:</span>
-                  
-                  <button
-                    onClick={() => handleFeedback('too-long')}
-                    className="flex items-center gap-1 rounded-md bg-slate-800 hover:bg-slate-700 px-2 py-0.8 text-[11px] text-slate-300 border border-slate-700/60 transition-colors"
-                    title="Change profile to concise bullet points"
-                  >
-                    <Zap className="h-3 w-3 text-amber-400" />
-                    <span>Too long</span>
-                  </button>
-
-                  <button
-                    onClick={() => handleFeedback('analogy')}
-                    className="flex items-center gap-1 rounded-md bg-slate-800 hover:bg-slate-700 px-2 py-0.8 text-[11px] text-slate-300 border border-slate-700/60 transition-colors"
-                    title="Switch explanation style to intuitive analogies"
-                  >
-                    <Lightbulb className="h-3 w-3 text-yellow-400" />
-                    <span>Analogy</span>
-                  </button>
-
-                  <button
-                    onClick={() => handleFeedback('code')}
-                    className="flex items-center gap-1 rounded-md bg-slate-800 hover:bg-slate-700 px-2 py-0.8 text-[11px] text-slate-300 border border-slate-700/60 transition-colors"
-                    title="Switch explanation style to code-first implementation"
-                  >
-                    <Code className="h-3 w-3 text-blue-400" />
-                    <span>Code example</span>
-                  </button>
-
-                  <button
-                    onClick={() => handleFeedback('lost')}
-                    className="flex items-center gap-1 rounded-md bg-slate-800 hover:bg-slate-700 px-2 py-0.8 text-[11px] text-slate-300 border border-slate-700/60 transition-colors"
-                    title="Log to 'How I Learn' and flag for step-by-step guidance"
-                  >
-                    <Compass className="h-3 w-3 text-rose-400" />
-                    <span>I'm lost</span>
-                  </button>
-
-                  <button
-                    onClick={() => handleFeedback('quiz')}
-                    className="flex items-center gap-1 rounded-md bg-slate-800 hover:bg-slate-700 px-2 py-0.8 text-[11px] text-slate-300 border border-slate-700/60 transition-colors"
-                    title="Generate an active-recall quiz question"
-                  >
-                    <HelpCircle className="h-3 w-3 text-purple-400" />
-                    <span>Quiz me</span>
-                  </button>
-                </div>
-              )}
-
-            </div>
-          </div>
-        ))}
-
-        {isLoading && (
-          <div className="flex items-center gap-3 text-slate-400 text-sm py-2">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/20 border border-emerald-500/40">
-              <TreePine className="h-4 w-4 text-emerald-400 animate-pulse" />
-            </div>
-            <span>Searching 4-year degree memory & synthesizing connections...</span>
+            {isLoading && (
+              <p className="flex items-center gap-2 text-sm text-muted" role="status">
+                <span className="h-2 w-2 animate-pulse rounded-full bg-accent" />
+                Looking through your notes…
+              </p>
+            )}
           </div>
         )}
-
-        <div ref={messagesEndRef} />
+        <div ref={endRef} />
       </div>
 
-      {/* Suggested Starter Questions (when few messages) */}
-      {messages.length <= 2 && (
-        <div className="my-3">
-          <p className="text-xs text-slate-400 mb-2 font-medium">Try asking Grove across your 4-year degree:</p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {STARTER_PROMPTS.map((prompt, i) => (
-              <button
-                key={i}
-                onClick={() => handleSend(prompt)}
-                className="text-left rounded-xl bg-slate-900/60 hover:bg-slate-800 border border-slate-800/80 p-2.5 text-xs text-slate-300 hover:text-emerald-300 hover:border-emerald-500/40 transition-colors flex items-center justify-between"
-              >
-                <span>{prompt}</span>
-                <Sparkles className="h-3 w-3 text-emerald-400 opacity-60 ml-2 shrink-0" />
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Input Area */}
-      <div className="mt-3 relative">
+      <div className="pb-4 pt-2">
         <form
           onSubmit={(e) => {
             e.preventDefault();
             handleSend();
           }}
-          className="flex items-center gap-2 rounded-2xl bg-slate-900/90 border border-slate-800 p-2 shadow-2xl focus-within:border-emerald-500/60 transition-colors"
+          className="flex items-center gap-2"
         >
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder={`Ask Grove (degree-long memory across ${notes.length} notes)...`}
-            className="flex-1 bg-transparent px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none"
+            placeholder="Ask about anything in your degree"
+            aria-label="Ask Grove"
+            className={`${field} h-12 flex-1 rounded-xl bg-surface px-4`}
           />
-
           <button
             type="submit"
             disabled={!input.trim() || isLoading}
-            className="flex h-11 w-11 sm:h-9 sm:w-9 items-center justify-center rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:hover:bg-emerald-600 text-white shadow-md transition-colors"
+            aria-label="Send"
+            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-accent-strong text-white transition-colors hover:bg-accent hover:text-bg disabled:opacity-40"
           >
-            <Send className="h-4 w-4" />
+            <ArrowUp className="h-5 w-5" />
           </button>
         </form>
-
-        <div className="flex items-center justify-between px-2 mt-1.5 text-[11px] text-slate-500">
-          <span className="flex items-center gap-1">
-            <TreePine className="h-3 w-3 text-emerald-500" />
-            Active Degree Knowledge Base: Years 1 - 4
-          </span>
-          <button
-            onClick={clearChat}
-            className="hover:text-slate-400 transition-colors"
-          >
-            Clear conversation
-          </button>
-        </div>
+        {messages.length > 0 && (
+          <div className="mt-1 flex justify-end">
+            <button onClick={clearChat} className="min-h-9 px-1 text-sm text-muted hover:text-text">
+              Clear conversation
+            </button>
+          </div>
+        )}
       </div>
-
     </div>
   );
 };

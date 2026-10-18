@@ -1,198 +1,145 @@
-import React from 'react';
-import { 
-  Sparkles, 
-  BookOpen, 
-  Brain, 
-  GraduationCap, 
-  Repeat, 
-  Settings, 
-  Flame,
-  Layers,
-  Compass,
-  Users
-} from 'lucide-react';
-import { LearningProfile } from '../types';
+import React, { useEffect, useRef, useState } from 'react';
+import { MessageCircle, BookOpen, Repeat, User, MoreHorizontal, Compass, Users, Settings } from 'lucide-react';
 
 export type AppTab = 'chat' | 'notes' | 'blueprints' | 'tutoring' | 'profile' | 'portfolio' | 'quiz';
 
-interface HeaderProps {
+interface NavProps {
   activeTab: AppTab;
   setActiveTab: (tab: AppTab) => void;
-  profile: LearningProfile;
-  totalNotes: number;
-  onOpenSettings: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({
+/** Four places a student actually goes. Everything else lives under "You" or the menu. */
+const PRIMARY: { id: AppTab; label: string; icon: React.ElementType; match: AppTab[] }[] = [
+  { id: 'chat', label: 'Ask', icon: MessageCircle, match: ['chat'] },
+  { id: 'notes', label: 'Notes', icon: BookOpen, match: ['notes'] },
+  { id: 'quiz', label: 'Recall', icon: Repeat, match: ['quiz'] },
+  { id: 'profile', label: 'You', icon: User, match: ['profile', 'portfolio'] },
+];
+
+function Mark() {
+  return (
+    <svg viewBox="0 0 32 32" className="h-7 w-7" aria-hidden="true">
+      <circle cx="16" cy="16" r="14" fill="none" stroke="currentColor" strokeOpacity="0.25" strokeWidth="1.5" />
+      <circle cx="16" cy="16" r="9" fill="none" stroke="currentColor" strokeOpacity="0.55" strokeWidth="1.5" />
+      <circle cx="16" cy="16" r="4" fill="currentColor" />
+    </svg>
+  );
+}
+
+export const Header: React.FC<NavProps & { onOpenSettings: () => void }> = ({
   activeTab,
   setActiveTab,
-  profile,
-  totalNotes,
   onOpenSettings,
 }) => {
-  const tabButton =
-    'flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 min-h-11 sm:min-h-0 text-xs font-medium whitespace-nowrap transition-colors';
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
 
-  const navButtons = (
-    <>
-      <button
-        onClick={() => setActiveTab('chat')}
-        aria-label="Ask Grove"
-        className={`${tabButton} ${
-          activeTab === 'chat'
-            ? 'bg-emerald-600 text-white shadow-sm'
-            : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-        }`}
-      >
-        <Sparkles className="h-3.5 w-3.5 text-emerald-300" />
-        <span>Ask Grove</span>
-      </button>
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onDown = (e: MouseEvent) => {
+      if (!menuRef.current?.contains(e.target as Node)) setMenuOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setMenuOpen(false);
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [menuOpen]);
 
-      <button
-        onClick={() => setActiveTab('notes')}
-        aria-label="Degree Memory"
-        className={`${tabButton} ${
-          activeTab === 'notes'
-            ? 'bg-emerald-600 text-white shadow-sm'
-            : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-        }`}
-      >
-        <BookOpen className="h-3.5 w-3.5" />
-        <span className="hidden sm:inline">Degree Memory</span>
-        <span className="sm:hidden">Notes</span>
-        <span className="rounded-full bg-slate-800 px-1.5 py-0.2 text-[10px] text-slate-300">
-          {totalNotes}
-        </span>
-      </button>
-
-      <button
-        onClick={() => setActiveTab('blueprints')}
-        aria-label="A+ Blueprints"
-        className={`${tabButton} ${
-          activeTab === 'blueprints'
-            ? 'bg-amber-600 text-white shadow-sm'
-            : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-        }`}
-      >
-        <Compass className="h-3.5 w-3.5 text-amber-300" />
-        <span>A+ Blueprints</span>
-      </button>
-
-      <button
-        onClick={() => setActiveTab('tutoring')}
-        aria-label="Peer Tutoring"
-        className={`${tabButton} ${
-          activeTab === 'tutoring'
-            ? 'bg-teal-600 text-white shadow-sm'
-            : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-        }`}
-      >
-        <Users className="h-3.5 w-3.5 text-teal-300" />
-        <span>Peer Tutoring</span>
-      </button>
-
-      <button
-        onClick={() => setActiveTab('profile')}
-        aria-label="How I Learn"
-        className={`${tabButton} ${
-          activeTab === 'profile'
-            ? 'bg-emerald-600 text-white shadow-sm'
-            : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-        }`}
-      >
-        <Brain className="h-3.5 w-3.5" />
-        <span className="inline sm:hidden md:inline">How I Learn</span>
-      </button>
-
-      <button
-        onClick={() => setActiveTab('portfolio')}
-        aria-label="Portfolio and CV"
-        className={`${tabButton} ${
-          activeTab === 'portfolio'
-            ? 'bg-emerald-600 text-white shadow-sm'
-            : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-        }`}
-      >
-        <GraduationCap className="h-3.5 w-3.5" />
-        <span className="inline sm:hidden lg:inline">Portfolio &amp; CV</span>
-      </button>
-
-      <button
-        onClick={() => setActiveTab('quiz')}
-        aria-label="Recall quiz"
-        className={`${tabButton} ${
-          activeTab === 'quiz'
-            ? 'bg-emerald-600 text-white shadow-sm'
-            : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-        }`}
-      >
-        <Repeat className="h-3.5 w-3.5" />
-        <span className="inline sm:hidden xl:inline">Recall</span>
-      </button>
-    </>
-  );
+  const item =
+    'flex w-full min-h-11 items-center gap-3 px-4 text-left text-sm text-text hover:bg-raised';
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-slate-800 bg-slate-950/80 backdrop-blur-md">
-      <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 px-3 py-2.5 sm:px-6">
-        {/* Logo and Tree Rings Motif */}
-        <div className="flex items-center gap-3 shrink-0">
-          <div className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500/20 via-teal-500/10 to-blue-500/20 border border-emerald-500/30 shadow-inner">
-            {/* Concentric Tree Rings representing Years 1-4 */}
-            <div className="absolute inset-1 rounded-full border border-emerald-500/30" />
-            <div className="absolute inset-2 rounded-full border border-teal-500/40" />
-            <div className="absolute inset-3 rounded-full border border-blue-500/50" />
-            <div className="h-2 w-2 rounded-full bg-emerald-400 shadow-sm shadow-emerald-400/80" />
-          </div>
+    <header className="z-40 shrink-0 border-b border-line bg-bg">
+      <div className="mx-auto flex h-14 max-w-5xl items-center justify-between gap-4 px-4 sm:px-6">
+        <button
+          onClick={() => setActiveTab('chat')}
+          className="flex items-center gap-2 text-accent"
+          aria-label="Grove home"
+        >
+          <Mark />
+          <span className="text-lg font-semibold tracking-tight text-text">Grove</span>
+        </button>
 
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-xl font-bold tracking-tight text-white">Grove</span>
-              <span className="rounded-md bg-emerald-500/10 px-2 py-0.5 text-xs font-semibold text-emerald-400 border border-emerald-500/20">
-                Year {profile.currentYear}
-              </span>
-            </div>
-            <p className="text-[11px] text-slate-400 hidden sm:block">
-              Study NotebookLM & Cohort Mentorship
-            </p>
-          </div>
-        </div>
-
-        {/* Center Navigation Tabs (sm+ only) */}
-        <nav className="hidden sm:flex min-w-0 flex-1 items-center justify-center gap-1 rounded-xl bg-slate-900/90 p-1 border border-slate-800/80 shadow-lg shadow-black/20 overflow-x-auto no-scrollbar mx-2">
-          {navButtons}
+        <nav className="hidden sm:flex items-center gap-1" aria-label="Main">
+          {PRIMARY.map((t) => {
+            const active = t.match.includes(activeTab);
+            return (
+              <button
+                key={t.id}
+                onClick={() => setActiveTab(t.id)}
+                aria-current={active ? 'page' : undefined}
+                className={`relative min-h-14 px-4 text-sm font-medium transition-colors ${
+                  active ? 'text-text' : 'text-muted hover:text-text'
+                }`}
+              >
+                {t.label}
+                {active && <span className="absolute inset-x-4 bottom-0 h-0.5 rounded-full bg-accent" />}
+              </button>
+            );
+          })}
         </nav>
 
-        {/* Right Action Bar */}
-        <div className="flex items-center gap-3 shrink-0">
-          {/* Study Streak */}
-          <div className="hidden lg:flex items-center gap-1.5 rounded-lg bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-400 border border-amber-500/20">
-            <Flame className="h-3.5 w-3.5 text-amber-500 fill-amber-500" />
-            <span>{profile.studyStreaksDays}d streak</span>
-          </div>
-
-          {/* Academic Breadcrumb */}
-          <div className="hidden 2xl:flex items-center gap-1 text-xs text-slate-400">
-            <Layers className="h-3.5 w-3.5 text-emerald-400" />
-            <span>{profile.degreeName}</span>
-          </div>
-
-          {/* Settings Trigger */}
+        <div className="relative" ref={menuRef}>
           <button
-            onClick={onOpenSettings}
-            className="flex h-11 w-11 sm:h-9 sm:w-9 items-center justify-center rounded-lg border border-slate-800 bg-slate-900 text-slate-400 hover:text-white hover:bg-slate-800 hover:border-slate-700 transition-colors"
-            title="Settings & Data Management"
-            aria-label="Settings and data management"
+            onClick={() => setMenuOpen((o) => !o)}
+            aria-haspopup="menu"
+            aria-expanded={menuOpen}
+            aria-label="More"
+            className="flex h-10 w-10 items-center justify-center rounded-lg text-muted hover:bg-surface hover:text-text"
           >
-            <Settings className="h-4 w-4" />
+            <MoreHorizontal className="h-5 w-5" />
           </button>
+          {menuOpen && (
+            <div
+              role="menu"
+              className="absolute right-0 top-12 w-60 overflow-hidden rounded-xl bg-surface py-1 shadow-xl ring-1 ring-line animate-fade-in"
+            >
+              <p className="px-4 pb-1 pt-2 text-xs text-muted">Community</p>
+              <button role="menuitem" className={item} onClick={() => { setActiveTab('blueprints'); setMenuOpen(false); }}>
+                <Compass className="h-4 w-4 text-muted" /> Study blueprints
+              </button>
+              <button role="menuitem" className={item} onClick={() => { setActiveTab('tutoring'); setMenuOpen(false); }}>
+                <Users className="h-4 w-4 text-muted" /> Peer tutoring
+              </button>
+              <div className="my-1 border-t border-line" />
+              <button role="menuitem" className={item} onClick={() => { onOpenSettings(); setMenuOpen(false); }}>
+                <Settings className="h-4 w-4 text-muted" /> Settings
+              </button>
+            </div>
+          )}
         </div>
-      </div>
-
-      {/* Mobile Tab Strip: full-width horizontal scroll */}
-      <div className="sm:hidden overflow-x-auto no-scrollbar border-t border-slate-800/60">
-        <div className="flex items-center gap-1.5 px-3 py-2">{navButtons}</div>
       </div>
     </header>
   );
 };
+
+/** Phone navigation: reachable with a thumb, no scrolling strip. */
+export const BottomNav: React.FC<NavProps> = ({ activeTab, setActiveTab }) => (
+  <nav
+    aria-label="Main"
+    className="sm:hidden shrink-0 border-t border-line bg-bg pb-[env(safe-area-inset-bottom)]"
+  >
+    <div className="grid grid-cols-4">
+      {PRIMARY.map((t) => {
+        const active = t.match.includes(activeTab);
+        const Icon = t.icon;
+        return (
+          <button
+            key={t.id}
+            onClick={() => setActiveTab(t.id)}
+            aria-current={active ? 'page' : undefined}
+            className={`flex min-h-14 flex-col items-center justify-center gap-0.5 text-xs font-medium ${
+              active ? 'text-accent' : 'text-muted'
+            }`}
+          >
+            <Icon className="h-5 w-5" />
+            {t.label}
+          </button>
+        );
+      })}
+    </div>
+  </nav>
+);

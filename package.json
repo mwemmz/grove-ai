@@ -18,9 +18,11 @@
   "dependencies": {
     "@clerk/backend": "^3.25.0",
     "@clerk/react": "^6.17.8",
+    "@hyperframes/player": "^0.8.172",
     "canvas-confetti": "^1.9.4",
     "clsx": "^2.1.1",
     "drizzle-orm": "^0.45.4",
+    "gsap": "^3.12.5",
     "lucide-react": "^1.59.0",
     "pg": "^8.23.1",
     "react": "^19.2.8",

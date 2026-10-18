@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=1280, height=720" />
+<meta data-composition-id="cpu-cycle" data-width="1280" data-height="720" />
+<title>How a CPU runs one instruction</title>
+<script src="../gsap.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1280px; height: 720px; overflow: hidden; background: #0e1512; }
+  body { font-family: "Figtree", system-ui, sans-serif; color: #e5ede7; }
+  #stage { position: relative; width: 1280px; height: 720px; overflow: hidden; }
+
+  .cpu { position: absolute; left: 40px; top: 96px; width: 800px; height: 520px; border: 2px solid #26352d; border-radius: 18px; background: #101a15; }
+  .tag { position: absolute; font: 600 18px/1 "JetBrains Mono", monospace; letter-spacing: .12em; text-transform: uppercase; color: #92a59a; }
+  .box { position: absolute; border: 2px solid #26352d; border-radius: 12px; background: #151f1a; padding: 12px 14px; transition: none; }
+  .box h4 { font: 600 19px/1 "JetBrains Mono", monospace; letter-spacing: .08em; color: #92a59a; margin-bottom: 8px; }
+  .box .val { font: 600 34px/1.1 "JetBrains Mono", monospace; color: #e5ede7; }
+  .box .sub { font-size: 20px; color: #92a59a; margin-top: 6px; }
+  .ram { left: 920px; top: 96px; width: 320px; height: 520px; }
+  .ram .row { display: flex; justify-content: space-between; font: 500 22px/1 "JetBrains Mono", monospace; padding: 13px 10px; margin-top: 8px; border-radius: 8px; background: #0e1512; color: #92a59a; }
+  .ram .row b { color: #e5ede7; font-weight: 500; }
+
+  .bus { position: absolute; background: #26352d; border-radius: 2px; }
+  .packet { position: absolute; z-index: 5; padding: 8px 14px; border-radius: 999px; background: #5fc2a2; color: #08140f; font: 700 24px/1 "JetBrains Mono", monospace; white-space: nowrap; opacity: 0; }
+  .packet.warm { background: #e0a94a; }
+
+  #caption { position: absolute; left: 40px; top: 28px; width: 1200px; }
+  #caption .step { position: absolute; left: 0; top: -6px; opacity: 0; font-family: "Young Serif", Georgia, serif; font-size: 38px; }
+  #caption .step small { display: block; font: 500 22px/1.25 "Figtree", sans-serif; color: #92a59a; margin-top: 4px; }
+  #caption .step em { font-style: normal; color: #5fc2a2; }
+</style>
+</head>
+<body>
+<div id="stage" data-composition-id="cpu-cycle" data-width="1280" data-height="720">
+
+  <div id="caption">
+    <div class="step" id="c1">1 · Fetch <small>The Program Counter holds the address of the next instruction. It passes that address to memory.</small></div>
+    <div class="step" id="c2">2 · Memory answers <small>RAM looks up that address and sends the instruction back to the CPU.</small></div>
+    <div class="step" id="c3">3 · Decode <small>The Control Unit reads the instruction and works out what to do: ADD means "use the ALU".</small></div>
+    <div class="step" id="c4">4 · Execute <small>The ALU does the sum. Values <em>2</em> and <em>3</em> come in from the registers.</small></div>
+    <div class="step" id="c5">5 · Write back <small>The result goes into a register, and the Program Counter moves on to the next instruction.</small></div>
+  </div>
+
+  <div class="cpu"></div>
+  <div class="tag" style="left:64px; top:112px;">CPU</div>
+
+  <!-- buses -->
+  <div class="bus" id="bus-pc-mar" style="left:166px; top:262px; width:4px; height:58px;"></div>
+  <div class="bus" id="bus-mar-ram" style="left:236px; top:182px; width:684px; height:4px;"></div>
+  <div class="bus" id="bus-ir-cu" style="left:236px; top:408px; width:140px; height:4px;"></div>
+  <div class="bus" id="bus-reg-alu" style="left:556px; top:470px; width:90px; height:4px;"></div>
+
+  <div class="box" id="pc" style="left:96px; top:168px; width:160px; height:96px;">
+    <h4>PC</h4><div class="val" id="pc-val">0x04</div>
+  </div>
+  <div class="box" id="mar" style="left:96px; top:318px; width:160px; height:96px;">
+    <h4>MAR</h4><div class="val" id="mar-val">—</div>
+  </div>
+  <div class="box" id="ir" style="left:96px; top:468px; width:200px; height:104px;">
+    <h4>IR</h4><div class="val" id="ir-val" style="font-size:24px;">—</div>
+  </div>
+  <div class="box" id="cu" style="left:376px; top:344px; width:220px; height:120px;">
+    <h4>CONTROL UNIT</h4><div class="val" id="cu-val" style="font-size:26px;">waiting</div>
+  </div>
+  <div class="box" id="alu" style="left:376px; top:496px; width:220px; height:96px;">
+    <h4>ALU</h4><div class="val" id="alu-val">—</div>
+  </div>
+  <div class="box" id="reg" style="left:660px; top:344px; width:156px; height:248px;">
+    <h4>REGISTERS</h4>
+    <div class="sub">R1 <b id="r1" style="color:#e5ede7; font-size:30px;">2</b></div>
+    <div class="sub">R2 <b id="r2" style="color:#e5ede7; font-size:30px;">3</b></div>
+    <div class="sub">R3 <b id="r3" style="color:#e5ede7; font-size:30px;">—</b></div>
+  </div>
+
+  <div class="box ram" id="ram">
+    <h4>RAM (MEMORY)</h4>
+    <div class="row" id="row-03"><span>0x03</span><b>LOAD R1</b></div>
+    <div class="row" id="row-04"><span>0x04</span><b>ADD R3,R1,R2</b></div>
+    <div class="row" id="row-05"><span>0x05</span><b>STORE R3</b></div>
+    <div class="row" id="row-06"><span>0x06</span><b>HALT</b></div>
+  </div>
+
+  <div class="packet" id="p-addr">0x04</div>
+  <div class="packet" id="p-instr">ADD R3,R1,R2</div>
+  <div class="packet warm" id="p-a">2</div>
+  <div class="packet warm" id="p-b">3</div>
+  <div class="packet" id="p-res">5</div>
+</div>
+
+<script>
+  var HI = "#5fc2a2", LO = "#26352d";
+  var tl = gsap.timeline({ paused: true });
+  function glow(id, at, dur) {
+    tl.to(id, { borderColor: HI, boxShadow: "0 0 0 4px rgba(95,194,162,.25)", duration: 0.35 }, at);
+    tl.to(id, { borderColor: LO, boxShadow: "0 0 0 0 rgba(95,194,162,0)", duration: 0.35 }, at + dur);
+  }
+  function caption(id, start) {
+    tl.fromTo(id, { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.4 }, start);
+    tl.to(id, { opacity: 0, duration: 0.3 }, start + 2.65);
+  }
+  function packet(id, x0, y0, x1, y1, start, dur, hold) {
+    tl.set(id, { x: x0, y: y0, left: 0, top: 0 }, start);
+    tl.fromTo(id, { opacity: 0 }, { opacity: 1, duration: 0.25 }, start);
+    tl.to(id, { x: x1, y: y1, duration: dur, ease: "power2.inOut" }, start + 0.2);
+    tl.to(id, { opacity: 0, duration: 0.25 }, start + 0.2 + dur + (hold || 0.15));
+  }
+
+  /* Step 1 · 0-3s : fetch */
+  caption("#c1", 0);
+  glow("#pc", 0.2, 2.2);
+  packet("#p-addr", 120, 205, 120, 345, 0.4, 0.8);
+  glow("#mar", 1.2, 0.9);
+  tl.set("#mar-val", { innerText: "0x04" }, 1.3);
+  packet("#p-addr", 120, 345, 940, 190, 1.7, 1.0, 0.0);
+  tl.to("#bus-mar-ram", { backgroundColor: HI, duration: 0.3 }, 1.7);
+  tl.to("#bus-mar-ram", { backgroundColor: LO, duration: 0.3 }, 2.8);
+
+  /* Step 2 · 3-6s : memory answers */
+  caption("#c2", 3);
+  glow("#ram", 3.1, 2.4);
+  tl.to("#row-04", { backgroundColor: "#1f4a3b", color: "#e5ede7", duration: 0.35 }, 3.2);
+  tl.to("#row-04", { backgroundColor: "#0e1512", color: "#92a59a", duration: 0.35 }, 5.7);
+  packet("#p-instr", 940, 292, 130, 500, 3.6, 1.6, 0.0);
+  tl.set("#ir-val", { innerText: "ADD R3,R1,R2" }, 5.3);
+  glow("#ir", 5.1, 0.8);
+
+  /* Step 3 · 6-9s : decode */
+  caption("#c3", 6);
+  tl.to("#bus-ir-cu", { backgroundColor: HI, duration: 0.3 }, 6.2);
+  tl.to("#bus-ir-cu", { backgroundColor: LO, duration: 0.3 }, 8.4);
+  glow("#ir", 6.1, 1.0);
+  glow("#cu", 6.6, 2.2);
+  tl.set("#cu-val", { innerText: "ADD → ALU" }, 7.4);
+
+  /* Step 4 · 9-12s : execute */
+  caption("#c4", 9);
+  glow("#reg", 9.1, 1.4);
+  packet("#p-a", 690, 420, 440, 520, 9.4, 1.0, 0.0);
+  packet("#p-b", 690, 460, 440, 548, 9.5, 1.0, 0.0);
+  glow("#alu", 10.4, 1.7);
+  tl.set("#alu-val", { innerText: "2 + 3 = 5" }, 11.0);
+
+  /* Step 5 · 12-15s : write back */
+  caption("#c5", 12);
+  packet("#p-res", 440, 530, 690, 500, 12.2, 1.0, 0.0);
+  tl.set("#r3", { innerText: "5" }, 13.3);
+  glow("#reg", 13.2, 1.2);
+  glow("#pc", 13.6, 1.0);
+  tl.set("#pc-val", { innerText: "0x05" }, 13.8);
+
+  tl.set({}, {}, 15);
+  window.__timelines = window.__timelines || {};
+  window.__timelines["cpu-cycle"] = tl;
+</script>
+</body>
+</html>

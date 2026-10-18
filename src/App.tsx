@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { useAuth, SignInButton } from '@clerk/react';
 import { TreePine } from 'lucide-react';
 import { Header, Tabs, AppTab } from './components/Header';
@@ -11,6 +11,7 @@ import { PortfolioView } from './components/PortfolioView';
 import { QuizView } from './components/QuizView';
 import { StudyView, StudyPreset } from './components/StudyView';
 import { PlannerView } from './components/PlannerView';
+const VisualsView = lazy(() => import('./components/VisualsView').then((m) => ({ default: m.VisualsView })));
 import { SettingsModal } from './components/SettingsModal';
 import {
   Note,
@@ -236,6 +237,12 @@ function GroveApp() {
                 setSelectedNoteForDetail={setSelectedNoteForDetail}
               />
             </>
+          )}
+
+          {activeTab === 'visuals' && (
+            <Suspense fallback={<p className="py-6 text-sm text-muted" role="status">Loading visuals…</p>}>
+              <VisualsView />
+            </Suspense>
           )}
 
           {activeTab === 'study' && (

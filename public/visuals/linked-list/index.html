@@ -13,14 +13,14 @@
   #ll { position: absolute; inset: 0; }
   .ln { width: 200px; height: 100px; justify-content: stretch; }
   .ln .v { flex: 1; text-align: center; }
-  .ln .p { width: 70px; height: 100%; border-left: 2.5px solid #2f4439; display: flex; align-items: center; justify-content: center; }
-  .ln .p::after { content: ""; width: 14px; height: 14px; border-radius: 50%; background: #5fc2a2; }
+  .ln .p { width: 70px; height: 100%; border-left: 2.5px solid var(--lo); display: flex; align-items: center; justify-content: center; }
+  .ln .p::after { content: ""; width: 14px; height: 14px; border-radius: 50%; background: var(--hi); }
   .cmp { position: absolute; top: 160px; width: 560px; height: 320px; opacity: 0; padding: 22px 26px; }
   .cmp h3 { font: 400 32px/1 "Young Serif", Georgia, serif; margin-bottom: 20px; }
-  .cmp p { font: 500 24px/1.3 "Figtree", sans-serif; color: #92a59a; margin-bottom: 16px; }
-  .cmp p b { display: block; color: #e5ede7; font: 600 24px/1.2 "JetBrains Mono", monospace; }
-  .cmp .good { color: #5fc2a2; }
-  .cmp .bad { color: #e0a94a; }
+  .cmp p { font: 500 24px/1.3 "Figtree", sans-serif; color: var(--mu); margin-bottom: 16px; }
+  .cmp p b { display: block; color: var(--tx); font: 600 24px/1.2 "JetBrains Mono", monospace; }
+  .cmp .good { color: var(--hi); }
+  .cmp .bad { color: var(--warn); }
 </style>
 </head>
 <body>
@@ -33,7 +33,7 @@
   </div>
 
   <svg id="wires" viewBox="0 0 1280 720">
-    <g id="wl" fill="none" stroke="#2f4439" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+    <g id="wl" fill="none" stroke="var(--lo)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
       <path id="w1" d="M290 300 H396" />
       <path id="w2" d="M580 300 H686" />
       <path id="w3" d="M870 300 H976" />
@@ -41,7 +41,7 @@
       <path id="w4" d="M755 490 H800 V364" />
       <path id="wh" d="M220 206 V234" />
     </g>
-    <g id="wl2" stroke="#2f4439" fill="#2f4439" stroke-width="2" stroke-linejoin="round">
+    <g id="wl2" stroke="var(--lo)" fill="var(--lo)" stroke-width="2" stroke-linejoin="round">
       <path id="h1" d="M382 291 L396 300 L382 309 Z" />
       <path id="h2" d="M672 291 L686 300 L672 309 Z" />
       <path id="h3" d="M962 291 L976 300 L962 309 Z" />
@@ -56,7 +56,7 @@
     <div class="node ln" id="n1" style="left:120px; top:250px;"><span class="v">7</span><span class="p"></span></div>
     <div class="node ln" id="n2" style="left:410px; top:250px;"><span class="v">3</span><span class="p"></span></div>
     <div class="node ln" id="n3" style="left:700px; top:250px;"><span class="v">9</span><span class="p"></span></div>
-    <div class="node" id="nul" style="left:990px; top:276px; width:120px; height:48px; font-size:22px; color:#92a59a;">null</div>
+    <div class="node" id="nul" style="left:990px; top:276px; width:120px; height:48px; font-size:22px; color:var(--mu);">null</div>
     <div class="node ln" id="n4" style="left:555px; top:440px; opacity:0;"><span class="v">5</span><span class="p"></span></div>
     <div class="tag" id="hop" style="left:120px; top:396px;">looking for 9…</div>
     <div class="tag warm" id="n-ins" style="left:850px; top:470px;">2 pointers changed</div>

@@ -20,6 +20,7 @@
   --color-accent-strong: #5fc2a2;
   --color-ink: #08140f;
   --color-warn: #e0a94a;
+  --color-on-accent: #08140f;
 
   /* Views still using slate-* pick up the same greens */
   --color-slate-950: #0b110e;
@@ -41,7 +42,7 @@
     text-wrap: balance;
   }
   :root {
-    --bg-base: #08090d;
+    --bg-base: var(--color-bg);
     --bg-surface: #0e1117;
     --bg-card: #131722;
     --border-subtle: rgba(255, 255, 255, 0.07);
@@ -84,7 +85,7 @@
   /* Accessible Focus Rings */
   button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 2px var(--color-bg), 0 0 0 4px rgba(95, 194, 162, 0.75);
+    box-shadow: 0 0 0 2px var(--color-bg), 0 0 0 4px color-mix(in srgb, var(--color-accent) 75%, transparent);
   }
 }
 
@@ -178,14 +179,14 @@ button:disabled, [role="button"]:disabled {
   height: 5px;
 }
 ::-webkit-scrollbar-track {
-  background: rgba(8, 9, 13, 0.8);
+  background: var(--color-side);
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(148, 163, 184, 0.25);
+  background: color-mix(in srgb, var(--color-muted) 35%, transparent);
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(52, 211, 153, 0.45);
+  background: color-mix(in srgb, var(--color-accent) 55%, transparent);
 }
 
 /* Hide scrollbars on horizontal tab strips */

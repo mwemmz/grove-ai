@@ -194,7 +194,7 @@ export const StudyBlueprintsView: React.FC<StudyBlueprintsViewProps> = ({
                 </span>
               </div>
 
-              <h4 className="text-sm font-bold text-white line-clamp-1">
+              <h4 className="text-sm font-bold text-text line-clamp-1">
                 {bp.studentName}’s {bp.courseCode} Roadmap
               </h4>
               <p className="text-xs text-amber-400 font-medium mt-0.5">
@@ -231,7 +231,7 @@ export const StudyBlueprintsView: React.FC<StudyBlueprintsViewProps> = ({
                       {activeBlueprint.courseCode}: {activeBlueprint.courseName}
                     </span>
                   </div>
-                  <h2 className="text-xl font-bold text-white">
+                  <h2 className="text-xl font-bold text-text">
                     {activeBlueprint.studentName}’s A+ Study Blueprint
                   </h2>
                 </div>
@@ -240,7 +240,7 @@ export const StudyBlueprintsView: React.FC<StudyBlueprintsViewProps> = ({
                   onClick={() => handleToggleAdopt(activeBlueprint.id)}
                   className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-colors shadow ${
                     activeBlueprint.isAdopted
-                      ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                      ? 'bg-emerald-600 hover:bg-emerald-500 text-on-accent'
                       : 'bg-amber-600 hover:bg-amber-500 text-white'
                   }`}
                 >
@@ -258,7 +258,7 @@ export const StudyBlueprintsView: React.FC<StudyBlueprintsViewProps> = ({
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
                 <div className="rounded-xl bg-slate-950 p-3 border border-slate-800/80 text-center">
                   <div className="text-xs text-slate-500 uppercase font-semibold">Weekly Study Time</div>
-                  <div className="text-base font-bold text-white mt-1 flex items-center justify-center gap-1">
+                  <div className="text-base font-bold text-text mt-1 flex items-center justify-center gap-1">
                     <Clock className="h-4 w-4 text-amber-400" />
                     {activeBlueprint.weeklyHours}h / wk
                   </div>
@@ -274,7 +274,7 @@ export const StudyBlueprintsView: React.FC<StudyBlueprintsViewProps> = ({
 
                 <div className="rounded-xl bg-slate-950 p-3 border border-slate-800/80 text-center">
                   <div className="text-xs text-slate-500 uppercase font-semibold">Learner Archetype</div>
-                  <div className="text-xs font-bold text-white mt-1 truncate" title={activeBlueprint.archetype}>
+                  <div className="text-xs font-bold text-text mt-1 truncate" title={activeBlueprint.archetype}>
                     {activeBlueprint.archetype}
                   </div>
                 </div>
@@ -317,7 +317,7 @@ export const StudyBlueprintsView: React.FC<StudyBlueprintsViewProps> = ({
 
             {/* Syllabus Roadmap Milestones */}
             <div className="rounded-2xl bg-slate-900 border border-slate-800 p-6 shadow-xl space-y-4">
-              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+              <h3 className="text-sm font-bold text-text flex items-center gap-2">
                 <Calendar className="h-4 w-4 text-blue-400" />
                 14-Week Syllabus Execution Roadmap
               </h3>
@@ -336,7 +336,7 @@ export const StudyBlueprintsView: React.FC<StudyBlueprintsViewProps> = ({
                         <span className="rounded bg-slate-800 px-2 py-0.5 text-xs font-mono font-bold text-amber-400">
                           Week {ms.week}
                         </span>
-                        <h4 className="text-xs font-bold text-white">{ms.topic}</h4>
+                        <h4 className="text-xs font-bold text-text">{ms.topic}</h4>
                       </div>
                       <span className="text-xs text-slate-500 font-mono">
                         {ms.workloadHours} hrs required
@@ -362,15 +362,15 @@ export const StudyBlueprintsView: React.FC<StudyBlueprintsViewProps> = ({
       {/* Publish Blueprint Modal */}
       {isSubmitModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
-          <div className="w-full max-w-xl max-h-[90dvh] overflow-y-auto rounded-2xl bg-[#0f121a] border border-white/[0.08] p-6 shadow-2xl shadow-black/80 text-slate-200 animate-enter">
+          <div className="w-full max-w-xl max-h-[90dvh] overflow-y-auto rounded-2xl bg-surface border border-line p-6 shadow-2xl shadow-black/40 text-slate-200 animate-enter">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="text-base font-bold text-white flex items-center gap-2">
+              <h3 className="text-base font-bold text-text flex items-center gap-2">
                 <Plus className="h-4 w-4 text-amber-400" />
                 Publish Your Course Study Blueprint
               </h3>
               <button
                 onClick={() => setIsSubmitModalOpen(false)}
-                className="h-7 w-7 rounded-lg bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center"
+                className="h-7 w-7 rounded-lg bg-slate-800 text-slate-400 hover:text-text flex items-center justify-center"
               >
                 <X className="h-4 w-4" />
               </button>

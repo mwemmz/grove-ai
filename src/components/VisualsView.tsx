@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import '@hyperframes/player';
 import type { HyperframesPlayer } from '@hyperframes/player';
 import { Note, Course } from '../types';
+import { getStoredTheme, themeById, visualPalette } from '../themes';
 import { Segmented, labelCls, panel, primaryBtn, quietBtn, chip } from './ui';
 import type { StudyPreset } from './StudyView';
 import {
@@ -43,6 +44,7 @@ function TopicPlayer({
   onStartSession: (p: StudyPreset) => void;
 }) {
   const playerRef = useRef<HyperframesPlayer>(null);
+  const playerSrc = `${import.meta.env.BASE_URL}${topic.src}?p=${encodeURIComponent(JSON.stringify(visualPalette(themeById(getStoredTheme()))))}`;
   const [mode, setMode] = useState<Mode>('explore');
   const [ready, setReady] = useState(false);
   const [loadError, setLoadError] = useState(false);
@@ -158,7 +160,7 @@ function TopicPlayer({
         <div className="relative w-full overflow-hidden rounded-md bg-bg" style={{ aspectRatio: '16 / 9' }}>
           <hyperframes-player
             ref={playerRef}
-            src={`${import.meta.env.BASE_URL}${topic.src}`}
+            src={playerSrc}
             width={1280}
             height={720}
             controls
@@ -543,6 +545,12 @@ export const VisualsView: React.FC<VisualsViewProps> = ({ notes, courses, curren
   const [view, setView] = useState<View>('animations');
   const [topicId, setTopicId] = useState<TopicId>('cpu');
   const topic = TOPIC_BY_ID[topicId];
+  const [themeId, setThemeId] = useState(getStoredTheme);
+  useEffect(() => {
+    const on = (e: Event) => setThemeId((e as CustomEvent<string>).detail);
+    window.addEventListener('grove-theme-changed', on);
+    return () => window.removeEventListener('grove-theme-changed', on);
+  }, []);
   const groups = ['Computer systems', 'Data structures'] as const;
 
   return (
@@ -580,7 +588,7 @@ export const VisualsView: React.FC<VisualsViewProps> = ({ notes, courses, curren
               </div>
             ))}
           </div>
-          <TopicPlayer key={topic.id} topic={topic} courses={courses} notes={notes} onOpenNote={onOpenNote} onStartSession={onStartSession} />
+          <TopicPlayer key={`${topic.id}-${themeId}`} topic={topic} courses={courses} notes={notes} onOpenNote={onOpenNote} onStartSession={onStartSession} />
         </>
       ) : (
         <ProgrammeMap

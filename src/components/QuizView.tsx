@@ -178,7 +178,7 @@ export const QuizView: React.FC<QuizViewProps> = ({
                   <div className="text-sm text-muted mb-3">
                     Question
                   </div>
-                  <h3 className="text-lg sm:text-xl font-bold text-white leading-relaxed">
+                  <h3 className="text-lg sm:text-xl font-bold text-text leading-relaxed">
                     <Inline text={currentCard.front} />
                   </h3>
                 </div>
@@ -269,12 +269,12 @@ export const QuizView: React.FC<QuizViewProps> = ({
       {/* Create Flashcard Modal */}
       {isCreateModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
-          <div className="w-full max-w-lg max-h-[85dvh] overflow-y-auto rounded-2xl bg-[#0f121a] border border-white/[0.08] p-6 shadow-2xl shadow-black/80 text-slate-200 animate-enter">
+          <div className="w-full max-w-lg max-h-[85dvh] overflow-y-auto rounded-2xl bg-surface border border-line p-6 shadow-2xl shadow-black/40 text-slate-200 animate-enter">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-base font-bold text-white">Create Degree Flashcard</h3>
+              <h3 className="text-base font-bold text-text">Create Degree Flashcard</h3>
               <button
                 onClick={() => setIsCreateModalOpen(false)}
-                className="h-7 w-7 rounded-lg bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center"
+                className="h-7 w-7 rounded-lg bg-slate-800 text-slate-400 hover:text-text flex items-center justify-center"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -336,7 +336,7 @@ export const QuizView: React.FC<QuizViewProps> = ({
                 </button>
                 <button
                   type="submit"
-                  className="rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2 text-xs font-semibold"
+                  className="rounded-xl bg-emerald-600 hover:bg-emerald-500 text-on-accent px-5 py-2 text-xs font-semibold"
                 >
                   Save Flashcard
                 </button>

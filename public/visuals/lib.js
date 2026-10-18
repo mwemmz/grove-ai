@@ -1,9 +1,17 @@
 /* Shared helpers for Grove's HyperFrames compositions. Everything is seekable (GSAP timeline). */
 (function () {
-  var HI = '#5fc2a2', LO = '#2f4439', WARN = '#e0a94a';
-  var SHADOW = { hi: 'rgba(95,194,162,.28)', warn: 'rgba(224,169,74,.30)' };
+  /* The app passes its current theme as ?p=<json>; without it the default Grove palette applies. */
+  var P = { bg: '#0e1512', panel: '#101a15', surface: '#151f1a', raised: '#1b2b24', lo: '#2f4439', line: '#26352d', tx: '#e5ede7', mu: '#92a59a', dim: '#4b5e54', hi: '#5fc2a2', hibg: '#17382d', warn: '#e0a94a', warnbg: '#3a2f17', ink: '#08140f', dark: 1 };
+  try {
+    var q = new URLSearchParams(location.search).get('p');
+    if (q) Object.assign(P, JSON.parse(q));
+  } catch (e) { /* keep defaults */ }
+  Object.keys(P).forEach(function (k) { document.documentElement.style.setProperty('--' + k, P[k]); });
+  function rgba(h, a) { var n = parseInt(h.slice(1), 16); return 'rgba(' + (n >> 16) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + a + ')'; }
+  var HI = P.hi, LO = P.lo, WARN = P.warn;
+  var SHADOW = { hi: rgba(P.hi, P.dark ? 0.28 : 0.22), warn: rgba(P.warn, P.dark ? 0.3 : 0.24) };
   var tl = gsap.timeline({ paused: true });
-  var G = { HI: HI, LO: LO, WARN: WARN, tl: tl };
+  var G = { HI: HI, LO: LO, WARN: WARN, P: P, tl: tl };
 
   G.register = function (id) {
     window.__timelines = window.__timelines || {};

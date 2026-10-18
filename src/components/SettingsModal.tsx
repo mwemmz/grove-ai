@@ -1,3 +1,4 @@
+import { ThemePicker } from './ThemePicker';
 import React, { useState } from 'react';
 import { 
   X, 
@@ -92,19 +93,19 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
-      <div className="relative w-full max-w-xl max-h-[90dvh] overflow-y-auto rounded-2xl bg-[#0f121a] border border-white/[0.08] p-6 shadow-2xl shadow-black/80 text-slate-200 animate-enter">
+      <div className="relative w-full max-w-xl max-h-[90dvh] overflow-y-auto rounded-2xl bg-surface border border-line p-6 shadow-2xl shadow-black/40 text-slate-200 animate-enter">
         
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 h-8 w-8 rounded-lg bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center transition-colors"
+          className="absolute top-4 right-4 h-8 w-8 rounded-lg bg-slate-800 text-slate-400 hover:text-text flex items-center justify-center transition-colors"
         >
           <X className="h-4 w-4" />
         </button>
 
         <div className="flex items-center gap-2 mb-1">
           <Settings className="h-5 w-5 text-emerald-400" />
-          <h2 className="text-xl font-bold text-white">Grove Settings & Data</h2>
+          <h2 className="text-xl font-bold text-text">Grove Settings & Data</h2>
         </div>
         <p className="text-xs text-slate-400 mb-6">
           Configure degree parameters, persistence, and AI connectivity.
@@ -116,6 +117,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             <span>{toastMessage}</span>
           </div>
         )}
+
+        <div className="mb-6 space-y-3 rounded-xl border border-slate-800 bg-slate-950/60 p-4">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">Appearance</h3>
+          <ThemePicker />
+        </div>
 
         <form onSubmit={handleSaveProfile} className="space-y-6">
           
@@ -133,7 +139,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full rounded-lg bg-slate-900 border border-slate-700/80 px-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500"
+                  className="w-full rounded-lg bg-slate-900 border border-slate-700/80 px-3 py-1.5 text-xs text-text focus:outline-none focus:border-emerald-500"
                 />
               </div>
 
@@ -142,7 +148,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <select
                   value={year}
                   onChange={(e) => setYear(Number(e.target.value) as any)}
-                  className="w-full rounded-lg bg-slate-900 border border-slate-700/80 px-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500"
+                  className="w-full rounded-lg bg-slate-900 border border-slate-700/80 px-3 py-1.5 text-xs text-text focus:outline-none focus:border-emerald-500"
                 >
                   <option value={1}>Year 1 (Freshman)</option>
                   <option value={2}>Year 2 (Sophomore)</option>
@@ -159,7 +165,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   type="text"
                   value={degree}
                   onChange={(e) => setDegree(e.target.value)}
-                  className="w-full rounded-lg bg-slate-900 border border-slate-700/80 px-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500"
+                  className="w-full rounded-lg bg-slate-900 border border-slate-700/80 px-3 py-1.5 text-xs text-text focus:outline-none focus:border-emerald-500"
                 />
               </div>
 
@@ -169,7 +175,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   type="text"
                   value={university}
                   onChange={(e) => setUniversity(e.target.value)}
-                  className="w-full rounded-lg bg-slate-900 border border-slate-700/80 px-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500"
+                  className="w-full rounded-lg bg-slate-900 border border-slate-700/80 px-3 py-1.5 text-xs text-text focus:outline-none focus:border-emerald-500"
                 />
               </div>
             </div>
@@ -194,7 +200,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   onClick={() => setProvider(p.id as any)}
                   className={`p-2.5 rounded-lg border text-left transition-colors ${
                     provider === p.id
-                      ? 'bg-emerald-500/10 border-emerald-500/60 text-white'
+                      ? 'bg-emerald-500/10 border-emerald-500/60 text-text'
                       : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
                   }`}
                 >
@@ -214,7 +220,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   value={apiKey}
                   onChange={(e) => setApiKey(e.target.value)}
                   placeholder="sk-..."
-                  className="w-full rounded-lg bg-slate-900 border border-slate-700/80 px-3 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-emerald-500"
+                  className="w-full rounded-lg bg-slate-900 border border-slate-700/80 px-3 py-1.5 text-xs text-text font-mono focus:outline-none focus:border-emerald-500"
                 />
               </div>
             )}
@@ -280,7 +286,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
             <button
               type="submit"
-              className="rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2 text-xs font-semibold shadow-lg shadow-emerald-900/30"
+              className="rounded-xl bg-emerald-600 hover:bg-emerald-500 text-on-accent px-5 py-2 text-xs font-semibold shadow-lg shadow-emerald-900/30"
             >
               Save Changes
             </button>

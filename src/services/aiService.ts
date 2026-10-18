@@ -1,5 +1,6 @@
 import { Note, LearningProfile, AcademicYear, MemoryLogEntry, StudentTier } from '../types';
 import { storage } from './storage';
+import { PROVIDERS, buildSystemPrompt, buildUserPrompt, generate } from './llmService';
 
 export interface AIResponsePayload {
   text: string;
@@ -179,6 +180,28 @@ export const aiService = {
     // Default intelligent synthesized answer adapted to user style
     const resp = this.generateAdaptiveResponse(question, topNotes, profile, citedNotes, connections, appliedAttributes);
     resp.seniorTips = matchingSeniorTips;
+
+    // A real model answers when the student has connected a key; the local answer is the safety net.
+    const provider = storage.getApiProvider();
+    const key = storage.getApiKey(provider);
+    if (provider !== 'mock' && key) {
+      const def = PROVIDERS.find((p) => p.id === provider);
+      const model = storage.getApiModel(provider) || def?.model || '';
+      try {
+        const grounding = relevant.slice(0, 5).map((r) => r.note);
+        const text = await generate({
+          provider, key, model,
+          system: buildSystemPrompt(profile),
+          user: buildUserPrompt(question, grounding),
+        });
+        if (text) {
+          resp.text = text;
+          resp.appliedProfileAttributes = [`Answered by ${def?.label ?? provider}`, ...resp.appliedProfileAttributes];
+        }
+      } catch (err) {
+        resp.appliedProfileAttributes = [`AI engine unavailable, used local answer (${err instanceof Error ? err.message : 'unknown error'})`, ...resp.appliedProfileAttributes];
+      }
+    }
     return resp;
   },
 

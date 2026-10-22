@@ -83,11 +83,22 @@ export interface LearningProfile {
   clearedCourses?: string[];
 }
 
+/** A piece of the university's own material that an answer drew on. */
+export interface SourceRef {
+  id: string;
+  kind: 'project' | 'course' | 'policy';
+  title: string;
+  meta: string;
+  demo: boolean;
+  quote: string;
+}
+
 export interface ChatMessage {
   id: string;
   sender: 'user' | 'assistant' | 'system';
   text: string;
   timestamp: string;
+  sources?: SourceRef[];
   citedNotes?: {
     noteId: string;
     courseCode: string;

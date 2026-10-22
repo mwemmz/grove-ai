@@ -14,6 +14,7 @@ import { PortfolioView } from './components/PortfolioView';
 import { QuizView } from './components/QuizView';
 import { StudyView, StudyPreset } from './components/StudyView';
 import { PlannerView } from './components/PlannerView';
+import { LibraryView } from './components/LibraryView';
 const VisualsView = lazy(() => import('./components/VisualsView').then((m) => ({ default: m.VisualsView })));
 import { SettingsModal } from './components/SettingsModal';
 import {
@@ -104,6 +105,9 @@ function GroveApp() {
   const [chat, setChat] = useState<ChatMessage[]>([]);
   const [chatView, setChatView] = useState<string | null>(null);
   const seededChat = useRef(false);
+  // Library <-> Ask hand-offs: open a source in the Library, or send a question to the Ask screen.
+  const [focusSourceId, setFocusSourceId] = useState<string | null>(null);
+  const [pendingAsk, setPendingAsk] = useState<string | null>(null);
 
   // Skips the auto-save effects for the initial post-hydration commit.
   const skipInitialSync = useRef(true);
@@ -192,9 +196,9 @@ function GroveApp() {
     if (chat.length > 0 || notes.length === 0) return;
     (async () => {
       const starters = [
+        'What should a final-year project proposal include?',
+        'Has anyone done a project on mobile money fraud?',
         'Where did I first learn about mutual exclusion and locks?',
-        'Compare B+ Trees with Hash Tables for indexing',
-        'How does Raft log replication work?',
       ];
       const seeded: ChatMessage[] = [];
       for (const [i, q] of starters.entries()) {
@@ -207,6 +211,7 @@ function GroveApp() {
             sender: 'assistant',
             text: payload.text,
             timestamp: stamp,
+            sources: payload.sources,
             citedNotes: payload.citedNotes,
             yearConnections: payload.yearConnections,
             seniorTips: payload.seniorTips,
@@ -338,6 +343,12 @@ function GroveApp() {
                 profile={profile}
                 setProfile={setProfile}
                 onOpenNoteDetail={handleOpenNoteDetail}
+                onOpenSource={(id) => {
+                  setFocusSourceId(id);
+                  goTo('library');
+                }}
+                pendingAsk={pendingAsk}
+                onPendingHandled={() => setPendingAsk(null)}
               />
               <DegreeMemoryView
                 notes={notes}
@@ -347,6 +358,18 @@ function GroveApp() {
                 setSelectedNoteForDetail={setSelectedNoteForDetail}
               />
             </>
+          )}
+
+          {activeTab === 'library' && (
+            <LibraryView
+              focusId={focusSourceId}
+              onFocusDone={() => setFocusSourceId(null)}
+              onAsk={(q) => {
+                setChatView(NEW_VIEW);
+                setPendingAsk(q);
+                goTo('remember');
+              }}
+            />
           )}
 
           {activeTab === 'visuals' && (

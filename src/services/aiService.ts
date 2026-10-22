@@ -1,9 +1,12 @@
-import { Note, LearningProfile, AcademicYear, MemoryLogEntry, StudentTier } from '../types';
+import { Note, LearningProfile, AcademicYear, MemoryLogEntry, StudentTier, SourceRef } from '../types';
 import { storage } from './storage';
+import { searchSources, toRef, INSTITUTIONAL_RE, type Hit } from './knowledge';
 import { providerLabel, buildSystemPrompt, buildUserPrompt, generateRouted, candidatesFor } from './llmService';
 
 export interface AIResponsePayload {
   text: string;
+  /** The university's own material this answer drew on. */
+  sources?: SourceRef[];
   citedNotes: {
     noteId: string;
     courseCode: string;
@@ -131,6 +134,13 @@ export const aiService = {
     const topNotes = relevant.slice(0, 3).map(r => r.note);
     const connections = this.findCrossYearConnections(topNotes.length > 0 ? topNotes : allNotes);
 
+    // The university library comes first: past final-year projects, course outlines and policies.
+    const institutional = INSTITUTIONAL_RE.test(question);
+    const rawHits = searchSources(question, { n: 4 });
+    // A question about a rule is answered by a rule. A past project that merely shares a word is not an answer.
+    const strongProject = rawHits.some((h) => h.source.kind === 'project' && h.score >= 12);
+    const libHits = institutional && !strongProject && !rawHits.some((h) => h.source.kind !== 'project') ? [] : rawHits;
+
     const citedNotes = topNotes.map(n => ({
       noteId: n.id,
       courseCode: n.courseId.replace('c-', '').toUpperCase(),
@@ -182,28 +192,37 @@ export const aiService = {
 
     // Default intelligent synthesized answer adapted to user style
     const greeting = /^\s*(hi|hello|hey|yo|good (morning|afternoon|evening)|thanks?|thank you)\b[\s!.?]*$/i.test(question);
+    // A rules question the library can't answer is never answered from guesswork, even if a note shares a word.
+    const notInLibrary = institutional && libHits.length === 0;
     const resp: AIResponsePayload =
-      topNotes.length > 0
-        ? this.generateAdaptiveResponse(question, topNotes, profile, citedNotes, connections, appliedAttributes)
-        : {
-            text: greeting
-              ? `Hi${profile.studentName ? ` ${profile.studentName.split(' ')[0]}` : ''}! Ask me about something you have studied, like "How does Raft log replication work?", and I will answer from your notes.`
-              : `I could not find a note about that, so I will not guess. Try different words from your notes, or add a note about it under "Add to your grove". Connect an AI engine in Settings and I can also answer from general knowledge, clearly marked as not from your notes.`,
-            citedNotes: [],
-            yearConnections: [],
-            appliedProfileAttributes: appliedAttributes,
-          };
+      libHits.length > 0
+        // the library answered, so loosely matching notes and cross-year links would only be noise
+        ? this.generateLibraryResponse(libHits, [], [], appliedAttributes, /\b(deadlines?|due|dates?|when|fees?|how much|how many|limit)\b/i.test(question))
+        : topNotes.length > 0 && !notInLibrary
+          ? this.generateAdaptiveResponse(question, topNotes, profile, citedNotes, connections, appliedAttributes)
+          : {
+              text: greeting
+                ? `Hi${profile.studentName ? ` ${profile.studentName.split(' ')[0]}` : ''}! Ask me about your course, the final-year project process, or something you have studied. I answer from your university's library and your own notes, and I tell you when I cannot find it.`
+                : notInLibrary
+                  ? `That is not in the university library yet, so I will not guess. Ask your department office or your supervisor. If you have the document, add it under Library and I can answer from it.`
+                  : `I could not find that in the university library or your notes, so I will not guess. Try different words, add a note about it under "Add to your grove", or connect an AI engine in Settings and I can also answer from general knowledge, clearly marked as not from your sources.`,
+              citedNotes: [],
+              yearConnections: [],
+              appliedProfileAttributes: appliedAttributes,
+            };
     resp.seniorTips = matchingSeniorTips;
+    if (libHits.length > 0) resp.sources = libHits.map(toRef);
 
     // A real model answers when the student has connected a key; the local answer is the safety net.
     const task = opts.task ?? 'ask';
-    const ready = live && candidatesFor(task).length > 0;
+    // Never spend the student's key guessing at a rule the library doesn't contain.
+    const ready = live && candidatesFor(task).length > 0 && !notInLibrary;
     if (!ready) {
       resp.appliedProfileAttributes = ['Answered by Local Grove. Add an AI key in Settings for fuller answers.', ...resp.appliedProfileAttributes];
     } else {
       try {
         const grounding = relevant.slice(0, 5).map((r) => r.note);
-        const out = await generateRouted(task, buildSystemPrompt(profile), buildUserPrompt(question, grounding, opts.previous));
+        const out = await generateRouted(task, buildSystemPrompt(profile), buildUserPrompt(question, grounding, opts.previous, libHits.map((h) => ({ title: h.source.title, meta: h.source.meta, text: h.source.text }))));
         if (out) {
           const label = providerLabel(out.provider);
           const first = out.failed[0];
@@ -218,6 +237,54 @@ export const aiService = {
       }
     }
     return resp;
+  },
+
+  /** Answers straight from the university's own material, quoting it, with no model involved. */
+  generateLibraryResponse(
+    hits: Hit[],
+    citedNotes: AIResponsePayload['citedNotes'],
+    connections: AIResponsePayload['yearConnections'],
+    appliedAttributes: string[],
+    mayNeedConfirming = false
+  ): AIResponsePayload {
+    const projects = hits.filter((h) => h.source.kind === 'project');
+    const rules = hits.filter((h) => h.source.kind !== 'project');
+    const parts: string[] = [];
+
+    if (rules.length > 0) {
+      parts.push('### What the library says');
+      rules.slice(0, 2).forEach((h) => {
+        parts.push(`> ${h.passage}`);
+        parts.push(`From **${h.source.title}** (${h.source.meta}).`);
+      });
+      if (mayNeedConfirming) parts.push('This is the library\'s wording. If your question is about a specific date or a case that is not covered, confirm with your department office.');
+    }
+
+    if (projects.length > 0) {
+      parts.push('### Past projects close to this');
+      parts.push(
+        projects
+          .slice(0, 3)
+          .map((h, i) => `${i + 1}. **${h.source.title}** (${h.source.meta}). ${(h.source.fields?.problem ?? h.passage).split(/(?<=[.!?])\s/)[0]}`)
+          .join('\n')
+      );
+      const open = projects
+        .slice(0, 2)
+        .filter((h) => h.source.fields)
+        .map((h) => `- **${h.source.title}** left this open: ${h.source.fields!.limitations.split(/(?<=[.!?])\s/)[0]} Next step they suggest: ${h.source.fields!.future.split(/(?<=[.!?])\s/)[0]}`);
+      if (open.length > 0) {
+        parts.push('### What they left open');
+        parts.push(open.join('\n'));
+      }
+      parts.push('Use these to learn what was done and what to ask your supervisor. Cite any project you rely on, and do not copy from it.');
+    }
+
+    return {
+      text: parts.join('\n\n'),
+      citedNotes,
+      yearConnections: connections,
+      appliedProfileAttributes: appliedAttributes,
+    };
   },
 
   generateTimelineResponse(

@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Note, LearningProfile, ChatMessage } from '../types';
 import { aiService } from '../services/aiService';
 import { storage } from '../services/storage';
+import { KIND_LABEL } from '../services/knowledge';
 import { Disclosure, Toast, Inline, field, labelCls, primaryBtn, panel, chip } from './ui';
 
 /** Shown in `viewId` when the student pressed "New question": an empty composer, history untouched. */
@@ -17,14 +18,20 @@ interface ChatTutorViewProps {
   profile: LearningProfile;
   setProfile: React.Dispatch<React.SetStateAction<LearningProfile>>;
   onOpenNoteDetail?: (note: Note) => void;
+  /** Opens a university source in the Library. */
+  onOpenSource?: (id: string) => void;
+  /** A question sent from another screen (for example the Library). Asked once, then cleared. */
+  pendingAsk?: string | null;
+  onPendingHandled?: () => void;
 }
 
 const STARTER_PROMPTS = [
+  'What should a final-year project proposal include?',
+  'My supervisor has not been allocated yet. What should I do meanwhile?',
+  'Has anyone done a project on mobile money fraud?',
   'Where did I first learn about mutual exclusion and locks?',
-  'Compare B+ Trees with Hash Tables for indexing',
-  'Explain Raft log replication in my preferred style',
 ];
-const PLACEHOLDER = 'Where did I learn about pointers, and how does it connect to what we do now?';
+const PLACEHOLDER = 'What should my project proposal include, and has anyone done something like my idea?';
 
 const ADAPT_ACTIONS: { id: 'too-long' | 'analogy' | 'code' | 'lost' | 'quiz'; label: string }[] = [
   { id: 'too-long', label: 'Shorter' },
@@ -110,6 +117,9 @@ export const ChatTutorView: React.FC<ChatTutorViewProps> = ({
   profile,
   setProfile,
   onOpenNoteDetail,
+  onOpenSource,
+  pendingAsk,
+  onPendingHandled,
 }) => {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -148,6 +158,7 @@ export const ChatTutorView: React.FC<ChatTutorViewProps> = ({
           sender: 'assistant',
           text: payload.text,
           timestamp: now(),
+          sources: payload.sources,
           citedNotes: payload.citedNotes,
           yearConnections: payload.yearConnections,
           seniorTips: payload.seniorTips,
@@ -172,6 +183,15 @@ export const ChatTutorView: React.FC<ChatTutorViewProps> = ({
     flash(feedbackMessage);
     if (action === 'quiz') handleSend(question ? `Quiz me with one short question on: ${question.text}` : 'Generate an active-recall conceptual quiz question based on this topic.', 'quiz');
   };
+
+  useEffect(() => {
+    if (pendingAsk && !isLoading) {
+      onPendingHandled?.();
+      handleSend(pendingAsk);
+    }
+    // handleSend closes over current state; it only needs to run when a new question arrives
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingAsk]);
 
   const clearChat = () => {
     setMessages([]);
@@ -203,7 +223,7 @@ export const ChatTutorView: React.FC<ChatTutorViewProps> = ({
         className="space-y-3"
       >
         <label htmlFor="ask" className={labelCls}>
-          Ask anything. Grove answers from your own notes first.
+          Ask anything. Grove answers from your university's library and your own notes, and says when it can't find it.
         </label>
         <textarea
           id="ask"
@@ -218,7 +238,7 @@ export const ChatTutorView: React.FC<ChatTutorViewProps> = ({
         />
         <div className="flex flex-wrap items-center gap-3">
           <button type="submit" disabled={!input.trim() || isLoading} className={primaryBtn}>
-            {isLoading ? 'Looking through your notes…' : 'Ask Grove'}
+            {isLoading ? 'Looking through the library…' : 'Ask Grove'}
           </button>
           {messages.length > 0 && !isLoading && (
             <button type="button" onClick={clearChat} className="min-h-10 px-1 text-sm text-muted hover:text-text">
@@ -256,6 +276,25 @@ export const ChatTutorView: React.FC<ChatTutorViewProps> = ({
               </p>
             );
           })()}
+
+          {answer.sources && answer.sources.length > 0 && (
+            <div className="space-y-2" aria-label="From the university library">
+              <p className="font-mono text-xs uppercase tracking-wider text-muted">From the university library</p>
+              <div className="flex flex-wrap gap-2">
+                {answer.sources.map((src) => (
+                  <button
+                    key={src.id}
+                    onClick={() => onOpenSource?.(src.id)}
+                    title={src.demo ? 'Sample record: fictional demo data' : src.meta}
+                    className={`${chip} hover:brightness-125`}
+                  >
+                    {KIND_LABEL[src.kind]} · {src.title}
+                    {src.demo && <span className="text-muted">· sample</span>}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {answer.citedNotes && answer.citedNotes.length > 0 && (
             <div className="flex flex-wrap gap-2">
@@ -327,7 +366,7 @@ export const ChatTutorView: React.FC<ChatTutorViewProps> = ({
       {isLoading && (
         <p className="flex items-center gap-2 text-sm text-muted" role="status">
           <span className="h-2 w-2 animate-pulse rounded-full bg-accent" />
-          Looking through your notes…
+          Looking through the library and your notes…
         </p>
       )}
     </section>

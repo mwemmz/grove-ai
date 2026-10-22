@@ -6,6 +6,7 @@ import {
   Compass,
   Cpu,
   Layers,
+  Library,
   Sprout,
   Timer,
   Users,
@@ -13,7 +14,7 @@ import {
 } from 'lucide-react';
 import { Note } from '../types';
 
-export type AppTab = 'remember' | 'visuals' | 'study' | 'plan' | 'profile' | 'portfolio' | 'quiz' | 'blueprints' | 'tutoring';
+export type AppTab = 'remember' | 'library' | 'visuals' | 'study' | 'plan' | 'profile' | 'portfolio' | 'quiz' | 'blueprints' | 'tutoring';
 
 export interface NavItem {
   id: AppTab;
@@ -23,8 +24,8 @@ export interface NavItem {
 
 /** The six places a student goes every week. */
 export const PRIMARY_NAV: NavItem[] = [
-  { id: 'remember', label: 'Remember', icon: BookOpen },
-  { id: 'visuals', label: 'Visuals', icon: Cpu },
+  { id: 'remember', label: 'Ask', icon: BookOpen },
+  { id: 'library', label: 'Library', icon: Library },
   { id: 'study', label: 'Study', icon: Timer },
   { id: 'plan', label: 'Plan', icon: CalendarDays },
   { id: 'profile', label: 'How I learn', icon: Sprout },
@@ -33,6 +34,7 @@ export const PRIMARY_NAV: NavItem[] = [
 
 /** Useful, but tucked away so the sidebar stays calm. */
 export const MORE_NAV: NavItem[] = [
+  { id: 'visuals', label: 'Visuals', icon: Cpu },
   { id: 'quiz', label: 'Recall', icon: Layers },
   { id: 'blueprints', label: 'Blueprints', icon: Compass },
   { id: 'tutoring', label: 'Peer tutoring', icon: Users },

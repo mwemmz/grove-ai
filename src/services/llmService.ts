@@ -41,10 +41,12 @@ const clip = (s: string, n: number) => (s.length > n ? s.slice(0, n) + '…' : s
 
 export function buildSystemPrompt(profile: LearningProfile): string {
   return [
-    `You are Grove, a study companion for ${profile.studentName || 'a university student'}${profile.degreeName ? `, who studies ${profile.degreeName}` : ''}.`,
-    'Answer from the student\'s own notes first. When you use a note, name it in square brackets like [Raft Consensus Protocol].',
-    'If the notes do not cover the question, say so in one sentence, then answer from general knowledge and mark that part as "not from your notes".',
-    'Never invent a note or a quote. If a point is uncertain, say it is uncertain.',
+    `You are Grove, the study companion of ${profile.studentName || 'a university student'}${profile.degreeName ? `, who studies ${profile.degreeName}` : ''}. Grove belongs to the student's university and knows its library.`,
+    'Material marked LIBRARY comes from the university (past final-year projects, course outlines, policies). It ranks above the student\'s notes, and both rank above general knowledge. Cite what you use by its title in square brackets, like [Final-year project proposal: what to include].',
+    'For questions about the university itself (deadlines, rules, supervisors, procedures, formats) answer only from LIBRARY material. If it is not there, say "That is not in the university library yet" and tell the student to ask their department office or supervisor. Never guess these.',
+    'Past final-year projects are examples to learn from. Help the student see what was done, what was left open, and what to ask their supervisor. Never write their project text for them, and never present a past project\'s work as theirs. Remind them to cite any project they rely on.',
+    'For anything else, answer from the student\'s notes first. If the notes do not cover it, say so in one sentence, then answer from general knowledge and mark that part as "not from your notes".',
+    'Never invent a source, a note or a quote. If a point is uncertain, say it is uncertain.',
     `Explanation style: ${profile.explanationStyle}. Answer length: ${profile.answerLength}.`,
     profile.socraticPacing ? 'Teach Socratically: give a short hint and finish with one question for the student to answer.' : '',
     profile.codeLanguagePreference ? `When code helps, use ${profile.codeLanguagePreference}.` : '',
@@ -52,12 +54,26 @@ export function buildSystemPrompt(profile: LearningProfile): string {
   ].filter(Boolean).join('\n');
 }
 
-export function buildUserPrompt(question: string, notes: Note[], previous?: { question: string; answer: string }): string {
+export interface PromptSource {
+  title: string;
+  meta: string;
+  text: string;
+}
+
+export function buildUserPrompt(
+  question: string,
+  notes: Note[],
+  previous?: { question: string; answer: string },
+  sources: PromptSource[] = []
+): string {
+  const lib = sources.length
+    ? sources.map((s, i) => `LIBRARY ${i + 1}: ${s.title} (${s.meta})\n${clip(s.text, 1800)}`).join('\n\n---\n\n')
+    : '(nothing in the library matched)';
   const block = notes.length
     ? notes.map((n, i) => `NOTE ${i + 1}: ${n.title} (Year ${n.year}, ${n.courseId})\n${clip(n.content, 1800)}`).join('\n\n---\n\n')
     : '(no matching notes found)';
   const prior = previous ? `Previous exchange (for follow-ups):\nStudent: ${clip(previous.question, 300)}\nGrove: ${clip(previous.answer, 1500)}\n\n` : '';
-  return `Student's notes:\n\n${block}\n\n${prior}Question: ${question}`;
+  return `University library:\n\n${lib}\n\nStudent's notes:\n\n${block}\n\n${prior}Question: ${question}`;
 }
 
 function statusError(status: number, detail: string): LLMError {

@@ -1,6 +1,8 @@
 # Grove
 
-**Students who stay quiet go unseen until they fail or speak up, and the AI they turn to doesn't know their university.**
+**Grove is a university's own AI that helps students where lecturers and supervisors can't reach them.**
+
+*Why:* students who stay quiet go unseen until they fail or speak up, and the AI they turn to doesn't know their university.
 
 Grove is a university's own AI. It is given to students in first year and built on that institution's courses, policies, notes and past final-year projects. It answers from that library, cites its sources, and says "not in the library yet" instead of guessing.
 
@@ -18,11 +20,16 @@ Seen first-hand by the author, a student (not yet confirmed by interviews):
 |---|---|---|
 | Informal observation misses most struggling students | Among 429 medical students, tutors watching in class spotted about a quarter to a third of those who later failed or dropped out (O'Neill et al., 2016) | Medical school, one course |
 | Large classes are normal | 29 of 30 lecturers at two South African universities taught first-year classes of 301 to 450 (Moodley, 2015) | Small sample |
+| Zambian lecturers are stretched | Expanded enrolments outstripped capacity at UNZA and CBU; lecturer workloads rose and student-lecturer contact grew less satisfactory (Chipindi, 2011) | Dated, qualitative; no current ratio data |
 | Supervision is stretched | Supervisor workload and slow feedback delay research in Ghana (Amponsah et al., 2026) and Tanzania (Abeid et al., 2025) | Postgraduate, not undergraduate |
+| Counter-evidence | Malaysian engineering students rated supervisor availability 4.45 out of 5 (Rusli et al., 2023, n=246) | Different country and setting; shows the gap is not universal |
+| AI can reach students who don't ask people | Of nearly 7,000 Australian students, AI felt easier to access and less judging, but 60% trusted AI feedback vs 90% for instructors (de Mello Heredia, 2025) | Press report of a survey |
+| A course-grounded AI can answer reliably | Jill Watson answered 76.7% of 150 questions vs 31.3% for a commercial retrieval tool; use varied from 15% to 54% across courses (Taneja et al., 2024; Maiti & Goel, 2024) | Preprints, few courses, no learning data |
+| AI tutoring can help where staff are stretched | +0.31 SD after six weeks of AI tutoring in Nigeria (De Simone et al., 2025) | School-level |
 | Zambian students use AI heavily | 85.6% of 1,829 students at five universities had used ChatGPT; authors call for clear institutional guidelines (Mudenda et al., 2026) | 91% health students, self-reported |
 | AI design decides whether it helps | Unrestricted GPT-4 raised practice grades 48% but left students 17% worse on the exam without it; a guardrailed tutor largely avoided the harm (Bastani et al., 2025) | High-school maths |
 
-**Not found:** any study testing an institution-tied AI against general tools, or the idea of an AI that stays with a student across a degree. Those are hypotheses.
+**Not found:** any study testing an institution-tied AI against general tools, the idea of an AI that stays with a student across a degree, Zambian undergraduate supervision or class-size data, or anything specific to the University of Lusaka. Those are hypotheses or gaps.
 
 **Hypothesis (untested):** being tied to the institution can get help to students sooner, through past projects while waiting for a supervisor and, with consent, anonymous totals showing where students studying alone get stuck.
 

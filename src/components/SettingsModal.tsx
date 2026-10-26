@@ -13,12 +13,11 @@ import {
   User, 
   Check, 
   Database,
-  ShieldCheck,
   AlertTriangle
 } from 'lucide-react';
 import { LearningProfile } from '../types';
 import { storage } from '../services/storage';
-import { SignOutButton } from '@clerk/react';
+import { AccountPanel } from './AccountPanel';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -441,6 +440,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
           </div>
 
+          <AccountPanel />
+
           {/* Danger Zone: Reset to Demo */}
           <div className="pt-2 flex items-center justify-between border-t border-slate-800/80">
             <div className="flex items-center gap-4">
@@ -458,15 +459,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <span>Reset to 4-Year Demo Data</span>
               </button>
 
-              <SignOutButton>
-                <button
-                  type="button"
-                  className="text-xs text-slate-400 hover:text-slate-200 flex items-center gap-1.5"
-                >
-                  <ShieldCheck className="h-3.5 w-3.5" />
-                  <span>Sign Out</span>
-                </button>
-              </SignOutButton>
             </div>
 
             <button

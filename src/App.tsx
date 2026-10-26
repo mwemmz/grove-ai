@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
-import { useAuth, SignInButton } from '@clerk/react';
+import { useAuth, useUser } from '@clerk/react';
+import { AuthScreen } from './components/AuthScreen';
 import { TreePine } from 'lucide-react';
 import { AppTab, TAB_LABEL } from './components/Header';
 import { Shell } from './components/Shell';
@@ -44,25 +45,6 @@ function LoadingScreen({ label }: { label: string }) {
   );
 }
 
-function SignInScreen() {
-  return (
-    <div className="min-h-dvh bg-bg text-text flex items-center justify-center px-4 font-sans">
-      <div className="w-full max-w-sm text-center">
-        <TreePine className="h-9 w-9 text-accent mx-auto mb-5" />
-        <h1 className="font-display text-4xl tracking-tight mb-2">Grove</h1>
-        <p className="text-muted mb-8">
-          A study companion that remembers your whole degree.
-        </p>
-        <SignInButton mode="modal">
-          <button className="w-full min-h-11 rounded-md bg-accent text-ink font-semibold hover:brightness-110 transition-[filter]">
-            Sign in
-          </button>
-        </SignInButton>
-      </div>
-    </div>
-  );
-}
-
 function AuthGate() {
   const { isLoaded, isSignedIn, getToken } = useAuth();
 
@@ -76,12 +58,14 @@ function AuthGate() {
     return <LoadingScreen label="Starting Grove..." />;
   }
   if (!isSignedIn) {
-    return <SignInScreen />;
+    return <AuthScreen />;
   }
   return <GroveApp />;
 }
 
 function GroveApp() {
+  const { user } = useUser();
+  const accountName = user?.fullName || user?.username || '';
   const [activeTab, setActiveTab] = useState<AppTab>('remember');
   const [isDataReady, setIsDataReady] = useState(false);
 
@@ -136,6 +120,12 @@ function GroveApp() {
       cancelled = true;
     };
   }, []);
+
+  // The sidebar shows the signed-in student's own name, not the demo student's.
+  useEffect(() => {
+    if (!accountName || !isDataReady) return;
+    setProfile((p) => (!p.studentName || p.studentName === 'Alex Chimwaza' ? { ...p, studentName: accountName } : p));
+  }, [accountName, isDataReady]);
 
   // Sync to storage on state changes (each save also PUTs to the API)
   useEffect(() => {

@@ -394,7 +394,7 @@ export const ECON_TOPICS: VisualTopic[] = [
 
 /* ---------- dual coding: find the picture for some words ---------- */
 
-const MATCH: [EconTopicId, RegExp][] = [
+export const ECON_MATCH: [EconTopicId, RegExp][] = [
   ['econ-keynesian-cross', /\b(keynesian cross|multiplier|45[- ]?degree|equilibrium (income|output)|consumption function|marginal propensity|mpc|mps|planned (expenditure|spending)|paradox of thrift|income determination|three[- ]sector|two[- ]sector model)\b/i],
   ['econ-circular-flow', /\b(circular flow|leakages?|injections?|withdrawals?|national income|gdp|gnp|expenditure method|income method|output method|value added)\b/i],
   ['econ-ad-as', /\b(aggregate (demand|supply)|ad[- /]as|as[- /]ad|lras|sras|las\b|sas\b|real balance effect|full[- ]employment output|keynesian range|classical range)\b/i],
@@ -405,35 +405,3 @@ const MATCH: [EconTopicId, RegExp][] = [
   ['econ-exchange-rate', /\b(exchange rates?|kwacha|appreciat\w*|depreciat\w*|forex|foreign exchange|balance of payments|comparative advantage|absolute advantage)\b/i],
   ['econ-laffer', /\b(laffer|tax rates?|tax revenue)\b/i],
 ];
-
-/** Topics whose picture explains this text, best match first (at most `n`). */
-export function econVisualsFor(text: string, n = 2): EconTopicId[] {
-  const scored = MATCH.map(([id, re]) => {
-    const g = new RegExp(re.source, 'gi');
-    return { id, hits: (text.match(g) ?? []).length };
-  }).filter((s) => s.hits > 0);
-  scored.sort((a, b) => b.hits - a.hits);
-  return scored.slice(0, n).map((s) => s.id);
-}
-
-/** Where to put pictures in a long note: each topic goes after the paragraph (slide) that talks about it most,
- *  never after the title slide unless nothing else matches. Returns paragraph index → topics. */
-export function placeVisuals(paras: string[], max = 4): Map<number, EconTopicId[]> {
-  const best = new Map<EconTopicId, { idx: number; hits: number; total: number }>();
-  paras.forEach((para, idx) => {
-    for (const [id, re] of MATCH) {
-      const hits = (para.match(new RegExp(re.source, 'gi')) ?? []).length * (idx === 0 ? 0.5 : 1);
-      if (!hits) continue;
-      const cur = best.get(id);
-      if (!cur) best.set(id, { idx, hits, total: hits });
-      else {
-        cur.total += hits;
-        if (hits > cur.hits) Object.assign(cur, { idx, hits });
-      }
-    }
-  });
-  const chosen = [...best.entries()].sort((a, b) => b[1].total - a[1].total).slice(0, max);
-  const out = new Map<number, EconTopicId[]>();
-  for (const [id, { idx }] of chosen) out.set(idx, [...(out.get(idx) ?? []), id]);
-  return out;
-}

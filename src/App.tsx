@@ -33,6 +33,7 @@ import {
 } from './types';
 import { storage } from './services/storage';
 import type { TopicId } from './data/visualTopics';
+import { canSeeCourse, setStudentId } from './services/access';
 import { aiService } from './services/aiService';
 import { setTokenProvider } from './lib/api';
 
@@ -66,11 +67,14 @@ function AuthGate() {
 function GroveApp() {
   const { user } = useUser();
   const accountName = user?.fullName || user?.username || '';
+  // Decides programme-only material (e.g. BIT353 for IDs starting with BIT) for everything rendered below.
+  setStudentId(user?.username);
   const [activeTab, setActiveTab] = useState<AppTab>('remember');
   const [isDataReady, setIsDataReady] = useState(false);
 
   const [notes, setNotes] = useState<Note[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
+  const shownCourses = courses.filter((c) => canSeeCourse(c.code));
   const [profile, setProfile] = useState<LearningProfile>(() => storage.getProfile());
   const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
   const [skills, setSkills] = useState<PortfolioSkill[]>([]);
@@ -360,7 +364,7 @@ function GroveApp() {
               <DegreeMemoryView
                 notes={notes}
                 setNotes={setNotes}
-                courses={courses}
+                courses={shownCourses}
                 selectedNoteForDetail={selectedNoteForDetail}
                 setSelectedNoteForDetail={setSelectedNoteForDetail}
                 onAddCourse={addCourse}
@@ -385,7 +389,7 @@ function GroveApp() {
             <Suspense fallback={<p className="py-6 text-sm text-muted" role="status">Loading visuals…</p>}>
               <VisualsView
                 notes={notes}
-                courses={courses}
+                courses={shownCourses}
                 currentYear={profile.currentYear}
                 onOpenNote={openNoteById}
                 onStartSession={handleStartSession}
@@ -397,7 +401,7 @@ function GroveApp() {
           {activeTab === 'study' && (
             <StudyView
               notes={notes}
-              courses={courses}
+              courses={shownCourses}
               flashcards={flashcards}
               setFlashcards={setFlashcards}
               preset={studyPreset}
@@ -405,7 +409,7 @@ function GroveApp() {
           )}
 
           {activeTab === 'plan' && (
-            <PlannerView courses={courses} profile={profile} onStartSession={handleStartSession} />
+            <PlannerView courses={shownCourses} profile={profile} onStartSession={handleStartSession} />
           )}
 
           {activeTab === 'blueprints' && (
@@ -420,7 +424,7 @@ function GroveApp() {
               setTutors={setTutors}
               tutorRequests={tutorRequests}
               setTutorRequests={setTutorRequests}
-              courses={courses}
+              courses={shownCourses}
             />
           )}
 
@@ -437,7 +441,7 @@ function GroveApp() {
               profile={profile}
               skills={skills}
               projects={projects}
-              courses={courses}
+              courses={shownCourses}
               notes={notes}
               onOpenNoteDetail={handleOpenNoteDetail}
             />

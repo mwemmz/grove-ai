@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=1280, height=720" />
+<meta name="hyperframes" data-width="1280" data-height="720" />
+<title>How HDFS stores a file</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@500;600;700&family=Young+Serif&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
+<link rel="stylesheet" href="../base.css" />
+<script src="../gsap.min.js"></script>
+<style>
+  .box h4 { font-size: 16px; } .box .val { font-size: 24px; }
+  .sm { font: 500 17px/1.35 "JetBrains Mono", monospace; color: var(--mu); }
+  .row { font: 500 18px/1.5 "JetBrains Mono", monospace; color: var(--tx); white-space: nowrap; }
+  table.t { border-collapse: collapse; font: 500 19px/1 "JetBrains Mono", monospace; color: var(--tx); }
+  table.t td, table.t th { border: 2px solid var(--lo); padding: 9px 12px; text-align: right; }
+  table.t th { color: var(--mu); font-weight: 600; text-align: left; }
+  .dn{width:210px; height:190px;} .slot{position:absolute; width:56px; height:44px; border-radius:8px; display:flex; align-items:center; justify-content:center; font:700 19px/1 "JetBrains Mono",monospace; color:var(--ink); background:var(--hi); opacity:0;} #nn .sm{margin-top:6px;}
+</style>
+</head>
+<body>
+<div id="stage" data-composition-id="bit-hdfs" data-width="1280" data-height="720" data-duration="15">
+  <div id="cap">
+    <div class="step" id="c1">1 · Split into blocks <small>A 384 MB file is cut into 128 MB blocks: B1, B2, B3.</small></div>
+    <div class="step" id="c2">2 · Replicate <small>Each block is copied to <em>three</em> different DataNodes (replication factor 3).</small></div>
+    <div class="step" id="c3">3 · The NameNode keeps the map <small>The NameNode stores only metadata: which blocks make the file, and where each copy lives.</small></div>
+    <div class="step" id="c4">4 · A DataNode fails <small>DN2 stops sending heartbeats. Every block it held still has two other copies, so reads carry on.</small></div>
+    <div class="step" id="c5">5 · Self-healing <small>The NameNode copies the missing blocks to healthy nodes until each block has three copies again.</small></div>
+  </div>
+  <svg id="plot" viewBox="0 0 1280 720"></svg>
+  <div class="box" id="file" style="left:50px; top:300px; width:230px; height:110px;"><h4>sales_2025.csv</h4><div class="val" id="file-v">384 MB</div></div>
+  <div class="box" id="nn" style="left:420px; top:140px; width:400px; height:150px;opacity:0;"><h4>NameNode · metadata</h4><div class="sm" id="map">B1 → DN1, DN2, DN4<br/>B2 → DN2, DN3, DN1<br/>B3 → DN3, DN4, DN2</div></div>
+  <div class="box" id="dn1" style="left:330px; top:430px; width:210px; height:190px;"><h4>DataNode 1</h4></div>
+  <div class="box" id="dn2" style="left:560px; top:430px; width:210px; height:190px;"><h4>DataNode 2</h4></div>
+  <div class="box" id="dn3" style="left:790px; top:430px; width:210px; height:190px;"><h4>DataNode 3</h4></div>
+  <div class="box" id="dn4" style="left:1020px; top:430px; width:210px; height:190px;"><h4>DataNode 4</h4></div>
+  <div class="tag warm" id="x" style="left:590px; top:630px;">✕ no heartbeat</div>
+  <div class="chip" id="b1">B1</div><div class="chip" id="b2">B2</div><div class="chip" id="b3">B3</div>
+</div>
+<script src="../lib.js"></script>
+<script src="../econ.js"></script>
+<script>
+  var tl = G.tl, s = document.getElementById('plot');
+  var wires = E.el('g', { fill: 'none' }, s);
+  function wire(id, d) { E.el('path', { id: id, d: d, stroke: G.LO, 'stroke-width': 4, 'stroke-linecap': 'round' }, wires); }
+  G.caps([[0,3],[3,6],[6,9],[9,12],[12,15]]);
+  var DN = { 1: 330, 2: 560, 3: 790, 4: 1020 };
+  var place = { B1: [1, 2, 4], B2: [2, 3, 1], B3: [3, 4, 2] };
+  var used = { 1: 0, 2: 0, 3: 0, 4: 0 };
+  var st = document.getElementById('stage');
+  function slot(id, blk, n, slotIdx) {
+    var d = document.createElement('div'); d.className = 'slot'; d.id = id; d.textContent = blk;
+    d.style.left = (DN[n] + 18 + (slotIdx % 3) * 62) + 'px'; d.style.top = (480 + Math.floor(slotIdx / 3) * 54) + 'px'; st.appendChild(d); return '#' + id;
+  }
+  /* 1 split */
+  G.glow('#file', 0.3, 1.2);
+  [['#b1', 0.9], ['#b2', 1.2], ['#b3', 1.5]].forEach(function (c, i) { G.chip(c[0], [[165, 355], [165 + 0, 230 + i * 0], [340 + i * 70, 360]], c[1], 0.5, 1.2); });
+  /* 2 replicate */
+  var t = 3.2;
+  ['B1', 'B2', 'B3'].forEach(function (b) {
+    place[b].forEach(function (n) { var id = slot('s' + b + n, b, n, used[n]++); tl.fromTo(id, { opacity: 0, scale: 0.4 }, { opacity: 1, scale: 1, duration: 0.3 }, t); t += 0.25; });
+  });
+  /* 3 NameNode */
+  G.pop('#nn', 6.2); G.glow('#nn', 6.6, 2.0);
+  /* 4 failure */
+  tl.to('#dn2', { borderColor: G.WARN, opacity: 0.45, duration: 0.4 }, 9.2); G.pop('#x', 9.4);
+  tl.to(['#sB1' + 2, '#sB2' + 2, '#sB3' + 2], { opacity: 0.25, duration: 0.4 }, 9.4);
+  G.glow('#dn1', 10.2, 1.4); G.glow('#dn3', 10.4, 1.2);
+  /* 5 heal */
+  var heal = [['B1', 3], ['B2', 4], ['B3', 1]];
+  heal.forEach(function (h, i) { var id = slot('h' + h[0], h[0], h[1], used[h[1]]++); tl.fromTo(id, { opacity: 0, scale: 0.4 }, { opacity: 1, scale: 1, duration: 0.35 }, 12.4 + i * 0.5); });
+  G.txt('#map', 'B1 → DN1, DN4, DN3\nB2 → DN3, DN1, DN4\nB3 → DN3, DN4, DN1', 13.6); tl.set('#map', { whiteSpace: 'pre-line' }, 13.6); G.glow('#nn', 13.6, 1.2);
+  G.end(15);
+  window.__timelines = window.__timelines || {};
+  window.__timelines['bit-hdfs'] = tl;
+</script>
+</body>
+</html>

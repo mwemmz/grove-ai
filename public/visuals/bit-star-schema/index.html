@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=1280, height=720" />
+<meta name="hyperframes" data-width="1280" data-height="720" />
+<title>Star schema and snowflake schema</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@500;600;700&family=Young+Serif&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
+<link rel="stylesheet" href="../base.css" />
+<script src="../gsap.min.js"></script>
+<style>
+  .box h4 { font-size: 16px; } .box .val { font-size: 24px; }
+  .sm { font: 500 17px/1.35 "JetBrains Mono", monospace; color: var(--mu); }
+  .row { font: 500 18px/1.5 "JetBrains Mono", monospace; color: var(--tx); white-space: nowrap; }
+  table.t { border-collapse: collapse; font: 500 19px/1 "JetBrains Mono", monospace; color: var(--tx); }
+  table.t td, table.t th { border: 2px solid var(--lo); padding: 9px 12px; text-align: right; }
+  table.t th { color: var(--mu); font-weight: 600; text-align: left; }
+  .dim{width:250px;} .dim .sm{margin-top:4px;} #fact{border-width:3px;}
+</style>
+</head>
+<body>
+<div id="stage" data-composition-id="bit-star-schema" data-width="1280" data-height="720" data-duration="15">
+  <div id="cap">
+    <div class="step" id="c1">1 · The fact table <small>At the centre: one row per sale, with the <em>measures</em> you add up (quantity, amount) and a key for each dimension.</small></div>
+    <div class="step" id="c2">2 · Dimension tables <small>Around it: the who, what, where and when. Customer, product, store, date.</small></div>
+    <div class="step" id="c3">3 · A star <small>Each key in the fact table points to one dimension. Fact in the middle, dimensions around it: a star.</small></div>
+    <div class="step" id="c4">4 · A query <small>“Total sales by province in Q1” joins the fact table to store and date, then adds up amount.</small></div>
+    <div class="step" id="c5">5 · Snowflake <small>Split a dimension further (product → category) to cut repetition. Fewer duplicates, but more joins.</small></div>
+  </div>
+  <svg id="plot" viewBox="0 0 1280 720"></svg>
+  <div class="box" id="fact" style="left:500px; top:245px; width:280px; height:250px;"><h4>FACT_SALES</h4><div class="sm">date_key<br/>product_key<br/>store_key<br/>customer_key<br/><span style="color:var(--hi)">quantity<br/>amount</span></div></div>
+  <div class="box" id="dd" style="left:80px; top:150px; width:250px; height:150px;opacity:0;"><h4>DIM_DATE</h4><div class="sm">date_key<br/>day, month<br/><span id="q1">quarter</span>, year</div></div>
+  <div class="box" id="dp" style="left:950px; top:150px; width:250px; height:150px;opacity:0;"><h4>DIM_PRODUCT</h4><div class="sm">product_key<br/>name, brand<br/>category, price</div></div>
+  <div class="box" id="ds" style="left:80px; top:470px; width:250px; height:150px;opacity:0;"><h4>DIM_STORE</h4><div class="sm">store_key<br/>town, <span id="pv">province</span><br/>manager</div></div>
+  <div class="box" id="dc" style="left:950px; top:470px; width:250px; height:150px;opacity:0;"><h4>DIM_CUSTOMER</h4><div class="sm">customer_key<br/>name, age<br/>segment</div></div>
+  <div class="box" id="dcat" style="left:1010px; top:330px; width:210px; height:110px;opacity:0;"><h4>DIM_CATEGORY</h4><div class="sm">category_key<br/>category name</div></div>
+  <div class="tag good" id="ans" style="left:420px; top:560px;">Lusaka K2.4m · Copperbelt K1.9m · …</div>
+  <div class="tag warm" id="sf" style="left:470px; top:620px;">snowflake: product → category</div>
+</div>
+<script src="../lib.js"></script>
+<script src="../econ.js"></script>
+<script>
+  var tl = G.tl, s = document.getElementById('plot');
+  var wires = E.el('g', { fill: 'none' }, s);
+  function wire(id, d) { E.el('path', { id: id, d: d, stroke: G.LO, 'stroke-width': 4, 'stroke-linecap': 'round' }, wires); }
+  G.caps([[0,3],[3,6],[6,9],[9,12],[12,15]]);
+  wire('a1','M500 300 L 330 230'); wire('a2','M780 300 L 950 230'); wire('a3','M500 440 L 330 540'); wire('a4','M780 440 L 950 540'); wire('a5','M1000 300 L 1060 330');
+  tl.set(['#a1','#a2','#a3','#a4','#a5'],{opacity:0},0); tl.to(['#a1','#a2','#a3','#a4'],{opacity:1,duration:0.3},6.0); tl.to('#a2',{attr:{d:'M780 300 L 820 230'},duration:0.6},12.1); tl.to('#a5',{opacity:1,duration:0.3},12.6);
+  G.glow('#fact',0.3,2.5);
+  ['#dd','#dp','#ds','#dc'].forEach(function(d,i){ G.pop(d,3.2+i*0.45); });
+  ['#a1','#a2','#a3','#a4'].forEach(function(w,i){ G.wire(w,6.2+i*0.3,2.2); });
+  G.glow('#ds',9.2,2.4); G.glow('#dd',9.4,2.2); G.glow('#fact',9.6,2.0);
+  tl.to(['#pv','#q1'],{color:G.HI,duration:0.3},9.3); G.pop('#ans',10.2); G.fade('#ans',11.8,0);
+  tl.to('#dp',{x:-130,duration:0.6},12.1); G.pop('#dcat',12.5); G.wire('#a5',12.7,2); G.pop('#sf',12.9);
+  G.end(15);
+  window.__timelines = window.__timelines || {};
+  window.__timelines['bit-star-schema'] = tl;
+</script>
+</body>
+</html>

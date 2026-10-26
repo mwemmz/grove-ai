@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=1280, height=720" />
+<meta name="hyperframes" data-width="1280" data-height="720" />
+<title>Batch processing vs real-time (stream) processing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@500;600;700&family=Young+Serif&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
+<link rel="stylesheet" href="../base.css" />
+<script src="../gsap.min.js"></script>
+<style>
+  .box h4 { font-size: 16px; } .box .val { font-size: 24px; }
+  .sm { font: 500 17px/1.35 "JetBrains Mono", monospace; color: var(--mu); }
+  .row { font: 500 18px/1.5 "JetBrains Mono", monospace; color: var(--tx); white-space: nowrap; }
+  table.t { border-collapse: collapse; font: 500 19px/1 "JetBrains Mono", monospace; color: var(--tx); }
+  table.t td, table.t th { border: 2px solid var(--lo); padding: 9px 12px; text-align: right; }
+  table.t th { color: var(--mu); font-weight: 600; text-align: left; }
+  .lane{position:absolute; left:40px; width:1200px; height:4px; background:var(--lo);}
+</style>
+</head>
+<body>
+<div id="stage" data-composition-id="bit-batch-stream" data-width="1280" data-height="720" data-duration="15">
+  <div id="cap">
+    <div class="step" id="c1">1 · Sales happen all day <small>SmartMart tills record a sale every few seconds.</small></div>
+    <div class="step" id="c2">2 · Batch: collect <small>In batch processing the sales pile up in a transaction file until the scheduled run.</small></div>
+    <div class="step" id="c3">3 · Batch: run at night <small>At midnight the whole batch updates the master file. All day, stock records were out of date.</small></div>
+    <div class="step" id="c4">4 · Real time: stream <small>Each sale is published to a Kafka topic and processed within seconds. Stock is always current.</small></div>
+    <div class="step" id="c5">5 · Choosing <small>Batch: high throughput, cheap, but delayed (payroll, daily reports). Stream: low latency, more complex (stock, fraud alerts).</small></div>
+  </div>
+  <svg id="plot" viewBox="0 0 1280 720"></svg>
+  <div class="lbl" style="left:40px; top:150px;">Batch</div>
+  <div class="lbl" style="left:40px; top:430px;">Real time</div>
+  <div class="box" id="till" style="left:40px; top:250px; width:170px; height:100px;"><h4>Tills</h4><div class="val" id="till-v">sales</div></div>
+  <div class="box" id="tf" style="left:380px; top:200px; width:260px; height:150px;"><h4>Transaction file</h4><div class="val" id="tf-v">0 sales</div></div>
+  <div class="box" id="mf" style="left:830px; top:200px; width:380px; height:150px;"><h4>Master file · stock</h4><div class="val" id="mf-v">updated 00:00</div></div>
+  <div class="box" id="till2" style="left:40px; top:500px; width:170px; height:100px;"><h4>Tills</h4><div class="val" id="till2-v">sales</div></div>
+  <div class="box" id="kf" style="left:380px; top:480px; width:260px; height:140px;"><h4>Kafka topic “sales”</h4><div class="val" id="kf-v">stream</div></div>
+  <div class="box" id="st" style="left:830px; top:480px; width:380px; height:140px;"><h4>Stock · live</h4><div class="val" id="st-v">updated now</div></div>
+  <div class="tag warm" id="late" style="left:830px; top:362px;">stock wrong until midnight</div>
+  <div class="tag good" id="now" style="left:830px; top:632px;">current within seconds</div>
+  <div class="tag" id="clock" style="left:390px; top:362px;">08:00</div>
+  <div class="chip" id="e0">K45</div>
+  <div class="chip" id="e1">K120</div>
+  <div class="chip" id="e2">K18</div>
+  <div class="chip" id="e3">K260</div>
+  <div class="chip" id="e4">K75</div>
+  <div class="chip" id="e5">K32</div>
+  <div class="chip" id="f0">K45</div>
+  <div class="chip" id="f1">K120</div>
+  <div class="chip" id="f2">K18</div>
+  <div class="chip" id="f3">K260</div>
+  <div class="chip warm" id="bat">batch · 1,240 sales</div>
+</div>
+<script src="../lib.js"></script>
+<script src="../econ.js"></script>
+<script>
+  var tl = G.tl, s = document.getElementById('plot');
+  var wires = E.el('g', { fill: 'none' }, s);
+  function wire(id, d) { E.el('path', { id: id, d: d, stroke: G.LO, 'stroke-width': 4, 'stroke-linecap': 'round' }, wires); }
+  G.caps([[0,3],[3,6],[6,9],[9,12],[12,15]]);
+  G.glow('#till', 0.3, 2.4); G.glow('#till2', 0.5, 2.2);
+  var n = 0;
+  for (var i = 0; i < 6; i++) { G.chip('#e' + i, [[210, 300], [510, 275]], 3.1 + i * 0.4, 0.5, 0.05); n += 200; G.txt('#tf-v', (i + 1) * 205 + ' sales', 3.7 + i * 0.4); }
+  G.txt('#clock', '14:00', 4.6); G.txt('#clock', '23:59', 5.6);
+  G.txt('#clock', '00:00', 6.2); G.chip('#bat', [[510, 275], [1020, 275]], 6.4, 1.2, 0.3); G.glow('#mf', 7.6, 1.2); G.pop('#late', 7.8); G.txt('#tf-v', '0 sales', 7.8);
+  for (var j = 0; j < 4; j++) { G.chip('#f' + j, [[210, 550], [510, 550], [1020, 550]], 9.1 + j * 0.65, 0.55, 0.05); G.glow('#st', 9.8 + j * 0.65, 0.4); }
+  G.pop('#now', 10.4);
+  G.glow('#mf', 12.4, 2.2, 'warn'); G.glow('#st', 12.6, 2.0);
+  G.end(15);
+  window.__timelines = window.__timelines || {};
+  window.__timelines['bit-batch-stream'] = tl;
+</script>
+</body>
+</html>

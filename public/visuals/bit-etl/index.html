@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=1280, height=720" />
+<meta name="hyperframes" data-width="1280" data-height="720" />
+<title>ETL: getting data into the warehouse</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@500;600;700&family=Young+Serif&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
+<link rel="stylesheet" href="../base.css" />
+<script src="../gsap.min.js"></script>
+<style>
+  .box h4 { font-size: 16px; } .box .val { font-size: 24px; }
+  .sm { font: 500 17px/1.35 "JetBrains Mono", monospace; color: var(--mu); }
+  .row { font: 500 18px/1.5 "JetBrains Mono", monospace; color: var(--tx); white-space: nowrap; }
+  table.t { border-collapse: collapse; font: 500 19px/1 "JetBrains Mono", monospace; color: var(--tx); }
+  table.t td, table.t th { border: 2px solid var(--lo); padding: 9px 12px; text-align: right; }
+  table.t th { color: var(--mu); font-weight: 600; text-align: left; }
+  .src{width:250px;height:92px;} .tag{font-size:17px;}
+</style>
+</head>
+<body>
+<div id="stage" data-composition-id="bit-etl" data-width="1280" data-height="720" data-duration="15">
+  <div id="cap">
+    <div class="step" id="c1">1 · Extract <small>Copy data out of the systems that run the business: tills, mobile money, the customer database.</small></div>
+    <div class="step" id="c2">2 · Transform <small>Clean it in a staging area: remove duplicates, fix formats, match IDs, add up where needed.</small></div>
+    <div class="step" id="c3">3 · Load <small>Write the clean rows into the warehouse’s fact and dimension tables.</small></div>
+    <div class="step" id="c4">4 · Use it <small>Reports, dashboards and KPIs now read one consistent copy of the truth.</small></div>
+    <div class="step" id="c5">5 · ETL vs ELT <small>ELT loads the raw data first and transforms it <em>inside</em> the warehouse. Common with cloud warehouses.</small></div>
+  </div>
+  <svg id="plot" viewBox="0 0 1280 720"></svg>
+  <div class="box" id="s1" style="left:60px; top:160px; width:250px; height:92px;"><h4>POS tills</h4><div class="val" id="s1-v">CSV files</div></div>
+  <div class="box" id="s2" style="left:60px; top:300px; width:250px; height:92px;"><h4>Mobile money</h4><div class="val" id="s2-v">API</div></div>
+  <div class="box" id="s3" style="left:60px; top:440px; width:250px; height:92px;"><h4>Customer DB</h4><div class="val" id="s3-v">MySQL</div></div>
+  <div class="box" id="stg" style="left:470px; top:250px; width:300px; height:190px;"><h4>Staging · transform</h4><div class="val" id="stg-v">raw → clean</div></div>
+  <div class="box" id="dw" style="left:930px; top:230px; width:290px; height:120px;"><h4>Data warehouse</h4><div class="val" id="dw-v">fact_sales</div></div>
+  <div class="box" id="bi" style="left:930px; top:470px; width:290px; height:100px;"><h4>Dashboard</h4><div class="val" id="bi-v">KPIs</div></div>
+  <div class="tag" id="t1" style="left:470px; top:460px;">remove duplicate rows</div>
+  <div class="tag" id="t2" style="left:470px; top:500px;">05/03/26 → 2026-03-05</div>
+  <div class="tag" id="t3" style="left:470px; top:540px;">"K1,200" → 1200.00</div>
+  <div class="tag" id="t4" style="left:470px; top:580px;">match customer IDs</div>
+  <div class="tag good" id="t5" style="left:930px; top:370px;">+3,120 rows loaded</div>
+  <div class="tag warm" id="t6" style="left:420px; top:620px; white-space:normal; width:470px;">ELT: load raw → transform inside the warehouse (BigQuery, Snowflake)</div>
+  <div class="chip warm" id="k1">raw</div><div class="chip warm" id="k2">raw</div><div class="chip warm" id="k3">raw</div>
+  <div class="chip" id="k4">clean</div><div class="chip" id="k5">report</div><div class="chip warm" id="k6">raw</div>
+</div>
+<script src="../lib.js"></script>
+<script src="../econ.js"></script>
+<script>
+  var tl = G.tl, s = document.getElementById('plot');
+  var wires = E.el('g', { fill: 'none' }, s);
+  function wire(id, d) { E.el('path', { id: id, d: d, stroke: G.LO, 'stroke-width': 4, 'stroke-linecap': 'round' }, wires); }
+  G.caps([[0,3],[3,6],[6,9],[9,12],[12,15]]);
+  wire('w1','M310 206 C 390 206, 400 300, 470 320'); wire('w2','M310 346 L 470 346'); wire('w3','M310 486 C 390 486, 400 390, 470 372');
+  wire('w4','M770 345 C 850 345, 850 290, 930 290'); wire('w5','M1075 350 L 1075 470');
+  G.glow('#s1',0.2,2.4); G.glow('#s2',0.4,2.2); G.glow('#s3',0.6,2.0);
+  G.wire('#w1',0.6,2); G.wire('#w2',0.8,2); G.wire('#w3',1.0,2);
+  G.chip('#k1',[[310,206],[470,320],[560,330]],0.7,0.8); G.chip('#k2',[[310,346],[560,346]],0.9,0.8); G.chip('#k3',[[310,486],[470,372],[560,360]],1.1,0.8);
+  G.glow('#stg',3.2,2.6); ['#t1','#t2','#t3','#t4'].forEach(function(t,i){ G.pop(t,3.4+i*0.5); });
+  G.txt('#stg-v','clean ✓',5.0);
+  G.wire('#w4',6.2,2.2); G.chip('#k4',[[770,345],[850,320],[930,290]],6.3,0.9); G.glow('#dw',7.0,1.8); G.pop('#t5',7.4);
+  G.wire('#w5',9.2,2.2); G.chip('#k5',[[1075,350],[1075,470]],9.3,0.8); G.glow('#bi',9.9,1.8);
+  ['#t1','#t2','#t3','#t4'].forEach(function(t){ G.fade(t,11.8,0); });
+  G.chip('#k6',[[310,346],[620,180],[930,250]],12.3,1.0,0.3); G.glow('#dw',13.2,1.5,'warn'); G.pop('#t6',12.6);
+  G.end(15);
+  window.__timelines = window.__timelines || {};
+  window.__timelines['bit-etl'] = tl;
+</script>
+</body>
+</html>

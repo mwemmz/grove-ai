@@ -1,4 +1,6 @@
 import { ECON_TOPICS, type EconTopicId } from './econVisuals';
+import { BIT_TOPICS, type BitTopicId } from './bitVisuals';
+import { canSee } from '../services/access';
 
 /** Everything the Visuals tab needs: animations (HyperFrames compositions), written notes, quizzes, and the course map. */
 
@@ -27,11 +29,13 @@ export interface TopicNotes {
   watchOut: string[];
 }
 
-export type TopicId = 'cpu' | 'stack-queue' | 'linked-list' | 'bst' | 'hash-table' | EconTopicId;
+export type TopicId = 'cpu' | 'stack-queue' | 'linked-list' | 'bst' | 'hash-table' | EconTopicId | BitTopicId;
 
 export interface VisualTopic {
   id: TopicId;
-  group: 'Computer systems' | 'Data structures' | 'Economics';
+  group: 'Computer systems' | 'Data structures' | 'Economics' | 'Big data and warehousing';
+  /** Only students whose ID starts with this prefix see it (e.g. 'BIT'). */
+  audience?: string;
   /** The lecture unit it belongs to, shown under the title. */
   unit?: string;
   name: string;
@@ -278,7 +282,7 @@ const BASE_TOPICS: VisualTopic[] = [
   },
 ];
 
-export const VISUAL_TOPICS: VisualTopic[] = [...BASE_TOPICS, ...ECON_TOPICS];
+export const VISUAL_TOPICS: VisualTopic[] = [...BASE_TOPICS, ...ECON_TOPICS, ...BIT_TOPICS];
 
 export const TOPIC_BY_ID = Object.fromEntries(VISUAL_TOPICS.map((t) => [t.id, t])) as Record<TopicId, VisualTopic>;
 
@@ -316,6 +320,7 @@ export const BUILDS_ON: Record<string, string[]> = {
   CS401: ['CS301', 'CS302'],
   CS402: ['CS201', 'CS301'],
   ECF110: [],
+  BIT353: [],
 };
 
-export const VISUALS_FOR_COURSE = (code: string): VisualTopic[] => VISUAL_TOPICS.filter((t) => t.courseCode === code);
+export const VISUALS_FOR_COURSE = (code: string): VisualTopic[] => VISUAL_TOPICS.filter((t) => t.courseCode === code && canSee(t.audience));

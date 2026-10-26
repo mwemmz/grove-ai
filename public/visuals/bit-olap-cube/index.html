@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=1280, height=720" />
+<meta name="hyperframes" data-width="1280" data-height="720" />
+<title>OLAP cube operations</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@500;600;700&family=Young+Serif&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
+<link rel="stylesheet" href="../base.css" />
+<script src="../gsap.min.js"></script>
+<style>
+  .box h4 { font-size: 16px; } .box .val { font-size: 24px; }
+  .sm { font: 500 17px/1.35 "JetBrains Mono", monospace; color: var(--mu); }
+  .row { font: 500 18px/1.5 "JetBrains Mono", monospace; color: var(--tx); white-space: nowrap; }
+  table.t { border-collapse: collapse; font: 500 19px/1 "JetBrains Mono", monospace; color: var(--tx); }
+  table.t td, table.t th { border: 2px solid var(--lo); padding: 9px 12px; text-align: right; }
+  table.t th { color: var(--mu); font-weight: 600; text-align: left; }
+  #res{position:absolute; left:740px; top:170px; width:520px; opacity:0;} #res .lbl{white-space:normal; line-height:1.3;} .lab{position:absolute; font:600 18px/1 "JetBrains Mono",monospace; color:var(--mu);}
+</style>
+</head>
+<body>
+<div id="stage" data-composition-id="bit-olap-cube" data-width="1280" data-height="720" data-duration="18">
+  <div id="cap">
+    <div class="step" id="c1">1 · The cube <small>Sales stored by three dimensions at once: <em>region × product × quarter</em>.</small></div>
+    <div class="step" id="c2">2 · Slice <small>Fix one dimension to one value (quarter = Q1). You get a flat table: one slice of the cube.</small></div>
+    <div class="step" id="c3">3 · Dice <small>Pick a range on several dimensions (Lusaka and Copperbelt, phones and laptops, Q1–Q2): a smaller cube.</small></div>
+    <div class="step" id="c4">4 · Roll-up <small>Climb a hierarchy: regions add up to Zambia, quarters add up to the year. Less detail.</small></div>
+    <div class="step" id="c5">5 · Drill-down <small>The opposite: open Q1 into January, February and March. More detail.</small></div>
+    <div class="step" id="c6">6 · Pivot <small>Rotate the view: products become rows and regions become columns. Same numbers, new angle.</small></div>
+  </div>
+  <svg id="plot" viewBox="0 0 1280 720"></svg>
+  <div id="res"><div class="lbl" id="rt" style="position:relative; margin-bottom:10px;">Result</div><table class="t" id="tbl"></table></div>
+  <div class="lab" style="left:190px; top:650px;">product →</div>
+  <div class="lab" style="left:40px; top:240px;">region ↑</div>
+  <div class="lab" style="left:430px; top:140px;">quarter ↗</div>
+</div>
+<script src="../lib.js"></script>
+<script src="../econ.js"></script>
+<script>
+  var tl = G.tl, s = document.getElementById('plot');
+  var wires = E.el('g', { fill: 'none' }, s);
+  function wire(id, d) { E.el('path', { id: id, d: d, stroke: G.LO, 'stroke-width': 4, 'stroke-linecap': 'round' }, wires); }
+  G.caps([[0,3],[3,6],[6,9],[9,12],[12,15],[15,18]]);
+  var O = { x: 190, y: 600 }, C = 112, D = [52, -38];
+  var prods = ['Phones','Laptops','TVs'], regs = ['Lusaka','Copperbelt','Southern'], qs = ['Q1','Q2','Q3'];
+  function P(x, y) { return x + ',' + y; }
+  function poly(id, pts) { return E.el('polygon', { id: id, points: pts.map(function (p) { return P(p[0], p[1]); }).join(' '), fill: G.P.surface, stroke: G.P.lo, 'stroke-width': 2 }, s); }
+  // front face cells: product i (x), region j (y, 0 = bottom), quarter 0
+  for (var i = 0; i < 3; i++) for (var j = 0; j < 3; j++) {
+    var x = O.x + i * C, y = O.y - (j + 1) * C;
+    poly('f' + i + j, [[x, y], [x + C, y], [x + C, y + C], [x, y + C]]);
+  }
+  // top face cells: product i, quarter k
+  for (var i2 = 0; i2 < 3; i2++) for (var k = 0; k < 3; k++) {
+    var bx = O.x + i2 * C + k * D[0], by = O.y - 3 * C + k * D[1];
+    poly('t' + i2 + k, [[bx, by], [bx + C, by], [bx + C + D[0], by + D[1]], [bx + D[0], by + D[1]]]);
+  }
+  // right face cells: quarter k, region j
+  for (var k2 = 0; k2 < 3; k2++) for (var j2 = 0; j2 < 3; j2++) {
+    var rx = O.x + 3 * C + k2 * D[0], ry = O.y - (j2 + 1) * C + k2 * D[1];
+    poly('r' + k2 + j2, [[rx, ry], [rx + D[0], ry + D[1]], [rx + D[0], ry + C + D[1]], [rx, ry + C]]);
+  }
+  prods.forEach(function (p, i) { E.text(O.x + i * C + C / 2, O.y + 28, p, { anchor: 'middle', cls: 'tick' }); });
+  regs.forEach(function (r, j) { E.text(O.x - 10, O.y - j * C - C / 2 + 6, r, { anchor: 'end', cls: 'tick' }); });
+  qs.forEach(function (q, k) { E.text(O.x + 3 * C + k * D[0] + D[0] / 2 + 8, O.y - 3 * C + k * D[1] + D[1] / 2 - 2, q, { cls: 'tick' }); });
+  function cells(pred) { // visible faces whose cell satisfies pred(i, j, k)
+    var out = [];
+    for (var i = 0; i < 3; i++) for (var j = 0; j < 3; j++) if (pred(i, j, 0)) out.push('#f' + i + j);
+    for (var a = 0; a < 3; a++) for (var b = 0; b < 3; b++) if (pred(a, 2, b)) out.push('#t' + a + b);
+    for (var c = 0; c < 3; c++) for (var d = 0; d < 3; d++) if (pred(2, d, c)) out.push('#r' + c + d);
+    return out;
+  }
+  var all = cells(function () { return true; });
+  function light(pred, at, kind) {
+    tl.to(all, { attr: { fill: G.P.surface, 'fill-opacity': 0.35 }, duration: 0.3 }, at);
+    tl.to(cells(pred), { attr: { fill: kind === 'warn' ? G.P.warnbg : G.P.hibg, 'fill-opacity': 1, stroke: kind === 'warn' ? G.WARN : G.HI }, duration: 0.4 }, at + 0.1);
+  }
+  function reset(at) { tl.to(all, { attr: { fill: G.P.surface, 'fill-opacity': 1, stroke: G.P.lo }, duration: 0.3 }, at); }
+  function table(html, title, at) { G.txt('#rt', title, at); tl.set('#tbl', { innerHTML: html }, at); tl.fromTo('#tbl', { opacity: 0 }, { opacity: 1, duration: 0.4 }, at); }
+  var R = function (cols, rows) { return '<tr><th></th>' + cols.map(function (c) { return '<th>' + c + '</th>'; }).join('') + '</tr>' + rows.map(function (r) { return '<tr><th>' + r[0] + '</th>' + r.slice(1).map(function (v) { return '<td>' + v + '</td>'; }).join('') + '</tr>'; }).join(''); };
+  tl.to(all, { attr: { stroke: G.HI }, duration: 0.4, stagger: 0.01 }, 0.4); tl.to(all, { attr: { stroke: G.P.lo }, duration: 0.4 }, 2.2);
+  G.fade('#res', 3.0);
+  light(function (i, j, k) { return k === 0; }, 3.1);
+  table(R(prods, [['Lusaka', 120, 80, 45], ['Copperbelt', 95, 60, 30], ['Southern', 40, 25, 15]]), 'Slice · quarter = Q1 (K000)', 3.4);
+  light(function (i, j, k) { return i < 2 && j > 0 && k < 2; }, 6.1, 'warn');
+  table(R(['Q1', 'Q2'], [['Lusaka · Phones', 120, 130], ['Lusaka · Laptops', 80, 85], ['Copperbelt · Phones', 95, 90], ['Copperbelt · Laptops', 60, 70]]), 'Dice · 2 regions × 2 products × Q1–Q2', 6.4);
+  reset(9.0);
+  table(R(prods, [['Zambia · 2025', 1020, 690, 360]]), 'Roll-up · regions → Zambia, Q1–Q4 → 2025', 9.3);
+  tl.to(all, { attr: { 'fill-opacity': 0.6 }, duration: 0.3 }, 9.3);
+  light(function (i, j, k) { return k === 0; }, 12.1);
+  table(R(['Jan', 'Feb', 'Mar'], [['Phones', 38, 41, 41], ['Laptops', 25, 27, 28], ['TVs', 14, 15, 16]]), 'Drill-down · Q1 → months (Lusaka)', 12.4);
+  reset(15.0);
+  table(R(regs, [['Phones', 120, 95, 40], ['Laptops', 80, 60, 25], ['TVs', 45, 30, 15]]), 'Pivot · products as rows (Q1)', 15.3);
+  G.end(18);
+  window.__timelines = window.__timelines || {};
+  window.__timelines['bit-olap-cube'] = tl;
+</script>
+</body>
+</html>

@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=1280, height=720" />
+<meta name="hyperframes" data-width="1280" data-height="720" />
+<title>The Big Data technology stack</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@500;600;700&family=Young+Serif&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
+<link rel="stylesheet" href="../base.css" />
+<script src="../gsap.min.js"></script>
+<style>
+  .box h4 { font-size: 16px; } .box .val { font-size: 24px; }
+  .sm { font: 500 17px/1.35 "JetBrains Mono", monospace; color: var(--mu); }
+  .row { font: 500 18px/1.5 "JetBrains Mono", monospace; color: var(--tx); white-space: nowrap; }
+  table.t { border-collapse: collapse; font: 500 19px/1 "JetBrains Mono", monospace; color: var(--tx); }
+  table.t td, table.t th { border: 2px solid var(--lo); padding: 9px 12px; text-align: right; }
+  table.t th { color: var(--mu); font-weight: 600; text-align: left; }
+  .ly{left:300px; width:620px; height:84px;} .ly .val{font-size:19px; color:var(--mu);} .v{position:absolute; left:960px; width:270px; font:600 19px/1 "JetBrains Mono",monospace; opacity:0;} .v small{display:block; font:500 15px/1.3 Figtree,sans-serif; color:var(--mu); margin-top:4px;}
+</style>
+</head>
+<body>
+<div id="stage" data-composition-id="bit-big-data-stack" data-width="1280" data-height="720" data-duration="15">
+  <div id="cap">
+    <div class="step" id="c1">1 · Why “big” data <small>Too much (<em>volume</em>), too fast (<em>velocity</em>) and too mixed (<em>variety</em>) for one ordinary database.</small></div>
+    <div class="step" id="c2">2 · Sources and ingestion <small>Data arrives from apps, sensors, logs and social media. Kafka, Flume and Sqoop bring it in.</small></div>
+    <div class="step" id="c3">3 · Storage <small>HDFS, a data lake or a NoSQL store keeps it across many machines.</small></div>
+    <div class="step" id="c4">4 · Processing <small>MapReduce or Spark do the work in parallel. YARN decides which job gets which machines.</small></div>
+    <div class="step" id="c5">5 · Analysis and visualisation <small>Hive, Spark SQL and dashboards turn the results into answers people can use.</small></div>
+  </div>
+  <svg id="plot" viewBox="0 0 1280 720"></svg>
+  <div class="box" id="l5" style="left:300px; top:140px; width:620px; height:84px;opacity:0;"><h4>5 · Analysis & visualisation</h4><div class="val" id="l5-v">Hive · Spark SQL · Power BI</div></div>
+  <div class="box" id="l4" style="left:300px; top:244px; width:620px; height:84px;opacity:0;"><h4>4 · Processing</h4><div class="val" id="l4-v">MapReduce · Spark · YARN</div></div>
+  <div class="box" id="l3" style="left:300px; top:348px; width:620px; height:84px;opacity:0;"><h4>3 · Storage</h4><div class="val" id="l3-v">HDFS · data lake · HBase / NoSQL</div></div>
+  <div class="box" id="l2" style="left:300px; top:452px; width:620px; height:84px;opacity:0;"><h4>2 · Ingestion</h4><div class="val" id="l2-v">Kafka · Flume · Sqoop</div></div>
+  <div class="box" id="l1" style="left:300px; top:556px; width:620px; height:84px;opacity:0;"><h4>1 · Sources</h4><div class="val" id="l1-v">apps · sensors · logs · social media</div></div>
+  <div class="v" id="v1" style="top:160px; color:var(--hi);">Volume<small>terabytes and more</small></div>
+  <div class="v" id="v2" style="top:240px; color:var(--hi);">Velocity<small>arriving every second</small></div>
+  <div class="v" id="v3" style="top:320px; color:var(--hi);">Variety<small>tables, text, images, logs</small></div>
+  <div class="v" id="v4" style="top:400px; color:var(--warn);">Veracity<small>can we trust it?</small></div>
+  <div class="v" id="v5" style="top:480px; color:var(--warn);">Value<small>is it worth anything?</small></div>
+  <div class="chip" id="d">data</div>
+</div>
+<script src="../lib.js"></script>
+<script src="../econ.js"></script>
+<script>
+  var tl = G.tl, s = document.getElementById('plot');
+  var wires = E.el('g', { fill: 'none' }, s);
+  function wire(id, d) { E.el('path', { id: id, d: d, stroke: G.LO, 'stroke-width': 4, 'stroke-linecap': 'round' }, wires); }
+  G.caps([[0,3],[3,6],[6,9],[9,12],[12,15]]);
+  ['#v1', '#v2', '#v3', '#v4', '#v5'].forEach(function (v, i) { tl.fromTo(v, { opacity: 0, x: 20 }, { opacity: 1, x: 0, duration: 0.3 }, 0.3 + i * 0.4); });
+  G.pop('#l1', 3.1); G.pop('#l2', 3.7); G.glow('#l1', 3.3, 1.2); G.glow('#l2', 4.1, 1.6);
+  G.pop('#l3', 6.1); G.glow('#l3', 6.4, 2.0);
+  G.pop('#l4', 9.1); G.glow('#l4', 9.4, 2.0);
+  G.pop('#l5', 12.1); G.glow('#l5', 12.4, 1.8);
+  G.chip('#d', [[610, 598], [610, 494], [610, 390], [610, 286], [610, 182]], 12.5, 0.45, 0.3);
+  G.end(15);
+  window.__timelines = window.__timelines || {};
+  window.__timelines['bit-big-data-stack'] = tl;
+</script>
+</body>
+</html>

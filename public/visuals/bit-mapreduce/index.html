@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=1280, height=720" />
+<meta name="hyperframes" data-width="1280" data-height="720" />
+<title>MapReduce, step by step (and where Spark differs)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@500;600;700&family=Young+Serif&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
+<link rel="stylesheet" href="../base.css" />
+<script src="../gsap.min.js"></script>
+<style>
+  .box h4 { font-size: 16px; } .box .val { font-size: 24px; }
+  .sm { font: 500 17px/1.35 "JetBrains Mono", monospace; color: var(--mu); }
+  .row { font: 500 18px/1.5 "JetBrains Mono", monospace; color: var(--tx); white-space: nowrap; }
+  table.t { border-collapse: collapse; font: 500 19px/1 "JetBrains Mono", monospace; color: var(--tx); }
+  table.t td, table.t th { border: 2px solid var(--lo); padding: 9px 12px; text-align: right; }
+  table.t th { color: var(--mu); font-weight: 600; text-align: left; }
+  .mp{width:190px;height:150px;} .rd .val{font-size:21px; white-space:nowrap;} .kv{position:absolute; font:600 17px/1 "JetBrains Mono",monospace; color:var(--tx); opacity:0; white-space:nowrap;}
+</style>
+</head>
+<body>
+<div id="stage" data-composition-id="bit-mapreduce" data-width="1280" data-height="720" data-duration="15">
+  <div id="cap">
+    <div class="step" id="c1">1 · Input and splitting <small>Daily temperature files are split, and each split goes to its own mapper.</small></div>
+    <div class="step" id="c2">2 · Map <small>Each mapper turns its lines into key/value pairs: <em>&lt;city, temperature&gt;</em>.</small></div>
+    <div class="step" id="c3">3 · Shuffle and sort <small>All pairs with the same city go to the same reducer.</small></div>
+    <div class="step" id="c4">4 · Reduce <small>Each reducer keeps the highest value: Lusaka 38, Harare 27, Cape Town 33, Windhoek 32.</small></div>
+    <div class="step" id="c5">5 · Spark instead <small>MapReduce writes to disk between steps. Spark keeps data in memory and rebuilds lost pieces from their lineage, so repeated jobs run much faster.</small></div>
+  </div>
+  <svg id="plot" viewBox="0 0 1280 720"></svg>
+  <div class="box" id="in" style="left:40px; top:290px; width:190px; height:140px;"><h4>Input files</h4><div class="val" id="in-v">temps/</div></div>
+  <div class="box" id="m1" style="left:330px; top:150px; width:190px; height:150px;"><h4>Mapper 1</h4></div>
+  <div class="box" id="m2" style="left:330px; top:330px; width:190px; height:150px;"><h4>Mapper 2</h4></div>
+  <div class="box" id="m3" style="left:330px; top:510px; width:190px; height:150px;"><h4>Mapper 3</h4></div>
+  <div class="lbl" id="sh" style="left:610px; top:140px; opacity:0;">shuffle &amp; sort</div>
+  <div class="box rd" id="r1" style="left:880px; top:140px; width:330px; height:84px;"><h4>Reducer · Lusaka</h4><div class="val" id="r1-v">–</div></div>
+  <div class="box rd" id="r2" style="left:880px; top:254px; width:330px; height:84px;"><h4>Reducer · Harare</h4><div class="val" id="r2-v">–</div></div>
+  <div class="box rd" id="r3" style="left:880px; top:368px; width:330px; height:84px;"><h4>Reducer · Cape Town</h4><div class="val" id="r3-v">–</div></div>
+  <div class="box rd" id="r4" style="left:880px; top:482px; width:330px; height:84px;"><h4>Reducer · Windhoek</h4><div class="val" id="r4-v">–</div></div>
+  <div class="tag warm" id="disk" style="left:560px; top:620px;">MapReduce: map → disk → reduce → disk</div>
+  <div class="tag good" id="mem" style="left:560px; top:664px;">Spark: kept in memory · lineage rebuilds lost data</div>
+</div>
+<script src="../lib.js"></script>
+<script src="../econ.js"></script>
+<script>
+  var tl = G.tl, s = document.getElementById('plot');
+  var wires = E.el('g', { fill: 'none' }, s);
+  function wire(id, d) { E.el('path', { id: id, d: d, stroke: G.LO, 'stroke-width': 4, 'stroke-linecap': 'round' }, wires); }
+  G.caps([[0,3],[3,6],[6,9],[9,12],[12,15]]);
+  var kv = [['m1', ['<Lusaka, 18>', '<Harare, 20>', '<Lusaka, 38>']], ['m2', ['<Cape Town, 33>', '<Lusaka, 25>', '<Windhoek, 32>']], ['m3', ['<Harare, 27>', '<Cape Town, 21>', '<Windhoek, 29>']]];
+  var st = document.getElementById('stage'), ys = { m1: 150, m2: 330, m3: 510 };
+  kv.forEach(function (m) { m[1].forEach(function (p, i) { var d = document.createElement('div'); d.className = 'kv'; d.id = m[0] + 'k' + i; d.textContent = p; d.style.left = '342px'; d.style.top = (ys[m[0]] + 48 + i * 30) + 'px'; st.appendChild(d); }); });
+  wire('i1', 'M230 330 L 330 225'); wire('i2', 'M230 360 L 330 405'); wire('i3', 'M230 390 L 330 585');
+  G.glow('#in', 0.3, 1.5); G.wire('#i1', 0.9, 1.8); G.wire('#i2', 1.1, 1.8); G.wire('#i3', 1.3, 1.8);
+  ['#m1', '#m2', '#m3'].forEach(function (m, i) { G.glow(m, 1.2 + i * 0.25, 1.5); });
+  kv.forEach(function (m, a) { m[1].forEach(function (p, i) { tl.fromTo('#' + m[0] + 'k' + i, { opacity: 0, x: -10 }, { opacity: 1, x: 0, duration: 0.3 }, 3.2 + a * 0.5 + i * 0.25); }); });
+  G.fade('#sh', 6.0);
+  var dest = { Lusaka: 182, Harare: 296, 'Cape Town': 410, Windhoek: 524 };
+  var t = 6.3;
+  kv.forEach(function (m) { m[1].forEach(function (p, i) { var city = p.slice(1, p.indexOf(',')); var el = '#' + m[0] + 'k' + i; tl.to(el, { x: 560 - 0, y: dest[city] - (ys[m[0]] + 48 + i * 30), duration: 0.8, ease: 'power2.inOut' }, t); tl.to(el, { opacity: 0, duration: 0.2 }, t + 0.8); t += 0.24; }); });
+  ['#r1', '#r2', '#r3', '#r4'].forEach(function (r, i) { G.glow(r, 7.3 + i * 0.3, 1.2); });
+  [['#r1-v', '38'], ['#r2-v', '27'], ['#r3-v', '33'], ['#r4-v', '32']].forEach(function (r, i) { G.txt(r[0], '<' + ['Lusaka', 'Harare', 'Cape Town', 'Windhoek'][i] + ', ' + r[1] + '>', 9.4 + i * 0.4); });
+  G.pop('#disk', 12.3); G.pop('#mem', 13.1);
+  G.end(15);
+  window.__timelines = window.__timelines || {};
+  window.__timelines['bit-mapreduce'] = tl;
+</script>
+</body>
+</html>

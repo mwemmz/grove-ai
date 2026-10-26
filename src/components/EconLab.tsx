@@ -70,7 +70,7 @@ function Dot({ s, x, y, tone = 'accent', xl, yl }: { s: ReturnType<typeof makeSc
   );
 }
 
-function Slider({ label, value, min, max, step, onChange, fmt }: { label: string; value: number; min: number; max: number; step: number; onChange: (v: number) => void; fmt?: (v: number) => string }) {
+export function Slider({ label, value, min, max, step, onChange, fmt }: { label: string; value: number; min: number; max: number; step: number; onChange: (v: number) => void; fmt?: (v: number) => string }) {
   const id = useId();
   return (
     <div>
@@ -83,7 +83,7 @@ function Slider({ label, value, min, max, step, onChange, fmt }: { label: string
   );
 }
 
-function Readout({ items }: { items: [string, string][] }) {
+export function Readout({ items }: { items: [string, string][] }) {
   return (
     <dl className="grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-3">
       {items.map(([k, v]) => (
@@ -340,7 +340,7 @@ function LafferLab() {
   );
 }
 
-function LabShell({ intro, graph, controls, readout, working }: { intro: string; graph: React.ReactNode; controls: React.ReactNode; readout: [string, string][]; working: string }) {
+export function LabShell({ intro, graph, controls, readout, working }: { intro: string; graph: React.ReactNode; controls: React.ReactNode; readout: [string, string][]; working: string }) {
   return (
     <section className={`${panel} space-y-4`} aria-label="Try it yourself">
       <div>

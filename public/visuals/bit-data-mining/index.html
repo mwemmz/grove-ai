@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=1280, height=720" />
+<meta name="hyperframes" data-width="1280" data-height="720" />
+<title>Data mining: association rules and choosing a task</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@500;600;700&family=Young+Serif&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
+<link rel="stylesheet" href="../base.css" />
+<script src="../gsap.min.js"></script>
+<style>
+  .box h4 { font-size: 16px; } .box .val { font-size: 24px; }
+  .sm { font: 500 17px/1.35 "JetBrains Mono", monospace; color: var(--mu); }
+  .row { font: 500 18px/1.5 "JetBrains Mono", monospace; color: var(--tx); white-space: nowrap; }
+  table.t { border-collapse: collapse; font: 500 19px/1 "JetBrains Mono", monospace; color: var(--tx); }
+  table.t td, table.t th { border: 2px solid var(--lo); padding: 9px 12px; text-align: right; }
+  table.t th { color: var(--mu); font-weight: 600; text-align: left; }
+  .bk{position:absolute; left:60px; width:520px; height:52px; border-radius:10px; background:var(--surface); border:2.5px solid var(--lo); display:flex; align-items:center; padding:0 14px; gap:10px; font:600 19px/1 "JetBrains Mono",monospace; color:var(--tx);} .bk b{color:var(--mu); font-weight:600; width:40px;} .it{padding:6px 10px; border-radius:6px; background:var(--raised);} .tk{position:absolute; left:660px; width:570px; font:500 18px/1.35 "Figtree",sans-serif; color:var(--tx); opacity:0;} .tk b{font-family:"JetBrains Mono",monospace; color:var(--hi);}
+</style>
+</head>
+<body>
+<div id="stage" data-composition-id="bit-data-mining" data-width="1280" data-height="720" data-duration="15">
+  <div id="cap">
+    <div class="step" id="c1">1 · Six baskets <small>Market basket analysis looks at what is bought together. Rule to test: <em>bread → butter</em>.</small></div>
+    <div class="step" id="c2">2 · Support <small>Bread and butter appear together in 3 of 6 baskets: support = 3 ÷ 6 = <em>50%</em>.</small></div>
+    <div class="step" id="c3">3 · Confidence <small>Of the 4 baskets with bread, 3 have butter: confidence = 3 ÷ 4 = <em>75%</em>.</small></div>
+    <div class="step" id="c4">4 · Lift <small>Butter is in 50% of all baskets. 75% ÷ 50% = <em>1.5</em>, so bread buyers take butter more than by chance.</small></div>
+    <div class="step" id="c5">5 · Which task? <small>Match the question to the task: patterns bought together, groups, labels, oddities, sequences.</small></div>
+  </div>
+  <svg id="plot" viewBox="0 0 1280 720"></svg>
+  <div class="bk" id="bk0" style="top:150px;"><b>T1</b><span class="it br">bread</span><span class="it ">milk</span><span class="it bu">butter</span></div>
+  <div class="bk" id="bk1" style="top:214px;"><b>T2</b><span class="it br">bread</span><span class="it bu">butter</span></div>
+  <div class="bk" id="bk2" style="top:278px;"><b>T3</b><span class="it ">mealie meal</span><span class="it ">kapenta</span></div>
+  <div class="bk" id="bk3" style="top:342px;"><b>T4</b><span class="it br">bread</span><span class="it ">milk</span></div>
+  <div class="bk" id="bk4" style="top:406px;"><b>T5</b><span class="it br">bread</span><span class="it bu">butter</span><span class="it ">eggs</span></div>
+  <div class="bk" id="bk5" style="top:470px;"><b>T6</b><span class="it ">milk</span><span class="it ">eggs</span></div>
+  <div class="box" id="m1" style="left:660px; top:150px; width:260px; height:100px;opacity:0;"><h4>Support</h4><div class="val" id="m1-v">–</div></div>
+  <div class="box" id="m2" style="left:960px; top:150px; width:260px; height:100px;opacity:0;"><h4>Confidence</h4><div class="val" id="m2-v">–</div></div>
+  <div class="box" id="m3" style="left:660px; top:280px; width:260px; height:100px;opacity:0;"><h4>Lift</h4><div class="val" id="m3-v">–</div></div>
+  <div class="tk" id="k0" style="top:160px;"><b>Association</b> · what is bought together (market basket)</div>
+  <div class="tk" id="k1" style="top:238px;"><b>Clustering</b> · find customer groups, no labels given</div>
+  <div class="tk" id="k2" style="top:316px;"><b>Classification</b> · learn from labelled cases: churn yes/no, spam</div>
+  <div class="tk" id="k3" style="top:394px;"><b>Anomaly detection</b> · unusual transactions → possible fraud</div>
+  <div class="tk" id="k4" style="top:472px;"><b>Sequential patterns</b> · savings account first, then a loan</div>
+  <div class="tk" id="k5" style="top:550px;"><b>Regression</b> · predict a number, e.g. next month’s spend</div>
+</div>
+<script src="../lib.js"></script>
+<script src="../econ.js"></script>
+<script>
+  var tl = G.tl, s = document.getElementById('plot');
+  var wires = E.el('g', { fill: 'none' }, s);
+  function wire(id, d) { E.el('path', { id: id, d: d, stroke: G.LO, 'stroke-width': 4, 'stroke-linecap': 'round' }, wires); }
+  G.caps([[0,3],[3,6],[6,9],[9,12],[12,15]]);
+  var rows = ['#bk0', '#bk1', '#bk2', '#bk3', '#bk4', '#bk5'];
+  rows.forEach(function (r, i) { tl.fromTo(r, { opacity: 0, x: -20 }, { opacity: 1, x: 0, duration: 0.3 }, 0.2 + i * 0.2); });
+  function mark(sel, at, kind) { tl.to(sel, { borderColor: kind === 'warn' ? G.WARN : G.HI, background: kind === 'warn' ? G.P.warnbg : G.P.hibg, duration: 0.3 }, at); }
+  function unmark(at) { tl.to(rows, { borderColor: G.LO, background: G.P.surface, duration: 0.3 }, at); }
+  G.pop('#m1', 3.2); mark(['#bk0', '#bk1', '#bk4'], 3.6); G.txt('#m1-v', '3/6 = 50%', 4.4);
+  unmark(6.0); G.pop('#m2', 6.2); mark(['#bk0', '#bk1', '#bk3', '#bk4'], 6.4, 'warn'); mark(['#bk0', '#bk1', '#bk4'], 7.3); G.txt('#m2-v', '3/4 = 75%', 7.6);
+  unmark(9.0); G.pop('#m3', 9.2); G.txt('#m3-v', '0.75/0.5 = 1.5', 10.2);
+  tl.to(['#m1', '#m2', '#m3'], { opacity: 0, duration: 0.3 }, 12.0);
+  ['#k0', '#k1', '#k2', '#k3', '#k4', '#k5'].forEach(function (k, i) { tl.fromTo(k, { opacity: 0, x: 20 }, { opacity: 1, x: 0, duration: 0.3 }, 12.2 + i * 0.3); });
+  G.end(15);
+  window.__timelines = window.__timelines || {};
+  window.__timelines['bit-data-mining'] = tl;
+</script>
+</body>
+</html>

@@ -11,6 +11,8 @@ export interface PackNote {
 }
 
 export interface NotesPack {
+  /** Student ID prefix allowed to import this pack, e.g. 'BIT'. */
+  audience?: string;
   course: Omit<Course, 'id'>;
   notes: PackNote[];
 }
@@ -41,7 +43,9 @@ export function parseNotesPack(text: string): NotesPack | null {
     .filter((n) => n.title && n.content)
     .slice(0, 200);
   if (notes.length === 0) return null;
+  const aud = (o.audience ?? {}) as Record<string, unknown>;
   return {
+    audience: str(aud.studentIdPrefix, 20).trim() || undefined,
     course: {
       code,
       name: str(c.name, 120) || code,

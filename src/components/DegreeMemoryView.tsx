@@ -4,9 +4,10 @@ import { Note, Course, AcademicYear } from '../types';
 import { storage } from '../services/storage';
 import { ACCEPT, extractText } from '../services/fileText';
 import { Modal, Inline, field, labelCls, primaryBtn, panel } from './ui';
-import { placeVisuals } from '../data/econVisuals';
+import { placePictures } from '../data/pictureMatch';
 import type { TopicId } from '../data/visualTopics';
 import { parseNotesPack } from '../services/notesPack';
+import { COURSE_AUDIENCE, canSee, getStudentId } from '../services/access';
 
 const VisualCard = lazy(() => import('./VisualCard'));
 
@@ -125,6 +126,16 @@ export const DegreeMemoryView: React.FC<DegreeMemoryViewProps> = ({
       const pack = parseNotesPack(await f.text().catch(() => ''));
       if (!pack) continue;
       files.splice(files.indexOf(f), 1);
+      const need = pack.audience ?? COURSE_AUDIENCE[pack.course.code.toUpperCase()];
+      if (!canSee(need)) {
+        setReading(false);
+        setUploadMsg({
+          ok: false,
+          text: `These ${pack.course.code} notes are only for students whose ID starts with ${need}. ${getStudentId() ? `Your student ID is ${getStudentId()}.` : 'Your account has no student ID.'}`,
+        });
+        if (fileRef.current) fileRef.current.value = '';
+        return;
+      }
       let course = courses.find((c) => c.code === pack.course.code);
       if (!course) {
         course = { id: `c-${pack.course.code.toLowerCase()}-${Date.now().toString(36)}`, ...pack.course };
@@ -353,7 +364,7 @@ export const DegreeMemoryView: React.FC<DegreeMemoryViewProps> = ({
             {(() => {
               // Dual coding: each picture sits right after the slide that explains the same idea (at most four per note).
               const paras = detail.content.split('\n\n');
-              const spots = placeVisuals(paras);
+              const spots = placePictures(paras);
               return paras.map((para, idx) => (
                 <React.Fragment key={idx}>
                   {renderPara(para, idx)}

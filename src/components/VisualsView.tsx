@@ -6,7 +6,9 @@ import { getStoredTheme, themeById, visualPalette } from '../themes';
 import { Segmented, labelCls, panel, primaryBtn, quietBtn, chip } from './ui';
 import type { StudyPreset } from './StudyView';
 import { EconLab } from './EconLab';
-import { econVisualsFor } from '../data/econVisuals';
+import { picturesFor } from '../data/pictureMatch';
+import { BitLab } from './BitLab';
+import { canSee } from '../services/access';
 import {
   BUILDS_ON,
   CPU_PARTS,
@@ -64,7 +66,7 @@ function TopicPlayer({
   const course = courses.find((c) => c.code === topic.courseCode);
   const courseNotes = notes.filter((n) => n.courseId === course?.id);
   // Notes that talk about this picture: the words that go with it, in the student's own material.
-  const matchingNotes = courseNotes.filter((n) => econVisualsFor(`${n.title} ${n.content}`, 3).includes(topic.id as never));
+  const matchingNotes = courseNotes.filter((n) => picturesFor(`${n.title} ${n.content}`, 3).includes(topic.id));
   const relatedNotes = (matchingNotes.length ? matchingNotes : courseNotes).slice(0, 3);
 
   useEffect(() => {
@@ -318,6 +320,7 @@ function TopicPlayer({
       )}
 
       <EconLab topicId={topic.id} />
+      <BitLab topicId={topic.id} />
 
       <section className={`${panel} space-y-5`} aria-label={`${topic.name} notes`}>
         <div>
@@ -554,7 +557,7 @@ export const VisualsView: React.FC<VisualsViewProps> = ({ notes, courses, curren
   const [view, setView] = useState<View>('animations');
   const [topicId, setTopicId] = useState<TopicId>(focusTopic ?? 'cpu');
   useEffect(() => {
-    if (focusTopic) {
+    if (focusTopic && canSee(TOPIC_BY_ID[focusTopic]?.audience)) {
       setTopicId(focusTopic);
       setView('animations');
     }
@@ -566,7 +569,8 @@ export const VisualsView: React.FC<VisualsViewProps> = ({ notes, courses, curren
     window.addEventListener('grove-theme-changed', on);
     return () => window.removeEventListener('grove-theme-changed', on);
   }, []);
-  const groups = ['Economics', 'Computer systems', 'Data structures'] as const;
+  const groups = ['Big data and warehousing', 'Economics', 'Computer systems', 'Data structures'] as const;
+  const shown = VISUAL_TOPICS.filter((t) => canSee(t.audience));
 
   return (
     <div className="space-y-5">
@@ -583,11 +587,11 @@ export const VisualsView: React.FC<VisualsViewProps> = ({ notes, courses, curren
       {view === 'animations' ? (
         <>
           <div className="space-y-3">
-            {groups.map((g) => (
+            {groups.filter((g) => shown.some((t) => t.group === g)).map((g) => (
               <div key={g}>
                 <p className={labelCls}>{g}</p>
                 <div className="flex flex-wrap gap-2">
-                  {VISUAL_TOPICS.filter((t) => t.group === g).map((t) => (
+                  {shown.filter((t) => t.group === g).map((t) => (
                     <button
                       key={t.id}
                       onClick={() => setTopicId(t.id)}

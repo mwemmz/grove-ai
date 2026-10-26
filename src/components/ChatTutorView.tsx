@@ -3,7 +3,7 @@ import { Note, LearningProfile, ChatMessage } from '../types';
 import { aiService } from '../services/aiService';
 import { storage } from '../services/storage';
 import { KIND_LABEL } from '../services/knowledge';
-import { econVisualsFor } from '../data/econVisuals';
+import { picturesFor } from '../data/pictureMatch';
 import type { TopicId } from '../data/visualTopics';
 
 const VisualCard = lazy(() => import('./VisualCard'));
@@ -219,7 +219,7 @@ export const ChatTutorView: React.FC<ChatTutorViewProps> = ({
     : undefined;
   const connections = answer?.yearConnections ?? [];
   // Dual coding: if the question is about an idea Grove has a picture for, show the picture beside the words.
-  const picture = answer ? econVisualsFor(`${question?.text ?? ''} ${question?.text ?? ''} ${answer.text}`, 1)[0] : undefined;
+  const picture = answer ? picturesFor(`${question?.text ?? ''} ${question?.text ?? ''} ${answer.text}`, 1)[0] : undefined;
 
   return (
     <section className={`${panel} space-y-4`} aria-label="Ask Grove">

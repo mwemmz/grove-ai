@@ -170,7 +170,7 @@ export function NoteDiagram({ d }: { d: Diagram }) {
 export function NoteMap({ root, items }: { root: string; items: Node[] }) {
   if (items.length < 2) return null;
   return (
-    <Frame caption="the whole note on one page" kind="Map">
+    <Frame caption="overview: the whole note on one page" kind="Map">
       <Tree root={root} items={items} />
     </Frame>
   );

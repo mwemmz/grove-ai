@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { LearningProfile, ExplanationStyle, AnswerLength, MemoryLogEntry } from '../types';
 import { storage } from '../services/storage';
+import { getStudyInstructions, saveStudyInstructions, MAX_STUDY_CHARS } from '../services/studyProfile';
 import { PageHeader, Segmented, Disclosure, Modal, Toast, field, labelCls, primaryBtn, quietBtn } from './ui';
 
 interface LearningProfileViewProps {
@@ -36,6 +37,7 @@ export const LearningProfileView: React.FC<LearningProfileViewProps> = ({
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [showAllTopics, setShowAllTopics] = useState(false);
+  const [mine, setMine] = useState(getStudyInstructions);
 
   const flash = (message: string) => {
     setToast(message);
@@ -148,6 +150,44 @@ export const LearningProfileView: React.FC<LearningProfileViewProps> = ({
             onChange={(e) => updateField('codeLanguagePreference', e.target.value)}
             className={field}
           />
+        </div>
+      </section>
+
+      <section className="space-y-3" aria-labelledby="mine-h">
+        <div>
+          <h2 id="mine-h" className="text-lg font-semibold text-text">My study instructions</h2>
+          <p className="text-sm text-muted">
+            Paste a profile you wrote about how you study and how you want your notes broken down (for example one made with another chatbot).
+            When an AI key is set, Grove follows it in every answer. It stays on this device.
+          </p>
+        </div>
+        <label htmlFor="mine" className="sr-only">My study instructions</label>
+        <textarea
+          id="mine"
+          rows={8}
+          maxLength={MAX_STUDY_CHARS}
+          value={mine}
+          onChange={(e) => setMine(e.target.value)}
+          placeholder={'1. Break notes down like a course module: overview first, study aids last\n2. Explain as if it is my first time, without losing nuance\n3. Keep code simple, do not overcomplicate'}
+          className={`${field} font-mono text-[13px] leading-6`}
+        />
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            className={primaryBtn}
+            onClick={() => {
+              saveStudyInstructions(mine);
+              flash(mine.trim() ? 'Saved. Grove will follow it' : 'Cleared');
+            }}
+          >
+            Save
+          </button>
+          {mine && (
+            <button type="button" className={quietBtn} onClick={() => { setMine(''); saveStudyInstructions(''); flash('Cleared'); }}>
+              Clear
+            </button>
+          )}
+          <span className="font-mono text-xs text-muted">{mine.length}/{MAX_STUDY_CHARS}</span>
         </div>
       </section>
 

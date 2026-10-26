@@ -98,6 +98,12 @@ export function NoteReader({
   const spots = useMemo(() => placePictures(sections.map((s) => s.raw)), [sections]);
   const map = useMemo(() => noteMap(note.title, sections), [note.title, sections]);
   const terms = useMemo(() => glossary(sections), [sections]);
+  const aids = useMemo(() => {
+    const questions = sections.map((sec) => ({ sec, r: recallFor(sec) })).filter((x) => x.r).slice(0, 10);
+    const takeaways = note.keyTakeaways?.length ? note.keyTakeaways : terms.slice(0, 6).map((t) => `${t.term}: ${t.def.length > 100 ? t.def.slice(0, 99) + '…' : t.def}`);
+    return { questions, takeaways };
+  }, [sections, terms, note.keyTakeaways]);
+  const nav = useMemo(() => [...sections.map((s) => ({ id: s.id, title: s.title })), { id: 'aids', title: 'Study aids' }], [sections]);
   const scroller = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(sections[0]?.id ?? '');
   const [progress, setProgress] = useState(0);
@@ -120,7 +126,7 @@ export function NoteReader({
       },
       { root, rootMargin: '-10% 0px -70% 0px' },
     );
-    sections.forEach((s) => {
+    nav.forEach((s) => {
       const el = document.getElementById(`sec-${s.id}`);
       if (el) io.observe(el);
     });
@@ -128,7 +134,7 @@ export function NoteReader({
       root.removeEventListener('scroll', onScroll);
       io.disconnect();
     };
-  }, [sections]);
+  }, [nav]);
 
   const jump = (id: string) => {
     document.getElementById(`sec-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -154,7 +160,7 @@ export function NoteReader({
 
       {/* Phones: the outline is a row of chips. */}
       <nav aria-label="Sections" className="flex gap-1.5 overflow-x-auto border-b border-line px-3 py-2 lg:hidden">
-        {sections.map((s) => (
+        {nav.map((s) => (
           <button
             key={s.id}
             onClick={() => jump(s.id)}
@@ -169,7 +175,7 @@ export function NoteReader({
         <nav aria-label="Outline" className="hidden w-64 shrink-0 overflow-y-auto border-r border-line px-3 py-5 lg:block">
           <p className="mb-2 px-2 font-mono text-[11px] uppercase tracking-[0.08em] text-muted">In this note</p>
           <ol className="space-y-0.5">
-            {sections.map((s, i) => (
+            {nav.map((s, i) => (
               <li key={s.id}>
                 <button
                   onClick={() => jump(s.id)}
@@ -233,14 +239,46 @@ export function NoteReader({
               </section>
             ))}
 
-            {note.keyTakeaways && note.keyTakeaways.length > 0 && (
-              <section className="rounded-xl bg-surface p-4 ring-1 ring-line">
-                <h3 className="font-mono text-[11px] uppercase tracking-[0.08em] text-accent">Key takeaways</h3>
-                <ul className="mt-2 list-disc space-y-1.5 pl-5 text-sm leading-6">
-                  {note.keyTakeaways.map((t, i) => <li key={i}>{t}</li>)}
-                </ul>
-              </section>
-            )}
+            <section id="sec-aids" className="scroll-mt-4 space-y-4">
+              <h3 className="flex items-baseline gap-3 border-b border-line pb-2 font-display text-xl text-text sm:text-2xl">
+                <span className="font-mono text-sm text-accent">{String(sections.length + 1).padStart(2, '0')}</span>
+                Study aids
+              </h3>
+              {(note.summary || aids.takeaways.length > 0) && (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {note.summary && (
+                    <div className="rounded-xl bg-surface p-4 ring-1 ring-line">
+                      <h4 className="font-mono text-[11px] uppercase tracking-[0.08em] text-accent">Summary</h4>
+                      <p className="mt-2 text-sm leading-6">{note.summary}</p>
+                    </div>
+                  )}
+                  {aids.takeaways.length > 0 && (
+                    <div className="rounded-xl bg-surface p-4 ring-1 ring-line">
+                      <h4 className="font-mono text-[11px] uppercase tracking-[0.08em] text-accent">Key takeaways</h4>
+                      <ul className="mt-2 list-disc space-y-1.5 pl-5 text-sm leading-6">
+                        {aids.takeaways.map((t, i) => <li key={i}>{t}</li>)}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
+              {aids.questions.length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="font-mono text-[11px] uppercase tracking-[0.08em] text-accent">Practice questions</h4>
+                  {aids.questions.map(({ sec, r }, i) => (
+                    <details key={sec.id} className="group max-w-2xl rounded-lg ring-1 ring-line">
+                      <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-4 py-2 text-sm marker:hidden [&::-webkit-details-marker]:hidden">
+                        <span className="font-mono text-accent">{i + 1}.</span>
+                        <span>{r!.q}</span>
+                      </summary>
+                      <ul className="space-y-1 border-t border-line px-4 py-3 text-sm leading-6 text-muted">
+                        {r!.a.map((t, j) => <li key={j}>{t}</li>)}
+                      </ul>
+                    </details>
+                  ))}
+                </div>
+              )}
+            </section>
             {note.tags.length > 0 && <p className="text-sm text-muted">{note.tags.map((t) => `#${t}`).join('  ')}</p>}
           </article>
         </div>

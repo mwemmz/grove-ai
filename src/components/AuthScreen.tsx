@@ -23,7 +23,6 @@ const FRIENDLY: Record<string, string> = {
   form_username_invalid_character: 'A student ID can only contain letters, numbers, - and _.',
   form_username_invalid_length: 'A student ID must be between 4 and 64 characters.',
   form_password_pwned: 'That password has appeared in a data breach elsewhere. Choose a different one.',
-  form_password_length_too_short: 'Use at least 8 characters for your password.',
   form_password_not_strong_enough: 'That password is too easy to guess. Make it longer or less common.',
   form_param_format_invalid: 'Check the format of what you typed.',
   form_code_incorrect: 'That code is not right. Check the email and try again.',
@@ -203,7 +202,7 @@ export function AuthScreen() {
               <Field id="a-name" label="Full name" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} required autoFocus />
               <Field id="a-email" label="Email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
               <Field id="a-sid" label="Student ID" autoComplete="username" value={studentId} onChange={(e) => setStudentId(e.target.value)} required hint="You can sign in with this or your email." />
-              <Field id="a-npw" label="Password" type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} required hint="At least 8 characters." />
+              <Field id="a-npw" label="Password" type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
               {/* Clerk's bot protection renders here when it is switched on. */}
               <div id="clerk-captcha" />
             </>

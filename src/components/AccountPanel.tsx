@@ -45,7 +45,7 @@ export function AccountPanel() {
 
   const savePassword = async () => {
     setPwMsg(null);
-    if (pw.next.length < 8) return setPwMsg({ ok: false, text: 'Use at least 8 characters.' });
+    if (!pw.next) return setPwMsg({ ok: false, text: 'Type a new password.' });
     setBusy('pw');
     try {
       await user.updatePassword(user.passwordEnabled ? { currentPassword: pw.current, newPassword: pw.next } : { newPassword: pw.next });

@@ -1,5 +1,5 @@
 import { lazyWithReload } from './lib/lazyReload';
-import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { useAuth, useUser } from '@clerk/react';
 import { AuthScreen } from './components/AuthScreen';
 import { TreePine } from 'lucide-react';

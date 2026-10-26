@@ -1,5 +1,5 @@
 import { lazyWithReload } from '../lib/lazyReload';
-import React, { Suspense, lazy, useRef, useState } from 'react';
+import React, { Suspense, useRef, useState } from 'react';
 import { FileUp } from 'lucide-react';
 import { Note, Course, AcademicYear } from '../types';
 import { storage } from '../services/storage';

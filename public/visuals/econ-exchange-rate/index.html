@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=1280, height=720" />
+<meta name="hyperframes" data-width="1280" data-height="720" />
+<title>How the kwacha exchange rate is set</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@500;600;700&family=Young+Serif&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
+<link rel="stylesheet" href="../base.css" />
+<script src="../gsap.min.js"></script>
+<style></style>
+</head>
+<body>
+<div id="stage" data-composition-id="econ-exchange-rate" data-width="1280" data-height="720" data-duration="15.5">
+  <div id="cap">
+    <div class="step" id="c1">1 · Demand for kwacha <small>Foreigners need kwacha to pay for Zambian exports like copper, and to invest in Zambia.</small></div>
+    <div class="step" id="c2">2 · Supply of kwacha <small>Zambians sell kwacha to buy foreign currency for imports and to invest abroad.</small></div>
+    <div class="step" id="c3">3 · The exchange rate <small>The value of the kwacha settles where demand meets supply.</small></div>
+    <div class="step" id="c4">4 · Copper prices rise <small>More export earnings raise demand for kwacha: the curve shifts right and the <em>kwacha appreciates</em>.</small></div>
+    <div class="step" id="c5">5 · Fuel imports rise <small>Back to the start. More kwacha is sold to buy dollars: supply shifts right and the <em>kwacha depreciates</em>.</small></div>
+  </div>
+  <svg id="plot" viewBox="0 0 1280 720"></svg>
+  <div class="panel">
+    <div class="box"><h4>Value of K1</h4><div class="val" id="rate">5.0 US cents</div><div class="sub" id="dir">&nbsp;</div></div>
+    <div class="tag good" id="ex" style="position:relative;opacity:0;white-space:normal;line-height:1.35;">stronger kwacha: imports cheaper, exports dearer abroad</div>
+    <div class="tag warm" id="im" style="position:relative;opacity:0;white-space:normal;line-height:1.35;">weaker kwacha: imports dearer (cost-push), exports cheaper abroad</div>
+  </div>
+</div>
+<script src="../lib.js"></script>
+<script src="../econ.js"></script>
+<script>
+  var tl = G.tl;
+  G.caps([[0, 3], [3, 6], [6, 9], [9, 12], [12, 15.5]]);
+  var g = E.graph({ left: 150, top: 180, width: 560, height: 430, xmax: 100, ymax: 8, xlabel: 'Quantity of kwacha', ylabel: 'US cents per kwacha' });
+  function D(c) { return [[(c - 7.6) / 0.06, 7.6], [(c - 0.6) / 0.06, 0.6]]; }
+  function S(c) { return [[(0.6 - c) / 0.06 < 4 ? 4 : (0.6 - c) / 0.06, Math.max(0.6, c + 0.24)], [(7.6 - c) / 0.06, 7.6]]; }
+  var d1 = D(8), s1 = S(2);
+  E.line(g, 'd', d1[0], d1[1], 'hi', { hidden: true });
+  E.line(g, 's', s1[0], s1[1], 'warn', { hidden: true });
+  function lab(e) { return E.clip(g, e[0], e[1])[1]; }
+  E.text(g.X(lab(d1)[0]) - 8, g.Y(lab(d1)[1]) - 14, 'D', { id: 'td', hidden: true, fill: G.HI, anchor: 'end' });
+  E.text(g.X(lab(s1)[0]) - 8, g.Y(lab(s1)[1]) + 6, 'S', { id: 'ts', hidden: true, fill: G.WARN, anchor: 'end' });
+  E.point(g, 'p', 50, 5);
+  /* 1 */ E.draw('#d', 0.4, 1.1); E.show('#td', 1.3);
+  /* 2 */ E.draw('#s', 3.4, 1.1); E.show('#ts', 4.3);
+  /* 3 */ E.showPoint('p', 6.4);
+  /* 4 */ var d2 = D(9.2); E.moveLine(g, '#d', d2[0], d2[1], 9.3, 1.2); tl.to('#td', { attr: { x: g.X(lab(d2)[0]) - 8, y: g.Y(lab(d2)[1]) - 14 }, duration: 1.2 }, 9.3);
+          E.movePoint(g, 'p', 60, 5.6, 9.3, 1.2); G.txt('#rate', '5.6 US cents', 10.0); G.txt('#dir', 'kwacha appreciates', 10.0); E.show('#ex', 10.2);
+  /* 5 */ E.moveLine(g, '#d', d1[0], d1[1], 12.2, 0.6); tl.to('#td', { attr: { x: g.X(lab(d1)[0]) - 8, y: g.Y(lab(d1)[1]) - 14 }, duration: 0.6 }, 12.2); E.movePoint(g, 'p', 50, 5, 12.2, 0.6);
+          var s2 = S(0.8); E.moveLine(g, '#s', s2[0], s2[1], 12.9, 1.1); tl.to('#ts', { attr: { x: g.X(lab(s2)[0]) - 8, y: g.Y(lab(s2)[1]) + 6 }, duration: 1.1 }, 12.9);
+          E.movePoint(g, 'p', 60, 4.4, 12.9, 1.1); G.txt('#rate', '4.4 US cents', 13.6); G.txt('#dir', 'kwacha depreciates', 13.6);
+          tl.to('#ex', { opacity: 0, duration: 0.3 }, 12.4); E.show('#im', 13.8);
+  G.end(15.5);
+  window.__timelines = window.__timelines || {};
+  window.__timelines['econ-exchange-rate'] = tl;
+</script>
+</body>
+</html>

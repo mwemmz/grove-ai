@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=1280, height=720" />
+<meta name="hyperframes" data-width="1280" data-height="720" />
+<title>The Keynesian cross and the multiplier</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@500;600;700&family=Young+Serif&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
+<link rel="stylesheet" href="../base.css" />
+<script src="../gsap.min.js"></script>
+<style></style>
+</head>
+<body>
+<div id="stage" data-composition-id="econ-keynesian-cross" data-width="1280" data-height="720" data-duration="18.5">
+  <div id="cap">
+    <div class="step" id="c1">1 · The 45° line <small>Every point on it is where planned spending equals income: <em>AE = Y</em>.</small></div>
+    <div class="step" id="c2">2 · Planned spending <small>C = 250 + 0.75(Y − 200), I = 80, G = 150, so <em>AE = 330 + 0.75Y</em>.</small></div>
+    <div class="step" id="c3">3 · Equilibrium <small>Output settles where AE meets the 45° line: Y = 330 ÷ 0.25 = <em>1,320</em>.</small></div>
+    <div class="step" id="c4">4 · Government spends 50 more <small>G rises from 150 to 200, so the AE line shifts up by 50.</small></div>
+    <div class="step" id="c5">5 · The multiplier <small>Income rises by <em>200</em>, not 50: ΔY = ΔG × 1 ÷ (1 − 0.75) = 50 × 4.</small></div>
+  </div>
+  <svg id="plot" viewBox="0 0 1280 720"></svg>
+  <div class="panel">
+    <div class="box" id="b1" style="opacity:0;"><h4>Planned spending</h4><div class="eq" id="e1">AE = 330 + 0.75Y</div><div class="sub">slope = MPC = 0.75</div></div>
+    <div class="box" id="b2" style="opacity:0;"><h4>Equilibrium income</h4><div class="eq" id="e2">Y = 330 ÷ (1 − 0.75) = <b>1,320</b></div></div>
+    <div class="box" id="b3" style="opacity:0;"><h4>Multiplier</h4><div class="eq">1 ÷ (1 − MPC) = <b>4</b></div><div class="sub" id="rounds">50 + 37.5 + 28.1 + 21.1 + … = 200</div></div>
+  </div>
+</div>
+<script src="../lib.js"></script>
+<script src="../econ.js"></script>
+<script>
+  var tl = G.tl;
+  G.caps([[0, 3.5], [3.5, 7], [7, 10.5], [10.5, 14], [14, 18.5]]);
+  var g = E.graph({ left: 170, top: 180, width: 440, height: 440, xmax: 2000, ymax: 2000, xlabel: 'Income, Y', ylabel: 'Planned spending, AE' });
+  E.line(g, 'l45', [0, 0], [2000, 2000], 'mu', { w: 4, hidden: true });
+  E.text(g.X(2000) + 14, g.Y(2000) + 4, '45°', { cls: 'cl', hidden: true, id: 't45' });
+  E.line(g, 'ae1', [0, 330], [2000, 1830], 'hi', { hidden: true });
+  E.text(g.X(2000) + 14, g.Y(1830) + 26, 'AE₁', { id: 'tae1', hidden: true, fill: G.HI });
+  E.line(g, 'ae2', [0, 330], [2000, 1830], 'warn', { hidden: true });
+  E.text(g.X(2000) + 14, g.Y(1880) - 2, 'AE₂', { id: 'tae2', hidden: true, fill: G.WARN });
+  E.point(g, 'p', 1320, 1320);
+  E.text(g.X(1320) - 8, g.Y(0) + 30, '1,320', { anchor: 'end', cls: 'tick', id: 'x1', hidden: true });
+  E.text(g.X(1520) + 8, g.Y(0) + 30, '1,520', { anchor: 'start', cls: 'tick', id: 'x2', hidden: true });
+  E.text(g.X(30), g.Y(330), '330', { cls: 'tick', id: 'y330', hidden: true });
+
+  /* 1 */ E.draw('#l45', 0.4, 1.2); E.show('#t45', 1.4);
+  /* 2 */ E.draw('#ae1', 3.8, 1.2); E.show('#tae1', 4.8); E.show('#b1', 4.2); E.show('#y330', 4.4);
+  /* 3 */ E.showPoint('p', 7.4); E.show('#x1', 7.6); E.show('#b2', 7.8);
+  /* 4 */ E.show('#ae2', 10.8); E.moveLine(g, '#ae2', [0, 380], [2000, 1880], 11.0, 1.2); E.show('#tae2', 12.0);
+          tl.to('#t45', { attr: { y: g.Y(2000) - 18 }, duration: 0.4 }, 11.0); tl.to('#ae1', { attr: { stroke: G.LO }, duration: 0.4 }, 11.4);
+          G.txt('#e1', 'AE = 380 + 0.75Y', 11.5);
+  /* 5 */ E.movePoint(g, 'p', 1520, 1520, 14.4, 1.4); E.show('#x2', 15.2); E.show('#b3', 14.6);
+          G.txt('#e2', 'ΔY = 50 × 4 = 200  →  1,520', 15.0);
+  G.end(18.5);
+  window.__timelines = window.__timelines || {};
+  window.__timelines['econ-keynesian-cross'] = tl;
+</script>
+</body>
+</html>

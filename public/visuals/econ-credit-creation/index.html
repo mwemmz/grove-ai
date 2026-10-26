@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=1280, height=720" />
+<meta name="hyperframes" data-width="1280" data-height="720" />
+<title>How banks create money</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@500;600;700&family=Young+Serif&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
+<link rel="stylesheet" href="../base.css" />
+<script src="../gsap.min.js"></script>
+<style>.bk { position:absolute; font: 600 15px/1.1 "JetBrains Mono", monospace; color: var(--mu); text-align:center; width: 74px; opacity: 0; }</style>
+</head>
+<body>
+<div id="stage" data-composition-id="econ-credit-creation" data-width="1280" data-height="720" data-duration="15">
+  <div id="cap">
+    <div class="step" id="c1">1 · A deposit <small>A farmer deposits <em>K100,000</em> at ZANACO. With a 10% reserve ratio, it keeps K10,000.</small></div>
+    <div class="step" id="c2">2 · A loan becomes a deposit <small>ZANACO lends <em>K90,000</em>. The borrower pays someone who banks at Stanbic.</small></div>
+    <div class="step" id="c3">3 · Round after round <small>Stanbic keeps K9,000 and lends K81,000. Each round is 90% of the last.</small></div>
+    <div class="step" id="c4">4 · The total <small>Deposits add up to K100,000 × 1 ÷ 0.10 = <em>K1,000,000</em>. Money multiplier = 10.</small></div>
+    <div class="step" id="c5">5 · The limits <small>Cash held outside banks, extra reserves and few good borrowers make the real multiplier <em>smaller</em>.</small></div>
+  </div>
+  <svg id="plot" viewBox="0 0 1280 720"></svg>
+  <div class="panel" style="left:880px; width:360px;">
+    <div class="box"><h4>Total deposits</h4><div class="val" id="tot">K0</div></div>
+    <div class="box"><h4>Money multiplier</h4><div class="eq">1 ÷ reserve ratio = 1 ÷ 0.10 = <b>10</b></div></div>
+    <div class="tag warm" id="lim" style="position:relative;opacity:0;white-space:normal;line-height:1.35;">cash leakages · excess reserves · weak loan demand</div>
+  </div>
+  <div class="chip" id="loan">K90,000 loan</div>
+</div>
+<script src="../lib.js"></script>
+<script src="../econ.js"></script>
+<script>
+  var tl = G.tl;
+  G.caps([[0, 3], [3, 6], [6, 9], [9, 12], [12, 15]]);
+  var s = document.getElementById('plot');
+  var vals = [100000, 90000, 81000, 72900, 65610, 59049, 53144, 47830, 43047];
+  var names = ['ZANACO', 'Stanbic', 'FNB', 'Atlas Mara', 'Indo Zambia', '…', '…', '…', '…'];
+  var base = 610, maxH = 400, x0 = 110, step = 82, w = 60;
+  E.el('line', { x1: 90, y1: base, x2: 860, y2: base, stroke: G.P.mu, 'stroke-width': 3 }, s);
+  vals.forEach(function (v, i) {
+    var h = v / 100000 * maxH, r = h * 0.1, x = x0 + i * step;
+    E.el('rect', { id: 'loan' + i, x: x, y: base - h, width: w, height: h - r, rx: 6, fill: G.HI, opacity: 0 }, s);
+    E.el('rect', { id: 'res' + i, x: x, y: base - h, width: w, height: r, rx: 4, fill: G.WARN, opacity: 0 }, s);
+    var t = E.text(x + w / 2, base - h - 14, 'K' + Math.round(v / 1000) + 'k', { anchor: 'middle', cls: 'tick', id: 'v' + i, hidden: true });
+    var lab = document.createElement('div'); lab.className = 'bk'; lab.id = 'n' + i; lab.textContent = names[i];
+    lab.style.left = (x - 7) + 'px'; lab.style.top = (base + 12) + 'px'; document.getElementById('stage').appendChild(lab);
+  });
+  function bar(i, at) {
+    tl.fromTo(['#loan' + i, '#res' + i], { opacity: 0, scaleY: 0, transformOrigin: '50% 100%' }, { opacity: 1, scaleY: 1, duration: 0.5, ease: 'power2.out' }, at);
+    E.show('#v' + i, at + 0.3); E.show('#n' + i, at);
+  }
+  var running = 0;
+  function total(i, at) { running += vals[i]; G.txt('#tot', 'K' + running.toLocaleString('en-US'), at); }
+  /* 1 */ bar(0, 0.5); total(0, 0.8);
+  tl.fromTo('#res0', { attr: { 'stroke-width': 0 } }, { attr: { stroke: G.WARN, 'stroke-width': 6 }, duration: 0.3 }, 1.6);
+  /* 2 */ G.chip('#loan', [[140, 300], [420, 160], [222, 330]], 3.3, 0.7, 0.2); bar(1, 4.8); total(1, 5.0);
+  /* 3 */ [2, 3, 4, 5, 6, 7, 8].forEach(function (i, k) { bar(i, 6.3 + k * 0.38); total(i, 6.5 + k * 0.38); });
+  /* 4 */ G.txt('#tot', 'K1,000,000', 9.4); tl.fromTo('#tot', { scale: 1 }, { scale: 1.12, duration: 0.3, yoyo: true, repeat: 1 }, 9.4);
+  /* 5 */ E.show('#lim', 12.3);
+  G.end(15);
+  window.__timelines = window.__timelines || {};
+  window.__timelines['econ-credit-creation'] = tl;
+</script>
+</body>
+</html>

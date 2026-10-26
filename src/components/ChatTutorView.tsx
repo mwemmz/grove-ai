@@ -1,8 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { Note, LearningProfile, ChatMessage } from '../types';
 import { aiService } from '../services/aiService';
 import { storage } from '../services/storage';
 import { KIND_LABEL } from '../services/knowledge';
+import { econVisualsFor } from '../data/econVisuals';
+import type { TopicId } from '../data/visualTopics';
+
+const VisualCard = lazy(() => import('./VisualCard'));
 import { Disclosure, Toast, Inline, field, labelCls, primaryBtn, panel, chip } from './ui';
 
 /** Shown in `viewId` when the student pressed "New question": an empty composer, history untouched. */
@@ -23,6 +27,8 @@ interface ChatTutorViewProps {
   /** A question sent from another screen (for example the Library). Asked once, then cleared. */
   pendingAsk?: string | null;
   onPendingHandled?: () => void;
+  /** Opens a picture in the Visuals tab. */
+  onOpenVisual?: (id: TopicId) => void;
 }
 
 const STARTER_PROMPTS = [
@@ -118,6 +124,7 @@ export const ChatTutorView: React.FC<ChatTutorViewProps> = ({
   setProfile,
   onOpenNoteDetail,
   onOpenSource,
+  onOpenVisual,
   pendingAsk,
   onPendingHandled,
 }) => {
@@ -211,6 +218,8 @@ export const ChatTutorView: React.FC<ChatTutorViewProps> = ({
     ? [...messages.slice(0, shownIndex)].reverse().find((m) => m.sender === 'user')
     : undefined;
   const connections = answer?.yearConnections ?? [];
+  // Dual coding: if the question is about an idea Grove has a picture for, show the picture beside the words.
+  const picture = answer ? econVisualsFor(`${question?.text ?? ''} ${question?.text ?? ''} ${answer.text}`, 1)[0] : undefined;
 
   return (
     <section className={`${panel} space-y-4`} aria-label="Ask Grove">
@@ -266,6 +275,14 @@ export const ChatTutorView: React.FC<ChatTutorViewProps> = ({
         <div className="space-y-4 border-t border-line pt-4 animate-slide-up">
           {question && <p className="text-sm text-muted">You asked: {question.text}</p>}
           <MessageBody text={answer.text} />
+
+          {picture && (
+            <Suspense fallback={<p className="text-sm text-muted" role="status">Loading the picture…</p>}>
+              <div className="max-w-2xl">
+                <VisualCard key={picture} topicId={picture} onOpen={onOpenVisual} />
+              </div>
+            </Suspense>
+          )}
           {(() => {
             const tag = answer.appliedProfileAttributes?.find((a) => a.startsWith('Answered by') || a.startsWith('AI engine unavailable'));
             if (!tag) return null;

@@ -31,6 +31,7 @@ import {
   TutorRequest,
 } from './types';
 import { storage } from './services/storage';
+import type { TopicId } from './data/visualTopics';
 import { aiService } from './services/aiService';
 import { setTokenProvider } from './lib/api';
 
@@ -98,6 +99,7 @@ function GroveApp() {
   const [tutorRequests, setTutorRequests] = useState<TutorRequest[]>([]);
 
   const [selectedNoteForDetail, setSelectedNoteForDetail] = useState<Note | null>(null);
+  const [visualFocus, setVisualFocus] = useState<TopicId | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [studyPreset, setStudyPreset] = useState<StudyPreset | null>(null);
 
@@ -243,6 +245,20 @@ function GroveApp() {
     setActiveTab('remember');
   };
 
+  const openVisual = (id: TopicId) => {
+    setVisualFocus(id);
+    setActiveTab('visuals');
+  };
+
+  const addCourse = (course: Course) => {
+    setCourses((prev) => {
+      if (prev.some((c) => c.code === course.code)) return prev;
+      const next = [...prev, course];
+      storage.saveCourses(next);
+      return next;
+    });
+  };
+
   const handleStartSession = (preset: StudyPreset) => {
     setStudyPreset(preset);
     setActiveTab('study');
@@ -349,6 +365,7 @@ function GroveApp() {
                 }}
                 pendingAsk={pendingAsk}
                 onPendingHandled={() => setPendingAsk(null)}
+                onOpenVisual={openVisual}
               />
               <DegreeMemoryView
                 notes={notes}
@@ -356,6 +373,8 @@ function GroveApp() {
                 courses={courses}
                 selectedNoteForDetail={selectedNoteForDetail}
                 setSelectedNoteForDetail={setSelectedNoteForDetail}
+                onAddCourse={addCourse}
+                onOpenVisual={openVisual}
               />
             </>
           )}
@@ -380,6 +399,7 @@ function GroveApp() {
                 currentYear={profile.currentYear}
                 onOpenNote={openNoteById}
                 onStartSession={handleStartSession}
+                focusTopic={visualFocus}
               />
             </Suspense>
           )}

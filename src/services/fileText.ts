@@ -2,7 +2,7 @@
 
 export const MAX_BYTES = 8 * 1024 * 1024;
 export const MAX_CHARS = 60_000;
-export const ACCEPT = '.txt,.md,.markdown,.csv,.json,.html,.htm,.pdf,.docx';
+export const ACCEPT = '.txt,.md,.markdown,.csv,.json,.html,.htm,.pdf,.docx,.pptx,.pptm';
 
 const TEXT_EXT = ['txt', 'md', 'markdown', 'csv', 'json', 'html', 'htm'];
 
@@ -48,16 +48,38 @@ async function docxText(file: File): Promise<string> {
   return value;
 }
 
+/** PowerPoint (.pptx / .pptm): each slide becomes "### title" followed by its lines, in slide order. Macros are never run. */
+async function pptxText(file: File): Promise<string> {
+  const { default: JSZip } = await import('jszip');
+  const zip = await JSZip.loadAsync(await file.arrayBuffer());
+  const names = Object.keys(zip.files)
+    .filter((n) => /^ppt\/slides\/slide\d+\.xml$/.test(n))
+    .sort((a, b) => Number(a.match(/(\d+)\.xml$/)![1]) - Number(b.match(/(\d+)\.xml$/)![1]));
+  const A = 'http://schemas.openxmlformats.org/drawingml/2006/main';
+  const slides: string[] = [];
+  for (const [i, name] of names.entries()) {
+    const xml = new DOMParser().parseFromString(await zip.files[name].async('string'), 'application/xml');
+    const lines = Array.from(xml.getElementsByTagNameNS(A, 'p'))
+      .map((p) => Array.from(p.getElementsByTagNameNS(A, 't')).map((t) => t.textContent ?? '').join('').trim())
+      .filter(Boolean);
+    if (lines.length === 0) continue;
+    const [title, ...rest] = lines;
+    slides.push([`### ${title.length > 90 ? `Slide ${i + 1}` : title}`, ...(title.length > 90 ? [title] : []), ...rest].join('\n'));
+  }
+  return slides.join('\n\n');
+}
+
 export async function extractText(file: File): Promise<ExtractedFile> {
   const e = ext(file.name);
   if (file.size > MAX_BYTES) throw new Error(`${file.name} is larger than 8 MB.`);
   let raw: string;
   if (e === 'pdf') raw = await pdfText(file);
   else if (e === 'docx') raw = await docxText(file);
+  else if (e === 'pptx' || e === 'pptm') raw = await pptxText(file);
   else if (TEXT_EXT.includes(e) || file.type.startsWith('text/')) {
     raw = await file.text();
     if (e === 'html' || e === 'htm') raw = new DOMParser().parseFromString(raw, 'text/html').body.textContent ?? '';
-  } else throw new Error(`${file.name}: this file type isn't supported. Use PDF, Word (.docx), text, Markdown or CSV.`);
+  } else throw new Error(`${file.name}: this file type isn't supported. Use PDF, Word (.docx), PowerPoint (.pptx), text, Markdown or CSV.`);
   const text = tidy(raw);
   if (!text) throw new Error(`${file.name}: no readable text found. Scanned PDFs need OCR first.`);
   return { title: baseName(file.name), text: text.slice(0, MAX_CHARS), truncated: text.length > MAX_CHARS };

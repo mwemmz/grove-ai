@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=1280, height=720" />
+<meta name="hyperframes" data-width="1280" data-height="720" />
+<title>The Laffer curve</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@500;600;700&family=Young+Serif&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
+<link rel="stylesheet" href="../base.css" />
+<script src="../gsap.min.js"></script>
+<style></style>
+</head>
+<body>
+<div id="stage" data-composition-id="econ-laffer" data-width="1280" data-height="720" data-duration="15">
+  <div id="cap">
+    <div class="step" id="c1">1 · A 0% tax rate <small>Nothing is taxed, so government revenue is <em>zero</em>.</small></div>
+    <div class="step" id="c2">2 · A 100% tax rate <small>Nobody would work for nothing, so revenue is <em>zero</em> again.</small></div>
+    <div class="step" id="c3">3 · Revenue peaks in between <small>Somewhere between them is the rate <em>Tx</em> that raises the most revenue.</small></div>
+    <div class="step" id="c4">4 · Two rates, same revenue <small>A low rate (25%) and a high rate (75%) can raise the same revenue.</small></div>
+    <div class="step" id="c5">5 · Cutting rates <small>Above Tx, a cut can <em>raise</em> revenue. Below Tx, a cut <em>lowers</em> it.</small></div>
+  </div>
+  <svg id="plot" viewBox="0 0 1280 720"></svg>
+  <div class="panel">
+    <div class="box"><h4>Tax rate</h4><div class="val" id="tr">0%</div></div>
+    <div class="box"><h4>Revenue</h4><div class="val" id="rv">0</div></div>
+  </div>
+</div>
+<script src="../lib.js"></script>
+<script src="../econ.js"></script>
+<script>
+  var tl = G.tl;
+  G.caps([[0, 3], [3, 6], [6, 9], [9, 12], [12, 15]]);
+  var g = E.graph({ left: 150, top: 180, width: 560, height: 430, xmax: 100, ymax: 110, xlabel: 'Tax rate, %', ylabel: 'Tax revenue' });
+  function R(t) { return t * (100 - t) / 25; }
+  var pts = []; for (var t = 0; t <= 100; t += 2) pts.push([t, R(t)]);
+  E.curve(g, 'lc', pts, 'hi', { hidden: true });
+  E.text(g.X(50), g.Y(0) + 30, 'Tx', { anchor: 'middle', cls: 'cl', id: 'tx', hidden: true });
+  E.text(g.X(25), g.Y(0) + 30, '25', { anchor: 'middle', cls: 'tick', id: 't25', hidden: true });
+  E.text(g.X(75), g.Y(0) + 30, '75', { anchor: 'middle', cls: 'tick', id: 't75', hidden: true });
+  E.text(g.X(100), g.Y(0) + 30, '100', { anchor: 'middle', cls: 'tick', id: 't100', hidden: true });
+  E.line(g, 'same', [25, 75], [75, 75], 'warn', { hidden: true, w: 3, dash: '8 8' });
+  E.point(g, 'p', 0, 0);
+  E.el('circle', { id: 'q', cx: g.X(25), cy: g.Y(75), r: 11, fill: G.WARN, stroke: G.P.bg, 'stroke-width': 4, opacity: 0 });
+  /* 1 */ E.showPoint('p', 0.5);
+  /* 2 */ E.movePoint(g, 'p', 100, 0, 3.3, 1.0); E.show('#t100', 3.6); G.txt('#tr', '100%', 3.8);
+  /* 3 */ E.draw('#lc', 6.2, 1.6); E.movePoint(g, 'p', 50, 100, 7.0, 1.0); E.show('#tx', 7.6); G.txt('#tr', 'Tx', 7.6); G.txt('#rv', 'maximum', 7.6);
+  /* 4 */ E.movePoint(g, 'p', 75, 75, 9.3, 0.8); G.pop('#q', 9.6); E.draw('#same', 9.8, 0.6); E.show('#t25', 9.8); E.show('#t75', 9.8);
+          G.txt('#tr', '25% or 75%', 10.0); G.txt('#rv', '75 at both', 10.0);
+  /* 5 */ tl.to('#q', { opacity: 0, duration: 0.3 }, 12.1);
+          [[70, R(70)], [65, R(65)], [60, R(60)]].forEach(function (q, k) { E.movePoint(g, 'p', q[0], q[1], 12.3 + k * 0.4, 0.4); });
+          G.txt('#tr', '75% → 60%', 13.2); G.txt('#rv', '75 → 96', 13.2);
+  G.end(15);
+  window.__timelines = window.__timelines || {};
+  window.__timelines['econ-laffer'] = tl;
+</script>
+</body>
+</html>

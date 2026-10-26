@@ -1,6 +1,6 @@
 import { Note, LearningProfile, AcademicYear, MemoryLogEntry, StudentTier, SourceRef } from '../types';
 import { storage } from './storage';
-import { searchSources, toRef, INSTITUTIONAL_RE, type Hit } from './knowledge';
+import { searchSources, toRef, tokens, INSTITUTIONAL_RE, type Hit } from './knowledge';
 import { providerLabel, buildSystemPrompt, buildUserPrompt, generateRouted, candidatesFor } from './llmService';
 
 export interface AIResponsePayload {
@@ -36,7 +36,8 @@ export const aiService = {
    */
   findRelevantNotes(query: string, allNotes: Note[]): { note: Note; score: number }[] {
     const q = query.toLowerCase();
-    const queryTokens = q.split(/\W+/).filter(t => t.length > 2);
+    // Meaningful words only (no "how", "does", "work"), stemmed, so a stray common word can't pull in a note.
+    const queryTokens = [...new Set(tokens(query))];
 
     const scored = allNotes.map(note => {
       let score = 0;
@@ -143,7 +144,7 @@ export const aiService = {
 
     const citedNotes = topNotes.map(n => ({
       noteId: n.id,
-      courseCode: n.courseId.replace('c-', '').toUpperCase(),
+      courseCode: n.courseId.replace(/^c-/, '').split('-')[0].toUpperCase(),
       year: n.year,
       title: n.title,
       relevanceQuote: n.keyTakeaways[0] || n.summary,
@@ -319,6 +320,7 @@ Here is the chronological evolution of this concept throughout your 4-year degre
     };
   },
 
+  /** Without an AI key: quote the slides or paragraphs from the student's own notes that best match the question. */
   generateAdaptiveResponse(
     question: string,
     notes: Note[],
@@ -327,59 +329,42 @@ Here is the chronological evolution of this concept throughout your 4-year degre
     connections: AIResponsePayload['yearConnections'],
     appliedAttributes: string[]
   ): AIResponsePayload {
-    const style = profile.explanationStyle;
-    const length = profile.answerLength;
-
-    let responseBody = '';
-
-    if (style === 'code-first') {
-      responseBody = `### Direct Implementation & Technical Analysis
-
-\`\`\`c
-// High-efficiency kernel buffer transfer (Zero-Copy Sendfile)
-#include <sys/sendfile.h>
-
-ssize_t stream_to_socket(int out_socket_fd, int in_file_fd, off_t *offset, size_t count) {
-    // Directly pushes pages from OS page cache into socket descriptor
-    // Bypasses userspace memory copy entirely!
-    return sendfile(out_socket_fd, in_file_fd, offset, count);
-}
-\`\`\`
-
-#### Key Mechanics:
-1. **DMA Transfer**: Disk controller transfers bytes directly to kernel page cache via DMA.
-2. **Descriptor Hand-off**: Kernel passes memory addresses straight to the Network Interface Card (NIC) queue.
-3. **CPU Preservation**: CPU never copies bytes into intermediate user-space stack or heap buffers.`;
-    } else if (style === 'analogies') {
-      responseBody = `### Real-World Analogy: The Freight Logistics Depot
-
-Think of normal I/O like receiving a massive shipping crate at your home, unpacking every single box into your living room, repacking it into a new box, and then calling a courier to take it to the airport. It wastes time and clutters your living room.
-
-**Zero-Copy and Distributed Buffering** is like having the freight train deliver straight to the airport cargo bay: the goods never enter your living room at all. The logistics hub (the kernel page cache) redirects the manifest straight onto the departing plane (the network socket).`;
-    } else {
-      responseBody = `### Core Analysis & First-Principles Breakdown
-
-1. **System Invariant**:
-   High-throughput systems are almost never bound by arithmetic execution; they are bound by **memory bus bandwidth** and **context switches**.
-   
-2. **The Bottleneck**:
-   A standard \`read()\` then \`write()\` cycle forces 4 context switches and 4 copies across user space and kernel space.
-
-3. **The Solution in Your Notes**:
-   By relying on append-only commit segments and Linux \`sendfile()\`, the OS page cache acts as the single source of truth. Data flows via Direct Memory Access (DMA) from disk to network card without CPU userland interruption.`;
+    const qt = new Set(tokens(question));
+    const passages: { note: Note; text: string; score: number }[] = [];
+    for (const note of notes) {
+      for (const para of note.content.split(/\n{2,}/)) {
+        const words = tokens(para);
+        if (words.length < 4) continue;
+        const hit = new Set(words.filter((w) => qt.has(w)));
+        if (hit.size === 0) continue;
+        passages.push({ note, text: para.trim(), score: hit.size * 3 + Math.min(words.filter((w) => qt.has(w)).length, 6) });
+      }
     }
-
-    if (length === 'concise') {
-      responseBody += `\n\n**Takeaway:** Keep writes sequential, eliminate userspace buffer bouncing, and let the kernel handle DMA transfers.`;
-    } else {
-      responseBody += `\n\n### Architectural Synthesis
-When you combine this with Raft log replication (from your Year 3 notes), every replica node can stream its committed state machine entries to followers without incurring CPU overhead, preserving computing power for application logic.`;
+    passages.sort((a, b) => b.score - a.score);
+    const take = passages.slice(0, profile.answerLength === 'concise' ? 2 : 3);
+    if (take.length === 0) {
+      return {
+        text: `Your notes mention this, but no single passage answers it directly. Open the notes listed below, or connect an AI engine in Settings for a written explanation from them.`,
+        citedNotes,
+        yearConnections: [],
+        appliedProfileAttributes: appliedAttributes,
+      };
     }
-
+    const clip = (t: string) => (t.length > 520 ? t.slice(0, 517).replace(/\s+\S*$/, '') + '…' : t);
+    const quote = (t: string) => {
+      // A slide has a real title line ("### …"); any other paragraph is quoted whole.
+      if (!t.startsWith('### ')) return `> ${clip(t.replace(/\s+/g, ' ').trim())}`;
+      const [head, ...rest] = t.slice(4).split('\n');
+      const body = rest.join(' ').replace(/\s+/g, ' ').trim();
+      return body ? `**${head}**\n> ${clip(body)}` : `> ${head}`;
+    };
+    const parts = ['### From your notes'];
+    for (const p of take) parts.push(`${quote(p.text)}\n\nFrom **${p.note.title}** (Year ${p.note.year}).`);
+    parts.push('These are your own notes, quoted. Connect an AI engine in Settings and Grove will explain them in its own words, still citing the notes.');
     return {
-      text: responseBody,
-      citedNotes,
-      yearConnections: connections,
+      text: parts.join('\n\n'),
+      citedNotes: citedNotes.filter((c) => take.some((p) => p.note.id === c.noteId)).concat(citedNotes.filter((c) => !take.some((p) => p.note.id === c.noteId))).slice(0, 3),
+      yearConnections: [],
       appliedProfileAttributes: appliedAttributes,
     };
   },

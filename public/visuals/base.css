@@ -18,3 +18,15 @@ body { font-family: "Figtree", system-ui, sans-serif; color: var(--tx); }
 .tag { position: absolute; padding: 8px 14px; border-radius: 8px; background: var(--raised); font: 600 20px/1 "JetBrains Mono", monospace; color: var(--tx); opacity: 0; white-space: nowrap; }
 .tag.warm { background: var(--warnbg); color: var(--warn); }
 .tag.good { background: var(--hibg); color: var(--hi); }
+/* economics graphs */
+#plot { position: absolute; left: 0; top: 0; width: 1280px; height: 720px; overflow: visible; }
+#plot .axl { font: 600 20px/1 "JetBrains Mono", monospace; letter-spacing: .06em; fill: var(--mu); text-transform: uppercase; }
+#plot .cl { font: 700 26px/1 "JetBrains Mono", monospace; fill: var(--tx); }
+#plot .tick { font: 500 19px/1 "JetBrains Mono", monospace; fill: var(--mu); }
+.panel { position: absolute; left: 820px; top: 150px; width: 420px; display: flex; flex-direction: column; gap: 14px; }
+.panel .box { position: relative; }
+.panel .box .val { font-size: 28px; }
+.panel .box .sub { font: 500 18px/1.3 "Figtree", sans-serif; color: var(--mu); margin-top: 6px; }
+.eq { font: 600 26px/1.25 "JetBrains Mono", monospace; color: var(--tx); }
+.eq b { color: var(--hi); font-weight: 700; }
+.eq i { font-style: normal; color: var(--warn); }

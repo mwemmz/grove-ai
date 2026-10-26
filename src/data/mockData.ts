@@ -100,6 +100,15 @@ export const INITIAL_COURSES: Course[] = [
     color: '#8b5cf6', // purple
     description: 'TLS 1.3 handshakes, constant-time algorithms, public key cryptosystems.',
   },
+  {
+    id: 'c-ecf110',
+    code: 'ECF110',
+    name: 'Introduction to Macroeconomics',
+    year: 1,
+    semester: 2,
+    color: '#0ea5e9', // sky
+    description: 'National income, AD-AS, the government and monetary sectors, unemployment, inflation and international trade.',
+  },
 ];
 
 export const INITIAL_NOTES: Note[] = [

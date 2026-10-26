@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=1280, height=720" />
+<meta name="hyperframes" data-width="1280" data-height="720" />
+<title>Demand-pull and cost-push inflation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@500;600;700&family=Young+Serif&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
+<link rel="stylesheet" href="../base.css" />
+<script src="../gsap.min.js"></script>
+<style></style>
+</head>
+<body>
+<div id="stage" data-composition-id="econ-inflation" data-width="1280" data-height="720" data-duration="15">
+  <div id="cap">
+    <div class="step" id="c1">1 · Starting point <small>AD meets short-run AS at price level <em>P₁</em> and output <em>Y₁</em>.</small></div>
+    <div class="step" id="c2">2 · Demand-pull <small>Too much spending chasing too few goods: AD shifts right, <em>prices and output rise</em>.</small></div>
+    <div class="step" id="c3">3 · Cost-push <small>Back to the start. Costs rise instead (wages, fuel, imported inputs): AS shifts left.</small></div>
+    <div class="step" id="c4">4 · Stagflation <small>Prices rise <em>and</em> output falls at the same time.</small></div>
+    <div class="step" id="c5">5 · The policy dilemma <small>Boosting AD restores output, but pushes prices higher still.</small></div>
+  </div>
+  <svg id="plot" viewBox="0 0 1280 720"></svg>
+  <div class="panel">
+    <div class="box" id="b1" style="opacity:0;"><h4>Result</h4><div class="eq" id="e1">P = 50, Y = 50</div></div>
+    <div class="tag warm" id="causes" style="position:relative;opacity:0;white-space:normal;line-height:1.35;">higher wages · dearer fuel · weaker kwacha raises import costs</div>
+  </div>
+</div>
+<script src="../lib.js"></script>
+<script src="../econ.js"></script>
+<script>
+  var tl = G.tl;
+  G.caps([[0, 3], [3, 6], [6, 9], [9, 12], [12, 15]]);
+  var g = E.graph({ left: 150, top: 180, width: 560, height: 430, xmax: 100, ymax: 100, xlabel: 'Real output, Y', ylabel: 'Price level, P' });
+  function ad(c) { return [[(c - 95) / 0.8, 95], [(c - 8) / 0.8, 8]]; }
+  function as(c) { return [[Math.max(4, (8 - c) / 0.8), Math.max(8, c + 3.2)], [(95 - c) / 0.8, 95]]; }
+  var a1 = ad(90), s1 = as(10);
+  E.line(g, 'ad', a1[0], a1[1], 'hi', { hidden: true });
+  E.line(g, 'as', s1[0], s1[1], 'tx', { hidden: true });
+  function lab(ends) { return E.clip(g, ends[0], ends[1]); }
+  E.text(g.X(lab(a1)[1][0]) - 6, g.Y(lab(a1)[1][1]) - 16, 'AD', { id: 'tad', hidden: true, fill: G.HI, anchor: 'end' });
+  E.text(g.X(lab(s1)[1][0]) - 6, g.Y(lab(s1)[1][1]) - 4, 'SRAS', { id: 'tas', hidden: true, anchor: 'end' });
+  E.point(g, 'p', 50, 50);
+  /* 1 */ E.draw('#ad', 0.3, 1); E.draw('#as', 0.6, 1); E.show('#tad', 1.2); E.show('#tas', 1.4); E.showPoint('p', 1.8); E.show('#b1', 2.0);
+  /* 2 demand-pull: AD to 110 */
+  var a2 = ad(110); E.moveLine(g, '#ad', a2[0], a2[1], 3.3, 1.2); tl.to('#tad', { attr: { x: g.X(lab(a2)[1][0]) - 6, y: g.Y(lab(a2)[1][1]) - 16 }, duration: 1.2 }, 3.3);
+  E.movePoint(g, 'p', 62.5, 60, 3.3, 1.2); G.txt('#e1', 'P 50 → 60   Y 50 → 62.5', 4.0);
+  /* 3 cost-push: reset AD, AS left */
+  E.moveLine(g, '#ad', a1[0], a1[1], 6.2, 0.6); tl.to('#tad', { attr: { x: g.X(lab(a1)[1][0]) - 6, y: g.Y(lab(a1)[1][1]) - 16 }, duration: 0.6 }, 6.2);
+  E.movePoint(g, 'p', 50, 50, 6.2, 0.6); G.txt('#e1', 'P = 50, Y = 50', 6.3);
+  var s2 = as(30); E.moveLine(g, '#as', s2[0], s2[1], 7.0, 1.2); tl.to('#tas', { attr: { x: g.X(lab(s2)[1][0]) - 6, y: g.Y(lab(s2)[1][1]) - 4 }, duration: 1.2 }, 7.0);
+  E.movePoint(g, 'p', 37.5, 60, 7.0, 1.2); E.show('#causes', 6.6);
+  G.txt('#e1', 'P 50 → 60   Y 50 → 37.5', 7.8);
+  /* 4 */ G.glow('#b1', 9.3, 2.0, 'warn');
+  /* 5 dilemma */ E.moveLine(g, '#ad', a2[0], a2[1], 12.3, 1.2); tl.to('#tad', { attr: { x: g.X(lab(a2)[1][0]) - 6, y: g.Y(lab(a2)[1][1]) - 16 }, duration: 1.2 }, 12.3);
+  E.movePoint(g, 'p', 50, 70, 12.3, 1.2); G.txt('#e1', 'Y back to 50, P now 70', 13.0);
+  G.end(15);
+  window.__timelines = window.__timelines || {};
+  window.__timelines['econ-inflation'] = tl;
+</script>
+</body>
+</html>

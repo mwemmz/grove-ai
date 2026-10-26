@@ -1,3 +1,5 @@
+import { ECON_TOPICS, type EconTopicId } from './econVisuals';
+
 /** Everything the Visuals tab needs: animations (HyperFrames compositions), written notes, quizzes, and the course map. */
 
 export interface VisualStep {
@@ -25,11 +27,13 @@ export interface TopicNotes {
   watchOut: string[];
 }
 
-export type TopicId = 'cpu' | 'stack-queue' | 'linked-list' | 'bst' | 'hash-table';
+export type TopicId = 'cpu' | 'stack-queue' | 'linked-list' | 'bst' | 'hash-table' | EconTopicId;
 
 export interface VisualTopic {
   id: TopicId;
-  group: 'Computer systems' | 'Data structures';
+  group: 'Computer systems' | 'Data structures' | 'Economics';
+  /** The lecture unit it belongs to, shown under the title. */
+  unit?: string;
   name: string;
   courseCode: string;
   src: string;
@@ -42,7 +46,7 @@ export interface VisualTopic {
 const even = (titles: [string, string][], each: number): VisualStep[] =>
   titles.map(([title, text], i) => ({ title, text, t0: i * each, t1: (i + 1) * each }));
 
-export const VISUAL_TOPICS: VisualTopic[] = [
+const BASE_TOPICS: VisualTopic[] = [
   {
     id: 'cpu',
     group: 'Computer systems',
@@ -274,6 +278,8 @@ export const VISUAL_TOPICS: VisualTopic[] = [
   },
 ];
 
+export const VISUAL_TOPICS: VisualTopic[] = [...BASE_TOPICS, ...ECON_TOPICS];
+
 export const TOPIC_BY_ID = Object.fromEntries(VISUAL_TOPICS.map((t) => [t.id, t])) as Record<TopicId, VisualTopic>;
 
 /** Click-the-part layout for the CPU animation (positions in the 1280x720 composition). */
@@ -309,6 +315,7 @@ export const BUILDS_ON: Record<string, string[]> = {
   CS302: ['CS202', 'CS103'],
   CS401: ['CS301', 'CS302'],
   CS402: ['CS201', 'CS301'],
+  ECF110: [],
 };
 
 export const VISUALS_FOR_COURSE = (code: string): VisualTopic[] => VISUAL_TOPICS.filter((t) => t.courseCode === code);

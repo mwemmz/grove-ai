@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=1280, height=720" />
+<meta name="hyperframes" data-width="1280" data-height="720" />
+<title>The money market and liquidity preference</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@500;600;700&family=Young+Serif&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
+<link rel="stylesheet" href="../base.css" />
+<script src="../gsap.min.js"></script>
+<style></style>
+</head>
+<body>
+<div id="stage" data-composition-id="econ-money-market" data-width="1280" data-height="720" data-duration="18">
+  <div id="cap">
+    <div class="step" id="c1">1 · Money demand <small>People hold less money when interest rates are high: <em>(M/P)ᵈ = 1,000 − 100r</em>.</small></div>
+    <div class="step" id="c2">2 · Money supply <small>The Bank of Zambia fixes M = 1,000. With P = 2, real balances M/P = <em>500</em>.</small></div>
+    <div class="step" id="c3">3 · Equilibrium <small>500 = 1,000 − 100r, so the interest rate settles at <em>r = 5%</em>.</small></div>
+    <div class="step" id="c4">4 · BoZ raises M to 1,200 <small>M/P rises to 600: 600 = 1,000 − 100r, so <em>r falls to 4%</em>. Borrowing gets cheaper.</small></div>
+    <div class="step" id="c5">5 · Income rises <small>More transactions raise money demand. The curve shifts right and <em>r rises again</em>.</small></div>
+  </div>
+  <svg id="plot" viewBox="0 0 1280 720"></svg>
+  <div class="panel">
+    <div class="box" id="b1" style="opacity:0;"><h4>Money demand</h4><div class="eq">(M/P)ᵈ = L(<i>−r</i>, <b>+Y</b>)</div><div class="sub">r ↑ → hold less money · Y ↑ → hold more</div></div>
+    <div class="box" id="b2" style="opacity:0;"><h4>Interest rate</h4><div class="eq" id="e2">r = <b>5%</b></div></div>
+    <div class="tag good" id="chain" style="position:relative;opacity:0;white-space:normal;line-height:1.35;">lower r → more investment → AD rises</div>
+  </div>
+</div>
+<script src="../lib.js"></script>
+<script src="../econ.js"></script>
+<script>
+  var tl = G.tl;
+  G.caps([[0, 3.5], [3.5, 7], [7, 10.5], [10.5, 14], [14, 18]]);
+  var g = E.graph({ left: 150, top: 180, width: 560, height: 430, xmax: 1100, ymax: 10, xlabel: 'Real money balances, M/P', ylabel: 'Interest rate, r (%)' });
+  E.line(g, 'md', [100, 9], [950, 0.5], 'hi', { hidden: true });
+  E.text(g.X(100) + 22, g.Y(9) - 4, 'L(r, Y₁)', { id: 'tmd', hidden: true, fill: G.HI });
+  E.line(g, 'ms', [500, 0], [500, 9.6], 'tx', { hidden: true });
+  E.text(g.X(500) + 10, g.Y(9.6), 'M/P', { id: 'tms', hidden: true });
+  E.point(g, 'p', 500, 5);
+  E.text(g.X(500), g.Y(0) + 30, '500', { anchor: 'middle', cls: 'tick', id: 'x500', hidden: true });
+  E.text(g.X(600), g.Y(0) + 56, '600', { anchor: 'middle', cls: 'tick', id: 'x600', hidden: true });
+  E.text(g.X(0) - 12, g.Y(5) + 7, '5', { anchor: 'end', cls: 'tick', id: 'y5', hidden: true });
+  E.text(g.X(0) - 12, g.Y(4) + 7, '4', { anchor: 'end', cls: 'tick', id: 'y4', hidden: true });
+  /* 1 */ E.draw('#md', 0.4, 1.1); E.show('#tmd', 1.3); E.show('#b1', 0.8);
+  /* 2 */ E.draw('#ms', 3.8, 1.0); E.show('#tms', 4.6); E.show('#x500', 4.6);
+  /* 3 */ E.showPoint('p', 7.3); E.show('#y5', 7.5); E.show('#b2', 7.6);
+  /* 4 */ E.moveLine(g, '#ms', [600, 0], [600, 9.6], 10.8, 1.2); tl.to('#tms', { attr: { x: g.X(600) + 10 }, duration: 1.2 }, 10.8);
+          E.movePoint(g, 'p', 600, 4, 10.8, 1.2); E.show('#x600', 11.4); E.show('#y4', 11.6); G.txt('#e2', 'r = 5% → 4%', 11.6); E.show('#chain', 12.2);
+  /* 5 */ E.moveLine(g, '#md', [200, 9], [1050, 0.5], 14.4, 1.2); tl.to('#tmd', { attr: { x: g.X(200) + 22 }, duration: 1.2 }, 14.4);
+          G.txt('#tmd', 'L(r, Y₂)', 14.4); E.movePoint(g, 'p', 600, 5, 14.4, 1.2); G.txt('#e2', 'r = 4% → 5%', 15.2);
+  G.end(18);
+  window.__timelines = window.__timelines || {};
+  window.__timelines['econ-money-market'] = tl;
+</script>
+</body>
+</html>

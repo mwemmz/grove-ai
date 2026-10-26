@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=1280, height=720" />
+<meta name="hyperframes" data-width="1280" data-height="720" />
+<title>The circular flow of income</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@500;600;700&family=Young+Serif&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
+<link rel="stylesheet" href="../base.css" />
+<script src="../gsap.min.js"></script>
+<style>#hh { left: 90px; top: 300px; width: 270px; height: 120px; }
+  #fm { left: 920px; top: 300px; width: 270px; height: 120px; }
+  .sm { width: 190px; height: 76px; top: 618px; opacity: 0; padding: 8px 14px; }
+  .sm h4 { margin-bottom: 4px; } .sm .val { font-size: 22px; }</style>
+</head>
+<body>
+<div id="stage" data-composition-id="econ-circular-flow" data-width="1280" data-height="720" data-duration="15">
+  <div id="cap">
+    <div class="step" id="c1">1 · Two sectors <small>Households own the land, labour and capital. Firms use them to produce.</small></div>
+    <div class="step" id="c2">2 · The real flow <small>Factor services go to firms. Goods and services come back to households.</small></div>
+    <div class="step" id="c3">3 · The money flow <small>Firms pay incomes. Households spend them. <em>Output = income = expenditure.</em></small></div>
+    <div class="step" id="c4">4 · Leakages <small>Saving, taxes and imports leave the flow, so spending on local firms falls.</small></div>
+    <div class="step" id="c5">5 · Injections <small>Investment, government spending and exports come back in. Balance: <em>S + T + M = I + G + X</em>.</small></div>
+  </div>
+  <svg id="plot" viewBox="0 0 1280 720"></svg>
+  <div class="box" id="hh"><h4>Households</h4><div class="val">own factors</div></div>
+  <div class="box" id="fm"><h4>Firms</h4><div class="val">produce</div></div>
+  <div class="box sm" id="bk" style="left:330px;"><h4>Banks</h4><div class="val">S → I</div></div>
+  <div class="box sm" id="gv" style="left:545px;"><h4>Government</h4><div class="val">T → G</div></div>
+  <div class="box sm" id="ab" style="left:760px;"><h4>Abroad</h4><div class="val">M → X</div></div>
+  <div class="lbl" id="l-goods" style="left:520px; top:132px; opacity:0;">← goods &amp; services</div>
+  <div class="lbl" id="l-spend" style="left:540px; top:256px; opacity:0;">spending (C) →</div>
+  <div class="lbl" id="l-fact" style="left:500px; top:440px; opacity:0;">land, labour, capital →</div>
+  <div class="lbl" id="l-inc" style="left:460px; top:572px; opacity:0;">← wages, rent, interest, profit</div>
+  <div class="chip" id="k1">labour</div><div class="chip" id="k2">goods</div>
+  <div class="chip" id="k3">K wages</div><div class="chip" id="k4">K spending</div>
+  <div class="chip warm" id="k5">S</div><div class="chip warm" id="k6">T</div><div class="chip warm" id="k7">M</div>
+  <div class="chip" id="k8">I</div><div class="chip" id="k9">G</div><div class="chip" id="k10">X</div>
+  <div class="tag good" id="t-eq" style="left:455px; top:342px;">output = income = expenditure</div>
+  <div class="tag warm" id="t-bal" style="left:515px; top:342px;">S + T + M = I + G + X</div>
+</div>
+<script src="../lib.js"></script>
+<script src="../econ.js"></script>
+<script>
+  var tl = G.tl;
+  G.caps([[0, 3], [3, 6], [6, 9], [9, 12], [12, 15]]);
+  var s = document.getElementById('plot');
+  var wires = E.el('g', { fill: 'none' }, s);
+  function arc(d, id) { E.el('path', { d: d, id: id, stroke: G.LO, 'stroke-width': 5, 'stroke-linecap': 'round' }, wires); }
+  arc('M 1010 300 C 1000 127, 280 127, 270 300', 'w-goods');
+  arc('M 310 300 C 320 227, 960 227, 970 300', 'w-spend');
+  arc('M 310 420 C 320 513, 960 513, 970 420', 'w-fact');
+  arc('M 1010 420 C 1000 620, 280 620, 270 420', 'w-inc');
+
+  /* 1 */
+  G.glow('#hh', 0.3, 2.4); G.glow('#fm', 0.8, 2.0);
+  /* 2 real flow */
+  G.fade('#l-fact', 3.2); G.fade('#l-goods', 4.4);
+  G.wire('#w-fact', 3.2, 1.8); G.chip('#k1', [[310, 420], [640, 490], [970, 420]], 3.3, 0.6);
+  G.wire('#w-goods', 4.5, 1.8); G.chip('#k2', [[1010, 300], [640, 170], [270, 300]], 4.6, 0.6);
+  /* 3 money flow */
+  G.fade('#l-inc', 6.2); G.fade('#l-spend', 7.2);
+  G.wire('#w-inc', 6.2, 1.8); G.chip('#k3', [[1010, 420], [640, 570], [270, 420]], 6.3, 0.6);
+  G.wire('#w-spend', 7.3, 1.8); G.chip('#k4', [[310, 300], [640, 245], [970, 300]], 7.4, 0.6);
+  G.pop('#t-eq', 8.0); G.fade('#t-eq', 8.9, 0);
+  /* 4 leakages */
+  G.fade('#bk', 9.1); G.fade('#gv', 9.1); G.fade('#ab', 9.1);
+  G.chip('#k5', [[225, 420], [425, 655]], 9.4, 0.7, 0.3);
+  G.chip('#k6', [[225, 420], [640, 655]], 9.8, 0.8, 0.3);
+  G.chip('#k7', [[225, 420], [855, 655]], 10.2, 0.9, 0.3);
+  G.glow('#bk', 10.0, 1.4, 'warn'); G.glow('#gv', 10.4, 1.4, 'warn'); G.glow('#ab', 10.8, 1.4, 'warn');
+  /* 5 injections */
+  G.chip('#k8', [[425, 620], [1055, 420]], 12.3, 0.9, 0.2);
+  G.chip('#k9', [[640, 620], [1055, 420]], 12.7, 0.8, 0.2);
+  G.chip('#k10', [[855, 620], [1055, 420]], 13.1, 0.7, 0.2);
+  G.glow('#fm', 12.6, 1.8);
+  G.pop('#t-bal', 14.0);
+  G.end(15);
+  window.__timelines = window.__timelines || {};
+  window.__timelines['econ-circular-flow'] = tl;
+</script>
+</body>
+</html>

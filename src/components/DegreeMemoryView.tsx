@@ -1,15 +1,24 @@
-import React, { useRef, useState } from 'react';
+import React, { Suspense, lazy, useRef, useState } from 'react';
 import { FileUp } from 'lucide-react';
 import { Note, Course, AcademicYear } from '../types';
 import { storage } from '../services/storage';
 import { ACCEPT, extractText } from '../services/fileText';
 import { Modal, Inline, field, labelCls, primaryBtn, panel } from './ui';
+import { placeVisuals } from '../data/econVisuals';
+import type { TopicId } from '../data/visualTopics';
+import { parseNotesPack } from '../services/notesPack';
+
+const VisualCard = lazy(() => import('./VisualCard'));
 
 interface DegreeMemoryViewProps {
   notes: Note[];
   setNotes: React.Dispatch<React.SetStateAction<Note[]>>;
   courses: Course[];
   selectedNoteForDetail: Note | null;
+  /** Adds a course if a notes pack brings one the student doesn't have yet. */
+  onAddCourse?: (course: Course) => void;
+  /** Opens a picture in the Visuals tab. */
+  onOpenVisual?: (id: TopicId) => void;
   setSelectedNoteForDetail: (note: Note | null) => void;
 }
 
@@ -27,12 +36,37 @@ function autoTags(text: string): string[] {
     .map(([w]) => w);
 }
 
+function renderPara(para: string, idx: number) {
+  if (para.startsWith('# ')) return <h3 key={idx} className="pt-2 text-lg font-semibold">{para.replace('# ', '')}</h3>;
+  if (para.startsWith('### ')) {
+    // A slide: its title, then its lines.
+    const [head, ...rest] = para.split('\n');
+    return (
+      <div key={idx} className="space-y-1">
+        <h4 className="pt-1 text-base font-semibold">{head.replace('### ', '')}</h4>
+        {rest.length > 0 && <p className="whitespace-pre-wrap"><Inline text={rest.join('\n')} /></p>}
+      </div>
+    );
+  }
+  if (para.startsWith('```')) {
+    const code = para.split('\n').slice(1, -1).join('\n');
+    return (
+      <pre key={idx} className="overflow-x-auto rounded-lg bg-bg p-4 font-mono text-[13px] leading-6">
+        <code>{code}</code>
+      </pre>
+    );
+  }
+  return <p key={idx} className="whitespace-pre-wrap"><Inline text={para} /></p>;
+}
+
 export const DegreeMemoryView: React.FC<DegreeMemoryViewProps> = ({
   notes,
   setNotes,
   courses,
   selectedNoteForDetail,
   setSelectedNoteForDetail,
+  onAddCourse,
+  onOpenVisual,
 }) => {
   const [query, setQuery] = useState('');
   const [saved, setSaved] = useState(false);
@@ -86,6 +120,46 @@ export const DegreeMemoryView: React.FC<DegreeMemoryViewProps> = ({
     setUploadMsg(null);
     const done: { title: string; text: string; truncated: boolean }[] = [];
     const problems: string[] = [];
+    // A Grove notes pack (.json) brings a whole course at once: add it and its notes directly.
+    for (const f of files.filter((x) => x.name.toLowerCase().endsWith('.json'))) {
+      const pack = parseNotesPack(await f.text().catch(() => ''));
+      if (!pack) continue;
+      files.splice(files.indexOf(f), 1);
+      let course = courses.find((c) => c.code === pack.course.code);
+      if (!course) {
+        course = { id: `c-${pack.course.code.toLowerCase()}-${Date.now().toString(36)}`, ...pack.course };
+        onAddCourse?.(course);
+      }
+      const have = new Set(notes.filter((n) => n.courseId === course!.id).map((n) => n.title));
+      const now = new Date().toISOString();
+      const fresh = pack.notes
+        .filter((n) => !have.has(n.title))
+        .map((n, i): Note => ({
+          id: `note-${Date.now()}-p${i}`,
+          courseId: course!.id,
+          year: course!.year,
+          title: n.title,
+          content: n.content,
+          summary: n.summary || n.content.replace(/\s+/g, ' ').slice(0, 140),
+          tags: n.tags?.length ? n.tags : autoTags(`${n.title} ${n.content}`),
+          keyTakeaways: n.keyTakeaways ?? [],
+          createdAt: now,
+          updatedAt: now,
+        }));
+      const updated = [...fresh, ...notes];
+      setNotes(updated);
+      storage.saveNotes(updated);
+      setReading(false);
+      setUploadMsg({
+        ok: true,
+        text:
+          fresh.length === 0
+            ? `All ${pack.notes.length} ${pack.course.code} notes are already here.`
+            : `Added ${fresh.length} ${pack.course.code} notes${pack.notes.length > fresh.length ? ` (${pack.notes.length - fresh.length} were already here)` : ''}. Open one to see the pictures beside the slides.`,
+      });
+      if (fileRef.current) fileRef.current.value = '';
+      return;
+    }
     for (const f of files) {
       try {
         done.push(await extractText(f));
@@ -276,25 +350,24 @@ export const DegreeMemoryView: React.FC<DegreeMemoryViewProps> = ({
           </p>
 
           <div className="mt-5 space-y-4 text-[15px] leading-7 text-text">
-            {detail.content.split('\n\n').map((para, idx) => {
-              if (para.startsWith('# ')) {
-                return <h3 key={idx} className="pt-2 text-lg font-semibold">{para.replace('# ', '')}</h3>;
-              }
-              if (para.startsWith('### ')) {
-                return <h4 key={idx} className="pt-1 text-base font-semibold">{para.replace('### ', '')}</h4>;
-              }
-              if (para.startsWith('```')) {
-                const code = para.split('\n').slice(1, -1).join('\n');
-                return (
-                  <pre key={idx} className="overflow-x-auto rounded-lg bg-bg p-4 font-mono text-[13px] leading-6">
-                    <code>{code}</code>
-                  </pre>
-                );
-              }
-              return <p key={idx} className="whitespace-pre-wrap"><Inline text={para} /></p>;
-            })}
+            {(() => {
+              // Dual coding: each picture sits right after the slide that explains the same idea (at most four per note).
+              const paras = detail.content.split('\n\n');
+              const spots = placeVisuals(paras);
+              return paras.map((para, idx) => (
+                <React.Fragment key={idx}>
+                  {renderPara(para, idx)}
+                  {(spots.get(idx) ?? []).map((id: TopicId) => (
+                    <Suspense key={id} fallback={null}>
+                      <div className="max-w-xl">
+                        <VisualCard topicId={id} onOpen={onOpenVisual ? (t) => { setSelectedNoteForDetail(null); onOpenVisual(t); } : undefined} />
+                      </div>
+                    </Suspense>
+                  ))}
+                </React.Fragment>
+              ));
+            })()}
           </div>
-
           {detail.keyTakeaways && detail.keyTakeaways.length > 0 && (
             <div className="mt-6 rounded-xl bg-bg p-4">
               <h3 className="text-sm font-medium text-muted">Key takeaways</h3>

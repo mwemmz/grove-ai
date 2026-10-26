@@ -5,6 +5,8 @@ import { Note, Course } from '../types';
 import { getStoredTheme, themeById, visualPalette } from '../themes';
 import { Segmented, labelCls, panel, primaryBtn, quietBtn, chip } from './ui';
 import type { StudyPreset } from './StudyView';
+import { EconLab } from './EconLab';
+import { econVisualsFor } from '../data/econVisuals';
 import {
   BUILDS_ON,
   CPU_PARTS,
@@ -23,6 +25,8 @@ interface VisualsViewProps {
   currentYear: number;
   onOpenNote: (noteId: string) => void;
   onStartSession: (preset: StudyPreset) => void;
+  /** Open straight onto this topic, e.g. from a "See it" link on an answer or a note. */
+  focusTopic?: TopicId | null;
 }
 
 type View = 'animations' | 'programme';
@@ -59,6 +63,9 @@ function TopicPlayer({
   const finished = qIndex >= total;
   const course = courses.find((c) => c.code === topic.courseCode);
   const courseNotes = notes.filter((n) => n.courseId === course?.id);
+  // Notes that talk about this picture: the words that go with it, in the student's own material.
+  const matchingNotes = courseNotes.filter((n) => econVisualsFor(`${n.title} ${n.content}`, 3).includes(topic.id as never));
+  const relatedNotes = (matchingNotes.length ? matchingNotes : courseNotes).slice(0, 3);
 
   useEffect(() => {
     const el = playerRef.current;
@@ -139,7 +146,7 @@ function TopicPlayer({
           <h2 className="font-display text-2xl text-text">{topic.name}</h2>
           <p className="mt-1 text-sm text-muted">
             {topic.courseCode}
-            {course ? ` · ${course.name}` : ''} · {isCpu ? 'click any part to see what it does' : 'press a step, or play it all'}
+            {topic.unit ? ` · ${topic.unit}` : course ? ` · ${course.name}` : ''} · {isCpu ? 'click any part to see what it does' : 'press a step, or play it all'}
           </p>
         </div>
         <Segmented
@@ -310,6 +317,8 @@ function TopicPlayer({
         </section>
       )}
 
+      <EconLab topicId={topic.id} />
+
       <section className={`${panel} space-y-5`} aria-label={`${topic.name} notes`}>
         <div>
           <p className={labelCls}>Notes</p>
@@ -372,11 +381,11 @@ function TopicPlayer({
           >
             Practise with blurting
           </button>
-          {courseNotes[0] && (
-            <button onClick={() => onOpenNote(courseNotes[0].id)} className={quietBtn}>
-              Open your {topic.courseCode} notes
+          {relatedNotes.map((n) => (
+            <button key={n.id} onClick={() => onOpenNote(n.id)} className={quietBtn} title="Open the note this picture explains">
+              Read: {n.title.length > 42 ? n.title.slice(0, 40) + '…' : n.title}
             </button>
-          )}
+          ))}
         </div>
       </section>
     </div>
@@ -541,9 +550,15 @@ function ProgrammeMap({
 
 /* ---------------------------------------------------------------- tab */
 
-export const VisualsView: React.FC<VisualsViewProps> = ({ notes, courses, currentYear, onOpenNote, onStartSession }) => {
+export const VisualsView: React.FC<VisualsViewProps> = ({ notes, courses, currentYear, onOpenNote, onStartSession, focusTopic }) => {
   const [view, setView] = useState<View>('animations');
-  const [topicId, setTopicId] = useState<TopicId>('cpu');
+  const [topicId, setTopicId] = useState<TopicId>(focusTopic ?? 'cpu');
+  useEffect(() => {
+    if (focusTopic) {
+      setTopicId(focusTopic);
+      setView('animations');
+    }
+  }, [focusTopic]);
   const topic = TOPIC_BY_ID[topicId];
   const [themeId, setThemeId] = useState(getStoredTheme);
   useEffect(() => {
@@ -551,7 +566,7 @@ export const VisualsView: React.FC<VisualsViewProps> = ({ notes, courses, curren
     window.addEventListener('grove-theme-changed', on);
     return () => window.removeEventListener('grove-theme-changed', on);
   }, []);
-  const groups = ['Computer systems', 'Data structures'] as const;
+  const groups = ['Economics', 'Computer systems', 'Data structures'] as const;
 
   return (
     <div className="space-y-5">

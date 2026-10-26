@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=1280, height=720" />
+<meta name="hyperframes" data-width="1280" data-height="720" />
+<title>Aggregate demand and the three ranges of supply</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@500;600;700&family=Young+Serif&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
+<link rel="stylesheet" href="../base.css" />
+<script src="../gsap.min.js"></script>
+<style></style>
+</head>
+<body>
+<div id="stage" data-composition-id="econ-ad-as" data-width="1280" data-height="720" data-duration="18">
+  <div id="cap">
+    <div class="step" id="c1">1 · Why AD slopes down <small>A lower price level raises real wealth, cuts interest rates and makes exports cheaper.</small></div>
+    <div class="step" id="c2">2 · Three ranges of AS <small>Flat with spare capacity (Keynesian), rising (intermediate), vertical at full employment (classical).</small></div>
+    <div class="step" id="c3">3 · AD rises, Keynesian range <small>Idle resources are put to work: <em>output rises, prices stay put</em>.</small></div>
+    <div class="step" id="c4">4 · AD rises, intermediate range <small>Bottlenecks appear: <em>output and prices both rise</em>.</small></div>
+    <div class="step" id="c5">5 · AD rises, classical range <small>The economy is at full employment: <em>only prices rise</em>. That is inflation.</small></div>
+  </div>
+  <svg id="plot" viewBox="0 0 1280 720"></svg>
+  <div class="panel">
+    <div class="box" id="b1" style="opacity:0;"><h4>AD slopes down because</h4><div class="sub" style="font-size:20px;color:var(--tx);">① real balance (wealth) effect<br/>② interest rate effect<br/>③ foreign trade effect</div></div>
+    <div class="box" id="b2" style="opacity:0;"><h4>What changed</h4><div class="eq" id="e2">–</div></div>
+  </div>
+</div>
+<script src="../lib.js"></script>
+<script src="../econ.js"></script>
+<script>
+  var tl = G.tl;
+  G.caps([[0, 3.5], [3.5, 7.4], [7.4, 10.9], [10.9, 14.4], [14.4, 18]]);
+  var g = E.graph({ left: 150, top: 180, width: 560, height: 430, xmax: 1000, ymax: 120, xlabel: 'Real output, Y', ylabel: 'Price level, P' });
+  var AS = [];
+  for (var y = 40; y <= 420; y += 20) AS.push([y, 30]);
+  for (var y2 = 440; y2 <= 760; y2 += 20) AS.push([y2, 30 + 52 * Math.pow((y2 - 420) / 340, 2.4)]);
+  AS.push([780, 95]); AS.push([785, 116]);
+  E.curve(g, 'as', AS, 'tx', { hidden: true, w: 5 });
+  E.text(g.X(20), g.Y(30) - 16, 'Keynesian', { cls: 'tick', id: 'r1', hidden: true });
+  E.text(g.X(560), g.Y(48) - 4, 'intermediate', { cls: 'tick', id: 'r2', hidden: true, anchor: 'end' });
+  E.text(g.X(800), g.Y(110), 'classical', { cls: 'tick', id: 'r3', hidden: true });
+  E.text(g.X(785), g.Y(0) + 30, 'Yf', { anchor: 'middle', cls: 'cl', id: 'yf', hidden: true });
+  E.text(g.X(940), g.Y(118), 'AS', { cls: 'cl', id: 'tas', hidden: true });
+  function asP(y) { for (var i = 1; i < AS.length; i++) if (AS[i][0] >= y) { var a = AS[i - 1], b = AS[i]; return a[1] + (b[1] - a[1]) * (y - a[0]) / (b[0] - a[0]); } return 200; }
+  function cross(c) { var lo = 0, hi = 784; for (var k = 0; k < 60; k++) { var m = (lo + hi) / 2; if (c - 0.12 * m > asP(m)) lo = m; else hi = m; } return [lo, c - 0.12 * lo]; }
+  function adEnds(c) { return [[Math.max(0, (c - 115) / 0.12), Math.min(115, c)], [(c - 4) / 0.12 > 1000 ? 1000 : (c - 4) / 0.12, c - 0.12 * Math.min(1000, (c - 4) / 0.12)]]; }
+  var cs = [62, 78, 108, 148];
+  var e0 = adEnds(cs[0]);
+  E.line(g, 'ad', e0[0], e0[1], 'hi', { hidden: true });
+  E.text(g.X(e0[1][0]) - 46, g.Y(e0[1][1]) - 12, 'AD', { id: 'tad', hidden: true, fill: G.HI });
+  var p0 = cross(cs[0]);
+  E.point(g, 'p', p0[0], p0[1]);
+
+  /* 1 */ E.draw('#ad', 0.4, 1.1); E.show('#tad', 1.3); E.show('#b1', 0.8);
+  /* 2 */ E.draw('#as', 3.6, 1.6); E.show('#r1', 4.3); E.show('#r2', 4.9); E.show('#r3', 5.4); E.show('#tas', 5.2); E.show('#yf', 5.6);
+          E.showPoint('p', 6.0); tl.to('#b1', { opacity: 0, duration: 0.3 }, 6.6); E.show('#b2', 6.8);
+  [1, 2, 3].forEach(function (k) {
+    var at = 3.5 * (k + 1) + 0.4, e = adEnds(cs[k]), p = cross(cs[k]);
+    E.moveLine(g, '#ad', e[0], e[1], at, 1.2);
+    E.moveText(g, '#tad', 0, 0, at, 0.01);
+    tl.to('#tad', { attr: { x: g.X(e[1][0]) - 46, y: g.Y(e[1][1]) - 12 }, duration: 1.2 }, at);
+    E.movePoint(g, 'p', p[0], p[1], at, 1.2);
+    G.txt('#e2', ['', 'Y ↑   P same', 'Y ↑   P ↑', 'Y same   P ↑'][k], at + 0.8);
+  });
+  G.end(18);
+  window.__timelines = window.__timelines || {};
+  window.__timelines['econ-ad-as'] = tl;
+</script>
+</body>
+</html>

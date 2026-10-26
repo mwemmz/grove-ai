@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { db } from './db.js';
 import {
   chatMessages,
@@ -62,6 +62,12 @@ import {
   INITIAL_TUTOR_REQUESTS,
 } from '../../src/data/mockData.js';
 
+/** Serialises writes to one user's table: a replace is "delete all, then insert", so two overlapping
+ *  replaces (first-load seeding from parallel requests, or two quick saves) would otherwise collide. */
+async function lockFor(tx: { execute: (q: ReturnType<typeof sql>) => Promise<unknown> }, userId: string, table: string) {
+  await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${userId + ':' + table}))`);
+}
+
 export async function listCourses(userId: string): Promise<Course[]> {
   const rows = await db.select().from(courses).where(eq(courses.userId, userId));
   return rows.map(fromCourseRow);
@@ -69,6 +75,7 @@ export async function listCourses(userId: string): Promise<Course[]> {
 
 export async function replaceCourses(userId: string, items: Course[]): Promise<void> {
   await db.transaction(async (tx) => {
+    await lockFor(tx, userId, 'courses');
     await tx.delete(courses).where(eq(courses.userId, userId));
     if (items.length > 0) {
       await tx.insert(courses).values(items.map((c) => ({ ...c, userId })));
@@ -83,6 +90,7 @@ export async function listNotes(userId: string): Promise<Note[]> {
 
 export async function replaceNotes(userId: string, items: Note[]): Promise<void> {
   await db.transaction(async (tx) => {
+    await lockFor(tx, userId, 'notes');
     await tx.delete(notes).where(eq(notes.userId, userId));
     if (items.length > 0) {
       await tx.insert(notes).values(items.map((n) => ({ ...toNoteValues(n), userId })));
@@ -110,6 +118,7 @@ export async function listFlashcards(userId: string): Promise<Flashcard[]> {
 
 export async function replaceFlashcards(userId: string, items: Flashcard[]): Promise<void> {
   await db.transaction(async (tx) => {
+    await lockFor(tx, userId, 'flashcards');
     await tx.delete(flashcards).where(eq(flashcards.userId, userId));
     if (items.length > 0) {
       await tx.insert(flashcards).values(items.map((f) => ({ ...toFlashcardValues(f), userId })));
@@ -124,6 +133,7 @@ export async function listSkills(userId: string): Promise<PortfolioSkill[]> {
 
 export async function replaceSkills(userId: string, items: PortfolioSkill[]): Promise<void> {
   await db.transaction(async (tx) => {
+    await lockFor(tx, userId, 'portfolioSkills');
     await tx.delete(portfolioSkills).where(eq(portfolioSkills.userId, userId));
     if (items.length > 0) {
       await tx.insert(portfolioSkills).values(items.map((s) => ({ ...toSkillValues(s), userId })));
@@ -138,6 +148,7 @@ export async function listProjects(userId: string): Promise<PortfolioProject[]> 
 
 export async function replaceProjects(userId: string, items: PortfolioProject[]): Promise<void> {
   await db.transaction(async (tx) => {
+    await lockFor(tx, userId, 'portfolioProjects');
     await tx.delete(portfolioProjects).where(eq(portfolioProjects.userId, userId));
     if (items.length > 0) {
       await tx.insert(portfolioProjects).values(items.map((p) => ({ ...toProjectValues(p), userId })));
@@ -152,6 +163,7 @@ export async function listChat(userId: string): Promise<ChatMessage[]> {
 
 export async function replaceChat(userId: string, items: ChatMessage[]): Promise<void> {
   await db.transaction(async (tx) => {
+    await lockFor(tx, userId, 'chatMessages');
     await tx.delete(chatMessages).where(eq(chatMessages.userId, userId));
     if (items.length > 0) {
       await tx.insert(chatMessages).values(items.map((m) => ({ ...toChatValues(m), userId })));
@@ -166,6 +178,7 @@ export async function listSeniorComments(userId: string): Promise<SeniorComment[
 
 export async function replaceSeniorComments(userId: string, items: SeniorComment[]): Promise<void> {
   await db.transaction(async (tx) => {
+    await lockFor(tx, userId, 'seniorComments');
     await tx.delete(seniorComments).where(eq(seniorComments.userId, userId));
     if (items.length > 0) {
       await tx.insert(seniorComments).values(items.map((c) => ({ ...toSeniorCommentValues(c), userId })));
@@ -180,6 +193,7 @@ export async function listBlueprints(userId: string): Promise<StudyBlueprint[]> 
 
 export async function replaceBlueprints(userId: string, items: StudyBlueprint[]): Promise<void> {
   await db.transaction(async (tx) => {
+    await lockFor(tx, userId, 'studyBlueprints');
     await tx.delete(studyBlueprints).where(eq(studyBlueprints.userId, userId));
     if (items.length > 0) {
       await tx.insert(studyBlueprints).values(items.map((b) => ({ ...toBlueprintValues(b), userId })));
@@ -194,6 +208,7 @@ export async function listTutors(userId: string): Promise<TutorProfile[]> {
 
 export async function replaceTutors(userId: string, items: TutorProfile[]): Promise<void> {
   await db.transaction(async (tx) => {
+    await lockFor(tx, userId, 'tutors');
     await tx.delete(tutors).where(eq(tutors.userId, userId));
     if (items.length > 0) {
       await tx.insert(tutors).values(items.map((t) => ({ ...toTutorValues(t), userId })));
@@ -208,6 +223,7 @@ export async function listTutorRequests(userId: string): Promise<TutorRequest[]>
 
 export async function replaceTutorRequests(userId: string, items: TutorRequest[]): Promise<void> {
   await db.transaction(async (tx) => {
+    await lockFor(tx, userId, 'tutorRequests');
     await tx.delete(tutorRequests).where(eq(tutorRequests.userId, userId));
     if (items.length > 0) {
       await tx.insert(tutorRequests).values(items.map((r) => ({ ...toTutorRequestValues(r), userId })));
@@ -232,6 +248,7 @@ export async function seedUserData(userId: string): Promise<void> {
 /** Wipes all of a user's data and re-seeds the demo dataset. */
 export async function resetUserData(userId: string): Promise<void> {
   await db.transaction(async (tx) => {
+    await lockFor(tx, userId, 'chatMessages');
     await tx.delete(chatMessages).where(eq(chatMessages.userId, userId));
     await tx.delete(notes).where(eq(notes.userId, userId));
     await tx.delete(courses).where(eq(courses.userId, userId));

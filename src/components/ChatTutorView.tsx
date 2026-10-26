@@ -1,3 +1,4 @@
+import { lazyWithReload } from '../lib/lazyReload';
 import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { Note, LearningProfile, ChatMessage } from '../types';
 import { aiService } from '../services/aiService';
@@ -6,7 +7,7 @@ import { KIND_LABEL } from '../services/knowledge';
 import { picturesFor } from '../data/pictureMatch';
 import type { TopicId } from '../data/visualTopics';
 
-const VisualCard = lazy(() => import('./VisualCard'));
+const VisualCard = lazyWithReload(() => import('./VisualCard'));
 import { Disclosure, Toast, Inline, field, labelCls, primaryBtn, panel, chip } from './ui';
 
 /** Shown in `viewId` when the student pressed "New question": an empty composer, history untouched. */

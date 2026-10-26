@@ -31,11 +31,9 @@ async function ensureDbUser(clerkId: string): Promise<DbUser> {
     } catch {
       // Clerk user lookup is best-effort; the row is still usable without it.
     }
-    const inserted = await db
-      .insert(users)
-      .values({ clerkId, email, name })
-      .returning();
-    user = inserted[0];
+    // Several first requests arrive together; only one creates the row, the others read it.
+    await db.insert(users).values({ clerkId, email, name }).onConflictDoNothing({ target: users.clerkId });
+    user = (await db.select().from(users).where(eq(users.clerkId, clerkId)).limit(1))[0];
   }
 
   if (!user.seeded) {

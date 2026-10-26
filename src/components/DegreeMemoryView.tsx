@@ -1,3 +1,4 @@
+import { lazyWithReload } from '../lib/lazyReload';
 import React, { Suspense, lazy, useRef, useState } from 'react';
 import { FileUp } from 'lucide-react';
 import { Note, Course, AcademicYear } from '../types';
@@ -9,7 +10,7 @@ import type { TopicId } from '../data/visualTopics';
 import { parseNotesPack } from '../services/notesPack';
 import { COURSE_AUDIENCE, canSee, getStudentId } from '../services/access';
 
-const VisualCard = lazy(() => import('./VisualCard'));
+const VisualCard = lazyWithReload(() => import('./VisualCard'));
 
 interface DegreeMemoryViewProps {
   notes: Note[];

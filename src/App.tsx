@@ -1,3 +1,4 @@
+import { lazyWithReload } from './lib/lazyReload';
 import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { useAuth, useUser } from '@clerk/react';
 import { AuthScreen } from './components/AuthScreen';
@@ -16,7 +17,7 @@ import { QuizView } from './components/QuizView';
 import { StudyView, StudyPreset } from './components/StudyView';
 import { PlannerView } from './components/PlannerView';
 import { LibraryView } from './components/LibraryView';
-const VisualsView = lazy(() => import('./components/VisualsView').then((m) => ({ default: m.VisualsView })));
+const VisualsView = lazyWithReload(() => import('./components/VisualsView').then((m) => ({ default: m.VisualsView })));
 import { SettingsModal } from './components/SettingsModal';
 import {
   Note,

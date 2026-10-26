@@ -120,7 +120,9 @@ export async function handlePacks(req: HandlerReq, res: HandlerRes, user: DbUser
   }
 
   await ensureTable();
-  const code = segments[2]?.toUpperCase();
+  // ?code=BIT353 (Vercel's catch-all only routes one level under /api, so no /api/packs/BIT353 in production).
+  const q = req.query?.code;
+  const code = (segments[2] ?? (Array.isArray(q) ? q[0] : q) ?? new URL(req.url ?? '/', 'http://x').searchParams.get('code') ?? undefined)?.toUpperCase() || undefined;
 
   if (!code && method === 'GET') {
     // Summaries of the packs this student may have (admins see all, marked).

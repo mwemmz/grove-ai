@@ -15,11 +15,11 @@ export interface PackSummary {
 
 export const getMe = () => apiGet<{ studentId: string | null; admin: boolean }>('/me');
 export const listPacks = () => apiGet<PackSummary[]>('/packs');
-export const publishPack = (code: string, pack: unknown) => apiPut<{ ok: true; notes: number; audience: string | null }>(`/packs/${encodeURIComponent(code)}`, pack);
-export const removePack = (code: string) => apiDelete<{ ok: true }>(`/packs/${encodeURIComponent(code)}`);
+export const publishPack = (code: string, pack: unknown) => apiPut<{ ok: true; notes: number; audience: string | null }>(`/packs?code=${encodeURIComponent(code)}`, pack);
+export const removePack = (code: string) => apiDelete<{ ok: true }>(`/packs?code=${encodeURIComponent(code)}`);
 
 async function fetchPack(code: string): Promise<NotesPack | null> {
-  const raw = await apiGet<unknown>(`/packs/${encodeURIComponent(code)}`);
+  const raw = await apiGet<unknown>(`/packs?code=${encodeURIComponent(code)}`);
   return parseNotesPack(JSON.stringify({ grove: 'notes-pack', ...(raw as object), audience: { studentIdPrefix: (raw as { audience?: string }).audience } }));
 }
 

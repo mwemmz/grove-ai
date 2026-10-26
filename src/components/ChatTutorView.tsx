@@ -36,7 +36,6 @@ const STARTER_PROMPTS = [
   'What should a final-year project proposal include?',
   'My supervisor has not been allocated yet. What should I do meanwhile?',
   'Has anyone done a project on mobile money fraud?',
-  'Where did I first learn about mutual exclusion and locks?',
 ];
 const PLACEHOLDER = 'What should my project proposal include, and has anyone done something like my idea?';
 

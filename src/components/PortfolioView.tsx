@@ -14,10 +14,10 @@ interface PortfolioViewProps {
 }
 
 const YEAR_RINGS = [
-  { year: 1, title: 'Foundations', desc: 'Manual memory, C pointers, discrete logic, hash tables.' },
-  { year: 2, title: 'Core systems', desc: 'Operating systems, semaphores, dynamic programming, deadlocks.' },
-  { year: 3, title: 'Distributed', desc: 'Raft consensus, LSM storage engines, state machines.' },
-  { year: 4, title: 'Production', desc: 'Zero-copy event streaming, TLS 1.3 capstone.' },
+  { year: 1, title: 'Foundations', desc: '' },
+  { year: 2, title: 'Core', desc: '' },
+  { year: 3, title: 'Advanced', desc: '' },
+  { year: 4, title: 'Final year', desc: '' },
 ];
 
 export const PortfolioView: React.FC<PortfolioViewProps> = ({
@@ -84,7 +84,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({
                   <div key={y.year} className="border-t border-line pt-3">
                     <p className="text-sm text-muted">Year {y.year}</p>
                     <p className="mt-0.5 font-medium text-text">{y.title}</p>
-                    <p className="mt-1 text-sm leading-6 text-muted">{y.desc}</p>
+                    {y.desc && <p className="mt-1 text-sm leading-6 text-muted">{y.desc}</p>}
                     <p className="mt-2 text-sm text-accent">
                       {count} {count === 1 ? 'note' : 'notes'}
                     </p>
@@ -182,14 +182,14 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({
               <h2 className="text-2xl font-semibold tracking-tight">{cv.name}</h2>
               <p className="mt-1 font-medium text-emerald-800">{cv.headline}</p>
               <p className="mt-1 text-sm text-slate-600">
-                {cv.education.degree} · {cv.education.institution} · {cv.education.years}
+                {[cv.education.degree, cv.education.institution, cv.education.years].filter(Boolean).join(' · ')}
               </p>
             </header>
 
             <section className="space-y-2">
               <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500">Education</h3>
               <p className="font-medium">{cv.education.degree}, {cv.education.institution}</p>
-              <p className="text-sm text-emerald-800">{cv.education.gpaOrHonors}</p>
+              {cv.education.gpaOrHonors && <p className="text-sm text-emerald-800">{cv.education.gpaOrHonors}</p>}
               <ul className="space-y-1 pt-1 text-sm text-slate-600">
                 {cv.education.courseworkByYear.map((cw) => (
                   <li key={cw.year}>

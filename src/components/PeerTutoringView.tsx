@@ -34,17 +34,17 @@ export const PeerTutoringView: React.FC<PeerTutoringViewProps> = ({
   const [selectedTutorForRequest, setSelectedTutorForRequest] = useState<TutorProfile | null>(null);
 
   // New Advice Form State
-  const [advCourseCode, setAdvCourseCode] = useState('CS201');
+  const [advCourseCode, setAdvCourseCode] = useState('');
   const [advTopic, setAdvTopic] = useState('');
-  const [advAuthorName, setAdvAuthorName] = useState('Alex Chimwaza');
+  const [advAuthorName, setAdvAuthorName] = useState('');
   const [advGrade, setAdvGrade] = useState<StudentTier>('A+');
   const [advCategory, setAdvCategory] = useState<SeniorComment['category']>('exam-gotcha');
   const [advText, setAdvText] = useState('');
 
   // New Request Form State
-  const [reqStudentName, setReqStudentName] = useState('Kelvin Banda');
+  const [reqStudentName, setReqStudentName] = useState('');
   const [reqStudentYear, setReqStudentYear] = useState(2);
-  const [reqCourseCode, setReqCourseCode] = useState('CS201');
+  const [reqCourseCode, setReqCourseCode] = useState('');
   const [reqTopic, setReqTopic] = useState('');
   const [reqUrgency, setReqUrgency] = useState<TutorRequest['urgency']>('midterm-prep');
   const [reqTime, setReqTime] = useState('Wednesday 16:00 (Discord or Campus Library)');
@@ -98,7 +98,7 @@ export const PeerTutoringView: React.FC<PeerTutoringViewProps> = ({
 
   const handleOpenRequestModal = (tutor: TutorProfile) => {
     setSelectedTutorForRequest(tutor);
-    setReqCourseCode(tutor.clearedCourses[0]?.courseCode || 'CS201');
+    setReqCourseCode(tutor.clearedCourses[0]?.courseCode || '');
     setIsRequestModalOpen(true);
   };
 
@@ -284,9 +284,7 @@ export const PeerTutoringView: React.FC<PeerTutoringViewProps> = ({
                 className="rounded-lg bg-slate-950 border border-slate-800 px-2.5 py-1 text-xs text-slate-300 focus:outline-none"
               >
                 <option value="all">All Courses</option>
-                <option value="CS101">CS101</option>
-                <option value="CS201">CS201</option>
-                <option value="CS301">CS301</option>
+                {courses.map((c) => <option key={c.id} value={c.code}>{c.code}</option>)}
               </select>
             </div>
           </div>

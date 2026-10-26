@@ -7,6 +7,7 @@ import {
   Cpu,
   Layers,
   Library,
+  NotebookText,
   Sprout,
   Timer,
   Users,
@@ -14,7 +15,7 @@ import {
 } from 'lucide-react';
 import { Note } from '../types';
 
-export type AppTab = 'remember' | 'library' | 'visuals' | 'study' | 'plan' | 'profile' | 'portfolio' | 'quiz' | 'blueprints' | 'tutoring';
+export type AppTab = 'remember' | 'notes' | 'library' | 'visuals' | 'study' | 'plan' | 'profile' | 'portfolio' | 'quiz' | 'blueprints' | 'tutoring';
 
 export interface NavItem {
   id: AppTab;
@@ -22,9 +23,10 @@ export interface NavItem {
   icon: LucideIcon;
 }
 
-/** The six places a student goes every week. */
+/** The places a student goes every week. */
 export const PRIMARY_NAV: NavItem[] = [
   { id: 'remember', label: 'Ask', icon: BookOpen },
+  { id: 'notes', label: 'Notes', icon: NotebookText },
   { id: 'library', label: 'Library', icon: Library },
   { id: 'study', label: 'Study', icon: Timer },
   { id: 'plan', label: 'Plan', icon: CalendarDays },

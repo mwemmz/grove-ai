@@ -23,6 +23,7 @@ import {
   INITIAL_TUTORS,
   INITIAL_TUTOR_REQUESTS,
 } from '../data/mockData';
+import { DEMO_IDS, DEMO_UNIVERSITY } from '../data/demoIds';
 import { apiGet, apiPost, apiPut } from '../lib/api';
 
 /**
@@ -143,6 +144,39 @@ async function loadAllFromServer(): Promise<void> {
   cache.blueprints = blueprints;
   cache.tutors = tutors;
   cache.tutorRequests = tutorRequests;
+  purgeSamples();
+}
+
+/** Accounts made before Grove started empty still hold the old sample records. Clear them once, and save the result. */
+function purgeSamples(): void {
+  const drop = <T>(items: T[], key: (t: T) => string, demo: readonly string[]): T[] => items.filter((t) => !demo.includes(key(t)));
+  const clean = <K extends 'courses' | 'notes' | 'flashcards' | 'projects' | 'seniorComments' | 'blueprints' | 'tutors' | 'tutorRequests' | 'skills', V extends { id?: string; name?: string }>(
+    name: K,
+    route: string,
+    items: V[],
+    demo: readonly string[],
+    key: (v: V) => string
+  ) => {
+    const kept = drop(items, key, demo);
+    if (kept.length !== items.length) {
+      (cache as unknown as Record<string, unknown>)[name] = kept;
+      scheduleSync(name, () => apiPut(route, kept));
+    }
+  };
+  clean('courses', '/courses', cache.courses, DEMO_IDS.courses, (c) => c.id ?? '');
+  clean('notes', '/notes', cache.notes, DEMO_IDS.notes, (n) => n.id ?? '');
+  clean('flashcards', '/flashcards', cache.flashcards, DEMO_IDS.flashcards, (f) => f.id ?? '');
+  clean('projects', '/projects', cache.projects, DEMO_IDS.projects, (p) => p.id ?? '');
+  clean('seniorComments', '/senior-comments', cache.seniorComments, DEMO_IDS.seniorComments, (c) => c.id ?? '');
+  clean('blueprints', '/blueprints', cache.blueprints, DEMO_IDS.blueprints, (b) => b.id ?? '');
+  clean('tutors', '/tutors', cache.tutors, DEMO_IDS.tutors, (t) => t.id ?? '');
+  clean('tutorRequests', '/tutor-requests', cache.tutorRequests, DEMO_IDS.tutorRequests, (r) => r.id ?? '');
+  clean('skills', '/skills', cache.skills, DEMO_IDS.skills, (k) => k.name ?? '');
+  if (cache.profile.university === DEMO_UNIVERSITY) {
+    // Keep the name the student set; drop the sample strengths, weak topics, memory log and counters.
+    cache.profile = { ...INITIAL_PROFILE, studentName: cache.profile.studentName === 'Alex Chimwaza' ? '' : cache.profile.studentName, currentYear: 3 };
+    scheduleSync('profile', () => apiPut('/profile', cache.profile));
+  }
 }
 
 export const storage = {

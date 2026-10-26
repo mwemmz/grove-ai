@@ -265,7 +265,7 @@ export const DegreeMemoryView: React.FC<DegreeMemoryViewProps> = ({
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="pointers, Raft, joins…"
+          placeholder="ETL, circular flow, joins…"
           className={field}
         />
 

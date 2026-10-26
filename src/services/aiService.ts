@@ -76,48 +76,9 @@ export const aiService = {
   /**
    * Detect conceptual connections across academic years
    */
-  findCrossYearConnections(relevantNotes: Note[]): AIResponsePayload['yearConnections'] {
-    const connections: AIResponsePayload['yearConnections'] = [];
-
-    const hasYear1Notes = relevantNotes.some(n => n.year === 1);
-    const hasYear2Notes = relevantNotes.some(n => n.year === 2);
-    const hasYear3Notes = relevantNotes.some(n => n.year === 3);
-    const hasYear4Notes = relevantNotes.some(n => n.year === 4);
-
-    // Concurrency / Consensus bridge (Year 2 CS201 -> Year 3 CS301)
-    if ((hasYear3Notes || hasYear4Notes) && !hasYear2Notes) {
-      const touchesDistributed = relevantNotes.some(n => n.tags.includes('Consensus') || n.tags.includes('Distributed Systems') || n.title.includes('Raft'));
-      if (touchesDistributed) {
-        connections.push({
-          earlierYear: 2,
-          earlierCourse: 'CS201',
-          earlierTopic: 'Mutual Exclusion & Locks',
-          connectionText: 'In Year 2 CS201, you solved race conditions in single-machine shared memory using hardware compare-and-swap and mutexes. Raft consensus is the exact mathematical equivalent for distributed systems with no shared memory and unreliable clocks.'
-        });
-      }
-    }
-
-    // Zero-Copy / Memory bridge (Year 1 CS101 -> Year 4 CS401)
-    if (hasYear4Notes || relevantNotes.some(n => n.tags.includes('Zero-Copy') || n.tags.includes('Streaming'))) {
-      connections.push({
-        earlierYear: 1,
-        earlierCourse: 'CS101',
-        earlierTopic: 'Manual Memory Layout & Heap Allocations',
-        connectionText: 'In Year 1 CS101, you manually mapped heap vs stack addresses in C. Capstone zero-copy transfers via sendfile() work by keeping data strictly inside the kernel page cache buffer, bypassing application user-space memory entirely.'
-      });
-    }
-
-    // Storage / Hash Table bridge (Year 1 CS103 -> Year 3 CS302)
-    if (relevantNotes.some(n => n.tags.includes('Databases') || n.tags.includes('Storage Engines') || n.title.includes('LSM'))) {
-      connections.push({
-        earlierYear: 1,
-        earlierCourse: 'CS103',
-        earlierTopic: 'Hash Tables & Amortized O(1)',
-        connectionText: 'In Year 1 CS103, you studied amortized time during dynamic table resizing. LSM trees apply this exact principle to disk I/O: by buffering writes in memory and performing amortized background compactions, writes stay blazing fast.'
-      });
-    }
-
-    return connections;
+  findCrossYearConnections(_relevantNotes: Note[]): AIResponsePayload['yearConnections'] {
+    // Grove no longer writes connections it cannot back with the student's own notes.
+    return [];
   },
 
   /**
@@ -296,24 +257,12 @@ export const aiService = {
     connections: AIResponsePayload['yearConnections'],
     appliedAttributes: string[]
   ): AIResponsePayload {
+    const byYear = [...citedNotes].sort((x, y) => x.year - y.year);
+    const lines = byYear.map((n, i) => `${i + 1}. **Year ${n.year} · ${n.courseCode}**: ${n.title}${n.relevanceQuote ? `\n   ${n.relevanceQuote}` : ''}`);
     return {
-      text: `### 🌲 Your Degree-Long Learning Lineage
-
-Here is the chronological evolution of this concept throughout your 4-year degree:
-
-1. **Year 1: Foundational Building Blocks (CS101 / CS103)**:
-   You were first introduced to manual memory layouts and pointer arithmetic. You analyzed why dereferencing an offset depends on \`sizeof(type)\` and how the CPU manages memory access.
-
-2. **Year 2: Local Concurrency & Resource Contention (CS201)**:
-   In Operating Systems, this evolved into synchronizing multiple threads accessing shared memory. You proved deadlock prevention using the **4 Coffman conditions** and implemented mutexes and counting semaphores.
-
-3. **Year 3: Breaking the Single-Machine Boundary (CS301 / CS302)**:
-   You moved beyond shared memory. When clocks and RAM are not shared, mutual exclusion transforms into **Consensus (Raft/Paxos)** and storage splits into **LSM vs B+ Trees**.
-
-4. **Year 4: Production Capstone & Zero-Copy Architecture (CS401)**:
-   In your Capstone project, you unified all four years: streaming 500k msgs/sec using Linux \`sendfile()\` zero-copy I/O and partitioned commit logs.
-
-> **Grove Insight**: You first struggled with pointers in Year 1, but by Year 4 you built a production zero-copy broker that completely circumvents userland memory buffers. That is a 4-year leap in systems maturity!`,
+      text: lines.length
+        ? `### Where this shows up in your notes\n\nOldest first:\n\n${lines.join('\n\n')}`
+        : 'I could not find this in your notes yet. Add the notes where you first met it and ask again.',
       citedNotes,
       yearConnections: connections,
       appliedProfileAttributes: [...appliedAttributes, 'Chronological Lineage Mode'],

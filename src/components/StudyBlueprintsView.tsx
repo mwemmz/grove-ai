@@ -20,10 +20,10 @@ export const StudyBlueprintsView: React.FC<StudyBlueprintsViewProps> = ({
   const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
 
   // New blueprint form state
-  const [formName, setFormName] = useState('Alex Chimwaza');
+  const [formName, setFormName] = useState('');
   const [formTier, setFormTier] = useState<StudentTier>('A+');
   const [formArchetype, setFormArchetype] = useState<WorkEthicArchetype>('Consistent Daily Architect');
-  const [formCourseCode, setFormCourseCode] = useState('CS202');
+  const [formCourseCode, setFormCourseCode] = useState('');
   const [formCourseName, setFormCourseName] = useState('Algorithms & Complexity');
   const [formWeeklyHours, setFormWeeklyHours] = useState(6);
   const [formPacing, setFormPacing] = useState('3 hours of whiteboard problem-solving every Tuesday and Saturday.');
@@ -159,9 +159,7 @@ export const StudyBlueprintsView: React.FC<StudyBlueprintsViewProps> = ({
             className="rounded-lg bg-slate-950 border border-slate-800 px-2.5 py-1 text-xs text-slate-300 focus:outline-none focus:border-amber-500"
           >
             <option value="all">All Courses</option>
-            <option value="CS101">CS101: Systems & C</option>
-            <option value="CS201">CS201: Operating Systems</option>
-            <option value="CS301">CS301: Distributed Systems</option>
+            {[...new Set(blueprints.map((b) => b.courseCode))].map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
         </div>
       </div>

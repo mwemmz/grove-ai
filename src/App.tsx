@@ -37,7 +37,6 @@ import { storage } from './services/storage';
 import type { TopicId } from './data/visualTopics';
 import { canSeeCourse, setStudentId } from './services/access';
 import { syncPacks } from './services/packs';
-import { aiService } from './services/aiService';
 import { setTokenProvider } from './lib/api';
 
 function LoadingScreen({ label }: { label: string }) {
@@ -95,7 +94,6 @@ function GroveApp() {
   // Conversation history lives here so the sidebar, the progress panel and the Ask box all agree.
   const [chat, setChat] = useState<ChatMessage[]>([]);
   const [chatView, setChatView] = useState<string | null>(null);
-  const seededChat = useRef(false);
   // Library <-> Ask hand-offs: open a source in the Library, or send a question to the Ask screen.
   const [focusSourceId, setFocusSourceId] = useState<string | null>(null);
   const [pendingAsk, setPendingAsk] = useState<string | null>(null);
@@ -202,40 +200,6 @@ function GroveApp() {
     }
   }, [isDataReady]);
 
-  // A brand-new account starts with a few example questions so the history is not empty.
-  useEffect(() => {
-    if (!isDataReady || seededChat.current) return;
-    seededChat.current = true;
-    if (chat.length > 0 || notes.length === 0) return;
-    (async () => {
-      const starters = [
-        'What should a final-year project proposal include?',
-        'Has anyone done a project on mobile money fraud?',
-        'Where did I first learn about mutual exclusion and locks?',
-      ];
-      const seeded: ChatMessage[] = [];
-      for (const [i, q] of starters.entries()) {
-        const payload = await aiService.askGrove(q, notes, profile, { live: false });
-        const stamp = new Date(Date.now() - (starters.length - i) * 3600_000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        seeded.push(
-          { id: `user-seed-${i}`, sender: 'user', text: q, timestamp: stamp },
-          {
-            id: `assistant-seed-${i}`,
-            sender: 'assistant',
-            text: payload.text,
-            timestamp: stamp,
-            sources: payload.sources,
-            citedNotes: payload.citedNotes,
-            yearConnections: payload.yearConnections,
-            seniorTips: payload.seniorTips,
-            appliedProfileAttributes: payload.appliedProfileAttributes,
-          }
-        );
-      }
-      setChat(seeded);
-      setChatView(NEW_VIEW);
-    })();
-  }, [isDataReady, chat.length, notes, profile]);
 
   const handleResetDemo = async () => {
     await storage.resetAllToDemo();
@@ -253,7 +217,7 @@ function GroveApp() {
 
   const handleOpenNoteDetail = (note: Note) => {
     setSelectedNoteForDetail(note);
-    setActiveTab('remember');
+    setActiveTab('notes');
   };
 
   const openVisual = (id: TopicId) => {
@@ -362,7 +326,7 @@ function GroveApp() {
         <div className="space-y-5">
           {packNotice && (
             <div role="status" className="flex items-start justify-between gap-3 rounded-[10px] bg-surface px-4 py-3 text-sm text-text ring-1 ring-accent/50">
-              <span>{packNotice} Find them under Ask → Your notes.</span>
+              <span>{packNotice} Find them under Notes.</span>
               <button onClick={() => setPackNotice(null)} className="text-muted hover:text-text" aria-label="Dismiss">✕</button>
             </div>
           )}
@@ -385,16 +349,19 @@ function GroveApp() {
                 onPendingHandled={() => setPendingAsk(null)}
                 onOpenVisual={openVisual}
               />
-              <DegreeMemoryView
-                notes={notes}
-                setNotes={setNotes}
-                courses={shownCourses}
-                selectedNoteForDetail={selectedNoteForDetail}
-                setSelectedNoteForDetail={setSelectedNoteForDetail}
-                onAddCourse={addCourse}
-                onOpenVisual={openVisual}
-              />
             </>
+          )}
+
+          {activeTab === 'notes' && (
+            <DegreeMemoryView
+              notes={notes}
+              setNotes={setNotes}
+              courses={shownCourses}
+              selectedNoteForDetail={selectedNoteForDetail}
+              setSelectedNoteForDetail={setSelectedNoteForDetail}
+              onAddCourse={addCourse}
+              onOpenVisual={openVisual}
+            />
           )}
 
           {activeTab === 'library' && (

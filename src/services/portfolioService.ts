@@ -8,7 +8,7 @@ export const portfolioService = {
     skills: PortfolioSkill[],
     projects: PortfolioProject[],
     courses: Course[],
-    _notes: Note[]
+    notes: Note[]
   ): GraduationCV {
     // Group courses by year
     const courseworkByYear = [1, 2, 3, 4].map(year => {
@@ -21,21 +21,19 @@ export const portfolioService = {
 
     return {
       name: studentName,
-      headline: `Software Engineer & Systems Architect | ${degreeName} Graduate`,
+      headline: degreeName,
       education: {
         degree: degreeName,
         institution: university,
-        years: '2023 - 2026',
-        gpaOrHonors: 'First Class Honours (Dean’s Commendation)',
+        years: '',
+        gpaOrHonors: '',
         courseworkByYear,
       },
       skills,
       projects,
-      academicHighlights: [
-        'Maintained a continuous 4-year degree knowledge repository in Grove with 140+ conceptual notes and active recall logs.',
-        'Synthesized cross-year systems foundations from Year 1 C pointers to a production-grade 500k msg/sec event streaming capstone.',
-        'Demonstrated verifiable competencies grounded in peer-reviewed course assignments and technical artifacts.',
-      ],
+      academicHighlights: notes.length
+        ? [`Kept ${notes.length} study ${notes.length === 1 ? 'note' : 'notes'} across ${new Set(notes.map((n) => n.courseId)).size} ${new Set(notes.map((n) => n.courseId)).size === 1 ? 'course' : 'courses'} in Grove.`]
+        : [],
     };
   },
 

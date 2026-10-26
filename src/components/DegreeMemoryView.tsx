@@ -1,16 +1,13 @@
-import { lazyWithReload } from '../lib/lazyReload';
-import React, { Suspense, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { FileUp } from 'lucide-react';
 import { Note, Course, AcademicYear } from '../types';
 import { storage } from '../services/storage';
 import { ACCEPT, extractText } from '../services/fileText';
-import { Modal, Inline, field, labelCls, primaryBtn, panel } from './ui';
-import { placePictures } from '../data/pictureMatch';
+import { field, labelCls, primaryBtn, panel } from './ui';
+import { NoteReader } from './NoteReader';
 import type { TopicId } from '../data/visualTopics';
 import { mergePack, parseNotesPack } from '../services/notesPack';
 import { COURSE_AUDIENCE, canSee, getStudentId } from '../services/access';
-
-const VisualCard = lazyWithReload(() => import('./VisualCard'));
 
 interface DegreeMemoryViewProps {
   notes: Note[];
@@ -36,29 +33,6 @@ function autoTags(text: string): string[] {
     .sort((a, b) => b[1] - a[1] || b[0].length - a[0].length)
     .slice(0, 4)
     .map(([w]) => w);
-}
-
-function renderPara(para: string, idx: number) {
-  if (para.startsWith('# ')) return <h3 key={idx} className="pt-2 text-lg font-semibold">{para.replace('# ', '')}</h3>;
-  if (para.startsWith('### ')) {
-    // A slide: its title, then its lines.
-    const [head, ...rest] = para.split('\n');
-    return (
-      <div key={idx} className="space-y-1">
-        <h4 className="pt-1 text-base font-semibold">{head.replace('### ', '')}</h4>
-        {rest.length > 0 && <p className="whitespace-pre-wrap"><Inline text={rest.join('\n')} /></p>}
-      </div>
-    );
-  }
-  if (para.startsWith('```')) {
-    const code = para.split('\n').slice(1, -1).join('\n');
-    return (
-      <pre key={idx} className="overflow-x-auto rounded-lg bg-bg p-4 font-mono text-[13px] leading-6">
-        <code>{code}</code>
-      </pre>
-    );
-  }
-  return <p key={idx} className="whitespace-pre-wrap"><Inline text={para} /></p>;
 }
 
 export const DegreeMemoryView: React.FC<DegreeMemoryViewProps> = ({
@@ -336,47 +310,12 @@ export const DegreeMemoryView: React.FC<DegreeMemoryViewProps> = ({
       </section>
 
       {detail && (
-        <Modal title={detail.title} onClose={() => setSelectedNoteForDetail(null)} wide>
-          <p className="text-sm text-muted">
-            Year {detail.year} · {courseOf(detail.courseId)?.name || 'Course'} ·{' '}
-            {new Date(detail.createdAt).toLocaleDateString()}
-            {detail.masteryScore ? ` · ${detail.masteryScore}% mastery` : ''}
-          </p>
-
-          <div className="mt-5 space-y-4 text-[15px] leading-7 text-text">
-            {(() => {
-              // Dual coding: each picture sits right after the slide that explains the same idea (at most four per note).
-              const paras = detail.content.split('\n\n');
-              const spots = placePictures(paras);
-              return paras.map((para, idx) => (
-                <React.Fragment key={idx}>
-                  {renderPara(para, idx)}
-                  {(spots.get(idx) ?? []).map((id: TopicId) => (
-                    <Suspense key={id} fallback={null}>
-                      <div className="max-w-xl">
-                        <VisualCard topicId={id} onOpen={onOpenVisual ? (t) => { setSelectedNoteForDetail(null); onOpenVisual(t); } : undefined} />
-                      </div>
-                    </Suspense>
-                  ))}
-                </React.Fragment>
-              ));
-            })()}
-          </div>
-          {detail.keyTakeaways && detail.keyTakeaways.length > 0 && (
-            <div className="mt-6 rounded-xl bg-bg p-4">
-              <h3 className="text-sm font-medium text-muted">Key takeaways</h3>
-              <ul className="mt-2 list-disc space-y-1.5 pl-5 text-sm leading-6 text-text">
-                {detail.keyTakeaways.map((t, i) => (
-                  <li key={i}>{t}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {detail.tags.length > 0 && (
-            <p className="mt-5 text-sm text-muted">{detail.tags.map((t) => `#${t}`).join('  ')}</p>
-          )}
-        </Modal>
+        <NoteReader
+          note={detail}
+          courseName={courseOf(detail.courseId)?.name}
+          onClose={() => setSelectedNoteForDetail(null)}
+          onOpenVisual={onOpenVisual}
+        />
       )}
     </div>
   );

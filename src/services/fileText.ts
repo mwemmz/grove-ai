@@ -48,7 +48,9 @@ async function docxText(file: File): Promise<string> {
   return value;
 }
 
-/** PowerPoint (.pptx / .pptm): each slide becomes "### title" followed by its lines, in slide order. Macros are never run. */
+/** PowerPoint (.pptx / .pptm): each slide becomes "### title" followed by its lines, in slide order.
+ *  The title comes from the slide's title placeholder (PowerPoint stores it wherever the author drew it, often last),
+ *  and indented bullets keep their level as "  - ". Macros are never run. */
 async function pptxText(file: File): Promise<string> {
   const { default: JSZip } = await import('jszip');
   const zip = await JSZip.loadAsync(await file.arrayBuffer());
@@ -56,15 +58,29 @@ async function pptxText(file: File): Promise<string> {
     .filter((n) => /^ppt\/slides\/slide\d+\.xml$/.test(n))
     .sort((a, b) => Number(a.match(/(\d+)\.xml$/)![1]) - Number(b.match(/(\d+)\.xml$/)![1]));
   const A = 'http://schemas.openxmlformats.org/drawingml/2006/main';
+  const P = 'http://schemas.openxmlformats.org/presentationml/2006/main';
   const slides: string[] = [];
-  for (const [i, name] of names.entries()) {
+  for (const name of names) {
     const xml = new DOMParser().parseFromString(await zip.files[name].async('string'), 'application/xml');
-    const lines = Array.from(xml.getElementsByTagNameNS(A, 'p'))
-      .map((p) => Array.from(p.getElementsByTagNameNS(A, 't')).map((t) => t.textContent ?? '').join('').trim())
-      .filter(Boolean);
-    if (lines.length === 0) continue;
-    const [title, ...rest] = lines;
-    slides.push([`### ${title.length > 90 ? `Slide ${i + 1}` : title}`, ...(title.length > 90 ? [title] : []), ...rest].join('\n'));
+    let title = '';
+    const body: string[] = [];
+    for (const sp of Array.from(xml.getElementsByTagNameNS(P, 'sp'))) {
+      const type = sp.getElementsByTagNameNS(P, 'ph')[0]?.getAttribute('type') ?? '';
+      const paras = Array.from(sp.getElementsByTagNameNS(A, 'p')).map((p) => ({
+        text: Array.from(p.getElementsByTagNameNS(A, 't')).map((t) => t.textContent ?? '').join('').trim(),
+        lvl: Number(p.getElementsByTagNameNS(A, 'pPr')[0]?.getAttribute('lvl') ?? 0),
+      })).filter((p) => p.text && !/^\d{1,3}$/.test(p.text));
+      if ((type === 'title' || type === 'ctrTitle') && !title) title = paras.map((p) => p.text).join(' ');
+      else if (type !== 'sldNum' && type !== 'ftr' && type !== 'dt') for (const p of paras) body.push(p.lvl > 0 ? `${'  '.repeat(Math.min(p.lvl, 2) - 1)}- ${p.text}` : p.text);
+    }
+    if (!title && body.length === 0) continue;
+    if (!title) {
+      // No title placeholder: a short first line is the title, otherwise its first words are.
+      const first = body[0].replace(/^\s*-\s*/, '');
+      if (first.length <= 70 && !/[.:]$/.test(first)) { title = first; body.shift(); }
+      else title = first.split(/[.:;]\s/)[0].slice(0, 56).trim();
+    }
+    slides.push([`### ${title}`, ...body].join('\n'));
   }
   return slides.join('\n\n');
 }

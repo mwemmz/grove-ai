@@ -73,6 +73,11 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
+  /* The app shell is exactly one screen tall and scrolls inside itself; the page itself never scrolls. */
+  @media screen {
+    html, body { overflow: hidden; height: 100%; }
+  }
+
   #root {
     min-height: 100dvh;
     width: 100%;

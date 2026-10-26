@@ -92,7 +92,7 @@ export function Shell({ title, sidebar, panel, children }: ShellProps) {
   };
 
   return (
-    <div className="app-shell flex h-dvh overflow-hidden bg-bg font-sans text-text selection:bg-accent/30">
+    <div className="app-shell relative flex h-dvh overflow-clip bg-bg font-sans text-text selection:bg-accent/30">
       {left && <div aria-hidden onClick={() => setLeft(false)} className="no-print fixed inset-0 z-30 animate-fade-in bg-black/60 lg:hidden" />}
       {right && <div aria-hidden onClick={() => setRight(false)} className="no-print fixed inset-0 z-30 animate-fade-in bg-black/60 xl:hidden" />}
 
@@ -130,7 +130,7 @@ export function Shell({ title, sidebar, panel, children }: ShellProps) {
             <span className="hidden sm:inline">Progress</span>
           </button>
         </header>
-        <main className="app-main min-h-0 flex-1 overflow-y-auto">
+        <main className="app-main relative min-h-0 flex-1 overflow-y-auto">
           <div className="mx-auto w-full max-w-[820px] px-4 pb-20 pt-6 sm:px-8">{children}</div>
         </main>
       </div>

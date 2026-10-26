@@ -50,11 +50,9 @@ function LoadingScreen({ label }: { label: string }) {
 function AuthGate() {
   const { isLoaded, isSignedIn, getToken } = useAuth();
 
-  useEffect(() => {
-    if (isLoaded) {
-      setTokenProvider(getToken);
-    }
-  }, [isLoaded, getToken]);
+  // Wire the token before the app renders: its data-loading effect runs before any effect here would,
+  // so setting this in an effect sent the first requests with no token (401) after a reload.
+  if (isLoaded) setTokenProvider(getToken);
 
   if (!isLoaded) {
     return <LoadingScreen label="Starting Grove..." />;

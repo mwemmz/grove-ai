@@ -1,7 +1,7 @@
 /* Who is signed in, where, and the controls to end sessions. Sessions are Clerk's; this only lists and revokes them. */
 import { useEffect, useState } from 'react';
 import { useClerk, useSession, useUser } from '@clerk/react';
-import { labelCls, quietBtn } from './ui';
+import { field, labelCls, quietBtn } from './ui';
 
 interface SessionRow {
   id: string;
@@ -26,6 +26,8 @@ export function AccountPanel() {
   const [sessions, setSessions] = useState<SessionRow[] | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [pw, setPw] = useState({ current: '', next: '' });
+  const [pwMsg, setPwMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   useEffect(() => {
     let live = true;
@@ -40,6 +42,22 @@ export function AccountPanel() {
 
   if (!user) return null;
   const email = user.primaryEmailAddress?.emailAddress;
+
+  const savePassword = async () => {
+    setPwMsg(null);
+    if (pw.next.length < 8) return setPwMsg({ ok: false, text: 'Use at least 8 characters.' });
+    setBusy('pw');
+    try {
+      await user.updatePassword(user.passwordEnabled ? { currentPassword: pw.current, newPassword: pw.next } : { newPassword: pw.next });
+      setPw({ current: '', next: '' });
+      setPwMsg({ ok: true, text: 'Password saved. You can now sign in with your email or student ID and this password.' });
+    } catch (err) {
+      const e = err as { errors?: { longMessage?: string; message?: string }[] };
+      setPwMsg({ ok: false, text: e.errors?.[0]?.longMessage || e.errors?.[0]?.message || 'Could not save the password.' });
+    } finally {
+      setBusy(null);
+    }
+  };
 
   const revoke = async (s: SessionRow) => {
     setBusy(s.id);
@@ -71,6 +89,20 @@ export function AccountPanel() {
           <dd className="font-mono text-text">{user.username || '–'}</dd>
         </div>
       </dl>
+
+      <div className="space-y-2">
+        <p className="text-xs text-muted">{user.passwordEnabled ? 'Change password' : 'Set a password (this account has none yet)'}</p>
+        <div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
+          {user.passwordEnabled && (
+            <input type="password" autoComplete="current-password" aria-label="Current password" placeholder="Current password" className={field} value={pw.current} onChange={(e) => setPw({ ...pw, current: e.target.value })} />
+          )}
+          <input type="password" autoComplete="new-password" aria-label="New password" placeholder="New password" className={field} value={pw.next} onChange={(e) => setPw({ ...pw, next: e.target.value })} />
+          <button type="button" onClick={savePassword} disabled={busy === 'pw'} className={`${quietBtn} !min-h-10 !px-3 text-sm`}>
+            {busy === 'pw' ? 'Saving…' : 'Save password'}
+          </button>
+        </div>
+        {pwMsg && <p className={`text-sm ${pwMsg.ok ? 'text-accent' : 'text-warn'}`} role={pwMsg.ok ? 'status' : 'alert'}>{pwMsg.text}</p>}
+      </div>
 
       <div>
         <p className="text-xs text-muted">Signed in on</p>

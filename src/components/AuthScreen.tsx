@@ -6,7 +6,7 @@ import { useSignIn, useSignUp } from '@clerk/react';
 import { TreePine } from 'lucide-react';
 import { field, labelCls, primaryBtn } from './ui';
 
-type Mode = 'signin' | 'signup' | 'reset';
+type Mode = 'signin' | 'signup' | 'reset' | 'code';
 type Step = 'form' | 'code' | 'newPassword';
 
 interface ClerkLikeError {
@@ -29,8 +29,13 @@ const FRIENDLY: Record<string, string> = {
   form_code_incorrect: 'That code is not right. Check the email and try again.',
   verification_expired: 'That code has expired. Send a new one.',
   too_many_requests: 'Too many attempts. Wait a minute, then try again.',
-  strategy_for_user_invalid: 'Password sign-in is not switched on for this account.',
+  strategy_for_user_invalid: 'This account has no password yet. It was probably created with Google or an email code. Sign in with an emailed code below, then set a password in Settings.',
 };
+
+function codeOf(err: unknown): string | undefined {
+  const e = (err ?? {}) as ClerkLikeError & { errors?: ClerkLikeError[] };
+  return (e.errors?.[0] ?? e).code;
+}
 
 function describe(err: unknown): string {
   const e = (err ?? {}) as ClerkLikeError & { errors?: ClerkLikeError[] };
@@ -64,6 +69,8 @@ export function AuthScreen() {
   const [studentId, setStudentId] = useState('');
   const [code, setCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
+  /** Set when a password sign-in fails because the account has no password: offer an emailed code instead. */
+  const [offerCode, setOfferCode] = useState(false);
 
   const go = (m: Mode) => {
     setMode(m);
@@ -71,6 +78,7 @@ export function AuthScreen() {
     setError(null);
     setNotice(null);
     setCode('');
+    setOfferCode(false);
     void signIn?.reset();
   };
 
@@ -79,6 +87,7 @@ export function AuthScreen() {
     try {
       const { error: err } = await fn();
       if (err) {
+        if (codeOf(err) === 'strategy_for_user_invalid') setOfferCode(true);
         setError(describe(err));
         return false;
       }
@@ -114,6 +123,14 @@ export function AuthScreen() {
     try {
       if (mode === 'signin' && step === 'form') {
         if (await run(() => signIn.password({ identifier: identifier.trim(), password }))) await finishSignIn();
+      } else if (mode === 'code' && step === 'form') {
+        if (!(await run(() => signIn.create({ identifier: identifier.trim() })))) return;
+        if (await run(() => signIn.emailCode.sendCode())) {
+          setStep('code');
+          setNotice('We emailed you a 6-digit sign-in code.');
+        }
+      } else if (mode === 'code' && step === 'code') {
+        if (await run(() => signIn.emailCode.verifyCode({ code: code.trim() }))) await finishSignIn();
       } else if (mode === 'signin' && step === 'code') {
         if (await run(() => signIn.mfa.verifyEmailCode({ code: code.trim() }))) await finishSignIn();
       } else if (mode === 'signup' && step === 'form') {
@@ -157,9 +174,9 @@ export function AuthScreen() {
     }
   };
 
-  const title = { signin: 'Sign in', signup: 'Create your account', reset: 'Reset your password' }[mode];
+  const title = { signin: 'Sign in', signup: 'Create your account', reset: 'Reset your password', code: 'Sign in with an emailed code' }[mode];
   const button =
-    step === 'code' ? 'Confirm code' : step === 'newPassword' ? 'Save new password' : { signin: 'Sign in', signup: 'Create account', reset: 'Email me a code' }[mode];
+    step === 'code' ? 'Confirm code' : step === 'newPassword' ? 'Save new password' : { signin: 'Sign in', signup: 'Create account', reset: 'Email me a code', code: 'Email me a code' }[mode];
   const ready = !!signIn && !!signUp;
 
   return (
@@ -192,7 +209,7 @@ export function AuthScreen() {
             </>
           )}
 
-          {step === 'form' && mode === 'reset' && (
+          {step === 'form' && (mode === 'reset' || mode === 'code') && (
             <Field id="a-rid" label="Email or student ID" autoComplete="username" value={identifier} onChange={(e) => setIdentifier(e.target.value)} required autoFocus />
           )}
 
@@ -207,6 +224,20 @@ export function AuthScreen() {
           {notice && !error && <p className="text-sm text-muted" role="status">{notice}</p>}
           {error && <p className="text-sm text-warn" role="alert">{error}</p>}
 
+          {offerCode && mode === 'signin' && (
+            <button
+              type="button"
+              onClick={() => {
+                const keep = identifier;
+                go('code');
+                setIdentifier(keep);
+              }}
+              className="w-full min-h-11 rounded-md text-sm text-text ring-1 ring-line hover:bg-raised"
+            >
+              Email me a sign-in code instead
+            </button>
+          )}
+
           <button type="submit" className={`${primaryBtn} w-full`} disabled={!ready || busy}>
             {busy ? 'One moment…' : button}
           </button>
@@ -216,6 +247,7 @@ export function AuthScreen() {
               <>
                 <button type="button" onClick={() => go('signup')} className="text-accent hover:underline">Create an account</button>
                 <button type="button" onClick={() => go('reset')} className="text-muted hover:text-text hover:underline">Forgot password?</button>
+                <button type="button" onClick={() => go('code')} className="basis-full text-left text-muted hover:text-text hover:underline">Sign in with an emailed code</button>
               </>
             ) : (
               <button type="button" onClick={() => go('signin')} className="text-accent hover:underline">Back to sign in</button>

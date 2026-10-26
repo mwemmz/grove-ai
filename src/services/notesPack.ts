@@ -1,6 +1,6 @@
 /* A notes pack is one JSON file carrying a course and its notes, so a whole semester of slides can be added at once.
    Format: { grove: 'notes-pack', version: 1, course: {...}, notes: [{ title, content, tags?, summary?, keyTakeaways? }] } */
-import type { AcademicYear, Course } from '../types';
+import type { AcademicYear, Course, Note } from '../types';
 
 export interface PackNote {
   title: string;
@@ -56,4 +56,28 @@ export function parseNotesPack(text: string): NotesPack | null {
     },
     notes,
   };
+}
+
+/** Adds a pack's course (if missing) and any of its notes not already there, matched by course and title. */
+export function mergePack(pack: NotesPack, notes: Note[], courses: Course[]): { notes: Note[]; course: Course; newCourse: boolean; added: number } {
+  let course = courses.find((c) => c.code.toUpperCase() === pack.course.code.toUpperCase());
+  const newCourse = !course;
+  if (!course) course = { id: `c-${pack.course.code.toLowerCase()}-${Date.now().toString(36)}`, ...pack.course };
+  const have = new Set(notes.filter((n) => n.courseId === course!.id).map((n) => n.title));
+  const now = new Date().toISOString();
+  const fresh = pack.notes
+    .filter((n) => !have.has(n.title))
+    .map((n, i): Note => ({
+      id: `note-${Date.now()}-p${i}`,
+      courseId: course!.id,
+      year: course!.year,
+      title: n.title,
+      content: n.content,
+      summary: n.summary || n.content.replace(/\s+/g, ' ').slice(0, 140),
+      tags: n.tags ?? [],
+      keyTakeaways: n.keyTakeaways ?? [],
+      createdAt: now,
+      updatedAt: now,
+    }));
+  return { notes: [...fresh, ...notes], course, newCourse, added: fresh.length };
 }

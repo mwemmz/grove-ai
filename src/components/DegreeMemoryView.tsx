@@ -7,7 +7,7 @@ import { ACCEPT, extractText } from '../services/fileText';
 import { Modal, Inline, field, labelCls, primaryBtn, panel } from './ui';
 import { placePictures } from '../data/pictureMatch';
 import type { TopicId } from '../data/visualTopics';
-import { parseNotesPack } from '../services/notesPack';
+import { mergePack, parseNotesPack } from '../services/notesPack';
 import { COURSE_AUDIENCE, canSee, getStudentId } from '../services/access';
 
 const VisualCard = lazyWithReload(() => import('./VisualCard'));
@@ -137,28 +137,10 @@ export const DegreeMemoryView: React.FC<DegreeMemoryViewProps> = ({
         if (fileRef.current) fileRef.current.value = '';
         return;
       }
-      let course = courses.find((c) => c.code === pack.course.code);
-      if (!course) {
-        course = { id: `c-${pack.course.code.toLowerCase()}-${Date.now().toString(36)}`, ...pack.course };
-        onAddCourse?.(course);
-      }
-      const have = new Set(notes.filter((n) => n.courseId === course!.id).map((n) => n.title));
-      const now = new Date().toISOString();
-      const fresh = pack.notes
-        .filter((n) => !have.has(n.title))
-        .map((n, i): Note => ({
-          id: `note-${Date.now()}-p${i}`,
-          courseId: course!.id,
-          year: course!.year,
-          title: n.title,
-          content: n.content,
-          summary: n.summary || n.content.replace(/\s+/g, ' ').slice(0, 140),
-          tags: n.tags?.length ? n.tags : autoTags(`${n.title} ${n.content}`),
-          keyTakeaways: n.keyTakeaways ?? [],
-          createdAt: now,
-          updatedAt: now,
-        }));
-      const updated = [...fresh, ...notes];
+      const merged = mergePack(pack, notes, courses);
+      if (merged.newCourse) onAddCourse?.(merged.course);
+      const fresh = { length: merged.added };
+      const updated = merged.notes;
       setNotes(updated);
       storage.saveNotes(updated);
       setReading(false);

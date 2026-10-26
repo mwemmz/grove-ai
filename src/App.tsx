@@ -35,6 +35,7 @@ import {
 import { storage } from './services/storage';
 import type { TopicId } from './data/visualTopics';
 import { canSeeCourse, setStudentId } from './services/access';
+import { syncPacks } from './services/packs';
 import { aiService } from './services/aiService';
 import { setTokenProvider } from './lib/api';
 
@@ -129,6 +130,22 @@ function GroveApp() {
     if (!accountName || !isDataReady) return;
     setProfile((p) => (!p.studentName || p.studentName === 'Alex Chimwaza' ? { ...p, studentName: accountName } : p));
   }, [accountName, isDataReady]);
+
+  // Course notes the university has published for this student (e.g. BIT353 for BIT IDs) arrive automatically.
+  const [packNotice, setPackNotice] = useState<string | null>(null);
+  const packsChecked = useRef(false);
+  useEffect(() => {
+    if (!isDataReady || packsChecked.current || !storage.isHydrated()) return;
+    packsChecked.current = true;
+    void syncPacks(storage.getNotes(), storage.getCourses()).then((r) => {
+      if (!r) return;
+      if (r.newCourses.length) setCourses((prev) => [...prev, ...r.newCourses.filter((c) => !prev.some((p) => p.code === c.code))]);
+      setNotes(r.notes);
+      storage.saveNotes(r.notes);
+      if (r.newCourses.length) storage.saveCourses([...storage.getCourses(), ...r.newCourses.filter((c) => !storage.getCourses().some((p) => p.code === c.code))]);
+      if (r.added.length) setPackNotice(`Added from your university: ${r.added.map((a) => `${a.count} ${a.code} notes`).join(', ')}.`);
+    });
+  }, [isDataReady]);
 
   // Sync to storage on state changes (each save also PUTs to the API)
   useEffect(() => {
@@ -341,6 +358,12 @@ function GroveApp() {
         )}
       >
         <div className="space-y-5">
+          {packNotice && (
+            <div role="status" className="flex items-start justify-between gap-3 rounded-[10px] bg-surface px-4 py-3 text-sm text-text ring-1 ring-accent/50">
+              <span>{packNotice} Find them under Ask → Your notes.</span>
+              <button onClick={() => setPackNotice(null)} className="text-muted hover:text-text" aria-label="Dismiss">✕</button>
+            </div>
+          )}
           {activeTab === 'remember' && (
             <>
               <ChatTutorView

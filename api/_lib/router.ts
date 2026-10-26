@@ -25,6 +25,7 @@ import {
   saveProfile,
 } from './collections.js';
 import { exportBackup, importBackup, resetBackup } from './backup.js';
+import { handlePacks } from './packs.js';
 import type {
   ChatMessage,
   Course,
@@ -105,6 +106,10 @@ export async function handleRequest(req: HandlerReq, res: HandlerRes): Promise<v
   }
 
   const resource = segments[1];
+  if (resource === 'packs' || resource === 'me') {
+    await handlePacks(req, res, await requireUser(req), segments);
+    return;
+  }
   const group = routes[resource];
   if (!group) {
     throw new ApiError(404, 'Not found');

@@ -96,6 +96,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </button>
       </div>
 
+      {/* Menu and recent questions scroll together, so nothing is cut off on short screens or with More open. */}
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
       <nav aria-label="Sections" className="mt-3 px-3">
         <ul className="space-y-0.5">{PRIMARY_NAV.map(row)}</ul>
         <button
@@ -110,7 +112,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {showMore && <ul className="animate-fade-in space-y-0.5">{MORE_NAV.map(row)}</ul>}
       </nav>
 
-      <div className="mt-4 min-h-0 flex-1 overflow-y-auto px-3 pb-3">
+      <div className="mt-4 px-3 pb-3">
         <p className={sectionLabel}>Recent questions</p>
         {recents.length === 0 ? (
           <p className="px-3 text-sm text-muted">Your questions will appear here.</p>
@@ -140,8 +142,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
         )}
       </div>
 
+      </div>
+
       {themesOpen && (
-        <div className="shrink-0 border-t border-line p-3">
+        <div className="max-h-[45%] shrink-0 overflow-y-auto border-t border-line p-3">
           <ThemePicker compact />
         </div>
       )}

@@ -78,6 +78,12 @@
     html, body { overflow: hidden; height: 100%; }
   }
 
+  /* Phones: 16px text in form fields stops iOS zooming in on tap; dropdowns never outgrow their box. */
+  select { max-width: 100%; }
+  @media (max-width: 639px) {
+    input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']), select, textarea { font-size: 16px !important; }
+  }
+
   #root {
     min-height: 100dvh;
     width: 100%;

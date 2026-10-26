@@ -5,6 +5,7 @@ import { AuthScreen } from './components/AuthScreen';
 import { TreePine } from 'lucide-react';
 import { AppTab, TAB_LABEL } from './components/Header';
 import { Shell } from './components/Shell';
+import { BottomNav } from './components/BottomNav';
 import { Sidebar } from './components/Sidebar';
 import { ProgressPanel } from './components/ProgressPanel';
 import { ChatTutorView, NEW_VIEW } from './components/ChatTutorView';
@@ -322,6 +323,7 @@ function GroveApp() {
     <>
       <Shell
         title={TAB_LABEL[activeTab]}
+        bottom={(openMenu) => <BottomNav tab={activeTab} onTab={goTo} onMenu={openMenu} />}
         sidebar={(api) => (
           <Sidebar
             tab={activeTab}

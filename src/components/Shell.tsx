@@ -34,13 +34,15 @@ interface ShellProps {
   sidebar: (api: PanelApi) => React.ReactNode;
   panel: (api: PanelApi) => React.ReactNode;
   children: React.ReactNode;
+  /** Phone-only bar under the page (hidden from lg up); receives a way to open the full menu. */
+  bottom?: (openMenu: () => void) => React.ReactNode;
 }
 
 /**
  * Three panels: history and navigation on the left, the work in the middle, progress on the right.
  * Wide screens show all three. Narrower screens show the middle, and the sides slide over it.
  */
-export function Shell({ title, sidebar, panel, children }: ShellProps) {
+export function Shell({ title, sidebar, panel, children, bottom }: ShellProps) {
   const [left, setLeft] = useState(() => matches(LG) && (readPref().left ?? true));
   const [right, setRight] = useState(() => matches(XL) && (readPref().right ?? true));
 
@@ -133,6 +135,7 @@ export function Shell({ title, sidebar, panel, children }: ShellProps) {
         <main className="app-main relative min-h-0 flex-1 overflow-y-auto">
           <div className="mx-auto w-full max-w-[820px] px-4 pb-20 pt-6 sm:px-8">{children}</div>
         </main>
+        {bottom && <div className="no-print shrink-0 lg:hidden">{bottom(() => setLeftPref(true))}</div>}
       </div>
 
       <aside

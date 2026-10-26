@@ -254,7 +254,7 @@ export const DegreeMemoryView: React.FC<DegreeMemoryViewProps> = ({
             <FileUp aria-hidden className="h-5 w-5 shrink-0 text-accent" />
             <span className="min-w-0">
               {reading ? 'Reading…' : 'Choose files or drop them here'}
-              <span className="block text-xs text-muted">PDF, Word, text, Markdown or CSV. Read on your device, up to 8 MB each.</span>
+              <span className="block text-xs text-muted">PDF, Word, PowerPoint, text, Markdown or CSV. Read on your device, up to 8 MB each.</span>
             </span>
           </label>
           {uploadMsg && (

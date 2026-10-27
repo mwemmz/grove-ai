@@ -144,6 +144,7 @@ function GroveApp() {
       storage.saveNotes(r.notes);
       if (r.newCourses.length) storage.saveCourses([...storage.getCourses(), ...r.newCourses.filter((c) => !storage.getCourses().some((p) => p.code === c.code))]);
       if (r.added.length) setPackNotice(`Added from your university: ${r.added.map((a) => `${a.count} ${a.code} notes`).join(', ')}.`);
+      else if (r.updated.length) setPackNotice(`Your university improved ${r.updated.map((a) => `${a.count} ${a.code} notes`).join(', ')}.`);
     });
   }, [isDataReady]);
 

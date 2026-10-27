@@ -9,10 +9,12 @@ export interface Item {
 }
 
 export interface Group {
-  kind: 'list' | 'defs' | 'steps' | 'para' | 'example' | 'code';
+  kind: 'list' | 'defs' | 'steps' | 'para' | 'example' | 'code' | 'table';
   label?: string;
   items: Item[];
   text?: string;
+  /** For tables: the first row is the header. */
+  rows?: string[][];
 }
 
 export interface Section {
@@ -48,6 +50,22 @@ const BULLET = /^(\s*)([-*•–▪◦]|\d{1,2}[.)])\s+(.*)$/;
 const GENERIC = /^(slide(\s*\d+)?|contd\.?|continued|\d+(\.\d+)*)$/i;
 
 const clean = (s: string) => s.replace(/\s+/g, ' ').trim();
+const tidyTitle = (s: string): string => {
+  let t = clean(s);
+  const strip = (re: RegExp) => { const r = t.replace(re, '').trim(); if (r.length >= 3) t = r; };
+  strip(/^(unit|chapter|lesson|week)\s*:?\s*\d+(\.\d+)*\s*[.:\-–]?\s*/i); // "Unit 8.2. YARN" -> "YARN"
+  strip(/^\d+(\.\d+)*\s*[.)]?\s*(?=[A-Za-z])/);                                // "3.Data Modeling" -> "Data Modeling"
+  strip(/^(i{1,3}|iv|vi{0,3}|ix|x)[.)]\s+/i);                                      // "ii. Primitives" -> "Primitives"
+  t = t.replace(/[\s:.\-–…]+$/, '');
+  const open = (t.match(/\(/g) ?? []).length, close = (t.match(/\)/g) ?? []).length;
+  return open > close ? t + ')' : t;
+};
+const CONTINUED = /^(contd|cont'?d|continued|continuation)\.*…?$/i;
+const EXAMPLE_TITLE = /^(examples?|case study|illustration)$/i;
+const NO_DIAGRAM = /objectives?|outcomes?|introduction|overview|conclusion|summary|references?|^school of|examination|instructions|^question\b|^section [a-z]\b|marking/i;
+/** Slide furniture that carries no study value. */
+const META = /^(unit|chapter|slide|page|lesson|week)\s*[:#.\-]?\s*\d+(\.\d+)*$/i;
+const CLOSING = /^(thank\s*you.*|thanks.*|questions?(\s+(and|&)\s+(discussions?|answers?))?|q\s*&\s*a|any questions\??)[\s!.?]*$/i;
 export const clip = (s: string, n: number) => (s.length > n ? s.slice(0, n - 1).replace(/[\s,;:]+$/, '') + '…' : s);
 
 /** A heading line for a block with no usable title: the first few words of its first line. */
@@ -80,7 +98,7 @@ export function parseSections(content: string, fallbackTitle = 'Overview'): Sect
     let body = b.body;
     const firstIdx = body.findIndex((l) => l.trim());
     // Old imports gave a long first line, or the word "Slide", as the heading. Use the real first words instead.
-    if (!title || GENERIC.test(title)) {
+    if (!title || GENERIC.test(title) || !/[A-Za-z0-9]/.test(title)) {
       if (firstIdx >= 0) {
         title = titleFrom(body[firstIdx]);
         if (clean(body[firstIdx]).length <= 56 && !/[.:]$/.test(clean(body[firstIdx]))) body = body.filter((_, j) => j !== firstIdx);
@@ -90,15 +108,63 @@ export function parseSections(content: string, fallbackTitle = 'Overview'): Sect
       body = [title, ...body];
       title = titleFrom(title);
     }
+    title = tidyTitle(title) || title;
+    body = body.filter((l) => !META.test(l.trim()));
     const raw = [`### ${title}`, ...body].join('\n');
-    out.push({ id: `s${out.length}`, title, groups: parseGroups(body), raw });
+    out.push({ id: '', title, groups: parseGroups(body), raw });
   });
-  return out;
+
+  // Tidy the result the way a person reading the slides would: drop empty and closing slides,
+  // and join a slide that repeats the title of the one before it (a title slide followed by its content).
+  const tidy: Section[] = [];
+  for (const s of out) {
+    const empty = s.groups.length === 0;
+    const closing = CLOSING.test(s.title) && s.groups.reduce((n, g) => n + g.items.length, 0) < 3;
+    if (closing) continue;
+    const prev = tidy[tidy.length - 1];
+    if (prev && (CONTINUED.test(s.title) || EXAMPLE_TITLE.test(s.title))) {
+      // "Contd…" slides carry on the section before; an "Example" slide is that section's example.
+      const asExample = EXAMPLE_TITLE.test(s.title);
+      prev.groups.push(...s.groups.map((g): Group => (asExample && g.kind === 'para' ? { kind: 'example', label: 'Example', items: [], text: g.text } : g)));
+      prev.raw += '\n' + s.raw.split('\n').slice(1).join('\n');
+      continue;
+    }
+    if (prev && prev.title.toLowerCase() === s.title.toLowerCase()) {
+      prev.groups.push(...s.groups);
+      prev.raw += '\n' + s.raw.split('\n').slice(1).join('\n');
+      continue;
+    }
+    if (empty && !(prev === undefined)) continue;
+    if (empty) continue;
+    tidy.push(s);
+  }
+  // The same heading used again further on (slides often repeat one) gets a part number so the outline is unambiguous.
+  const seen = new Map<string, number>();
+  return tidy.map((s, i) => {
+    const k = s.title.toLowerCase();
+    const n = (seen.get(k) ?? 0) + 1;
+    seen.set(k, n);
+    return { ...s, id: `s${i}`, title: n > 1 ? `${s.title} (part ${n})` : s.title };
+  });
 }
 
 /* ---------- grouping a section's lines ---------- */
 
-function parseGroups(body: string[]): Group[] {
+/** PDF text arrives hard-wrapped; a line that starts in lower case carries on the line above it. */
+function unwrap(lines: string[]): string[] {
+  const out: string[] = [];
+  for (const l of lines) {
+    const prev = out[out.length - 1];
+    const t = l.trim();
+    if (prev && t && !prev.trim().startsWith('|') && /^[a-z(]/.test(t) && !BULLET.test(l) && !BULLET.test(prev) && prev.trim() && !/[.:;!?]$/.test(prev.trim()) && !prev.trim().startsWith('```')) {
+      out[out.length - 1] = prev.replace(/\s+$/, '') + ' ' + t;
+    } else out.push(l);
+  }
+  return out;
+}
+
+function parseGroups(rawBody: string[]): Group[] {
+  const body = unwrap(rawBody);
   const groups: Group[] = [];
   let label: string | undefined;
   let run: Item[] = [];
@@ -115,7 +181,7 @@ function parseGroups(body: string[]): Group[] {
     const sentence = (t: string) => t.length > 100 || /[.!?]$/.test(t);
     // One or two sentences on their own are paragraphs; a run of lines is a list.
     if (!numbered && items.length < 3 && items.every((i) => i.depth === 0 && sentence(i.text))) {
-      if (lab) groups.push({ kind: 'para', items: [], text: `${lab}: ${items.map((i) => i.text).join(' ')}` });
+      if (lab) groups.push({ kind: 'list', label: lab, items });
       else items.forEach((i) => groups.push({ kind: 'para', items: [], text: i.text }));
       return;
     }
@@ -142,6 +208,18 @@ function parseGroups(body: string[]): Group[] {
       groups.push({ kind: 'code', items: [], text: code.join('\n') });
       continue;
     }
+    if (t.startsWith('|') && t.endsWith('|')) {
+      flushRun();
+      const rows: string[][] = [];
+      while (i < body.length && body[i].trim().startsWith('|')) {
+        const cells = body[i].trim().replace(/^\||\|$/g, '').split('|').map((c) => c.trim());
+        if (!cells.every((c) => /^:?-{2,}:?$/.test(c) || c === '---')) rows.push(cells);
+        i++;
+      }
+      if (rows.length) groups.push({ kind: 'table', label, items: [], rows });
+      label = undefined;
+      continue;
+    }
     const ex = t.match(/^(example|e\.g\.|for example|note|tip)\s*[:\-–]\s*(.+)$/i);
     if (ex) {
       flushRun();
@@ -161,7 +239,9 @@ function parseGroups(body: string[]): Group[] {
     const depth = bm ? Math.min(2, Math.floor(bm[1].replace(/\t/g, '  ').length / 2)) : 0;
     if (bm && /\d/.test(bm[2])) steps = true;
     const d = body0.match(/^([^:]{2,40}):\s+(\S.*)$/);
-    const item: Item = d && !/^https?$/i.test(d[1]) ? { text: body0, depth, term: d[1].trim(), def: d[2].trim() } : { text: body0, depth };
+    const stepLine = d && /^(step|stage|phase)\s*\d+$/i.test(d[1].trim());
+    if (stepLine) steps = true;
+    const item: Item = d && !stepLine && !/^https?$/i.test(d[1]) ? { text: body0, depth, term: d[1].trim(), def: d[2].trim() } : { text: stepLine && d ? d[2].trim() : body0, depth };
     run.push(item);
     i++;
   }
@@ -175,7 +255,7 @@ const SHORT = 64;
 const re = {
   pyramid: /pyramid|hierarch|dikw|ranking|priority/i,
   layers: /layer|tier|stack|architecture|levels?\b/i,
-  flow: /steps?|process|stages?|phases?|life ?cycle|workflow|pipeline|cycle|flow|procedure|sequence|how it works/i,
+  flow: /\b(steps?|process|stages?|phases?|life ?cycle|workflow|pipeline|cycle|flow|procedure|sequence)\b|how it works/i,
   pro: /advantage|benefit|pros?\b|strength|merit|positive/i,
   con: /disadvantage|challenge|cons?\b|limitation|drawback|weakness|risk|negative/i,
 };
@@ -194,8 +274,12 @@ function nest(items: Item[]): Node[] {
 
 const fits = (nodes: Node[]) => nodes.every((n) => n.text.length <= SHORT);
 
+/** Cover pages, exam questions and the like are read, not revised from a picture. */
+export const readOnly = (section: Section) => NO_DIAGRAM.test(section.title);
+
 export function diagramsFor(section: Section): Diagram[] {
   const out: Diagram[] = [];
+  if (NO_DIAGRAM.test(section.title)) return out;
   const lists = section.groups.filter((g) => g.kind === 'list' || g.kind === 'defs' || g.kind === 'steps');
 
   const pro = lists.find((g) => g.label && re.pro.test(g.label));
@@ -214,7 +298,9 @@ export function diagramsFor(section: Section): Diagram[] {
     if (g === pro || g === con) continue;
     const nodes = nest(g.items);
     if (nodes.length < 3 || nodes.length > 9 || !fits(nodes)) continue;
-    const about = `${g.label ?? ''} ${g.label ? '' : section.title}`;
+    // A list's own label says what it is; a section title only counts when it names the structure itself ("The Layers", "ETL Process").
+    const titleHint = /(layers|tiers|stack|levels|process|steps|stages|phases|life ?cycle|workflow|pipeline|procedure|sequence|pyramid|hierarchy)$/i.test(section.title) ? section.title : '';
+    const about = g.label ? g.label : titleHint;
     const caption = g.label && g.label.length <= 40 ? g.label : section.title;
     const whole = nodes.length <= 7;
     const covers = whole ? [g] : [];
@@ -260,6 +346,7 @@ export function glossary(sections: Section[], max = 16): { term: string; def: st
 
 /** "Cover it and say it" prompts, so reading becomes recall (answers stay hidden until opened). */
 export function recallFor(section: Section): Recall | null {
+  if (/^school of|examination|instructions|^question\b|^section [a-z]\b|marking|^thank/i.test(section.title)) return null;
   const g = section.groups.find((x) => x.kind === 'list' || x.kind === 'defs' || x.kind === 'steps');
   if (!g || g.items.length < 2) return null;
   const subject = g.label && g.label.length <= 40 ? g.label : section.title;

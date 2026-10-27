@@ -73,6 +73,16 @@ async function pptxText(file: File): Promise<string> {
       if ((type === 'title' || type === 'ctrTitle') && !title) title = paras.map((p) => p.text).join(' ');
       else if (type !== 'sldNum' && type !== 'ftr' && type !== 'dt') for (const p of paras) body.push(p.lvl > 0 ? `${'  '.repeat(Math.min(p.lvl, 2) - 1)}- ${p.text}` : p.text);
     }
+    // Tables live in graphic frames, not shapes: keep them as pipe tables so they read as tables.
+    for (const tbl of Array.from(xml.getElementsByTagNameNS(A, 'tbl'))) {
+      const rows = Array.from(tbl.getElementsByTagNameNS(A, 'tr'))
+        .map((tr) => Array.from(tr.getElementsByTagNameNS(A, 'tc')).map((tc) => Array.from(tc.getElementsByTagNameNS(A, 'p')).map((p) => Array.from(p.getElementsByTagNameNS(A, 't')).map((t) => t.textContent ?? '').join('').trim()).filter(Boolean).join(' ')))
+        .filter((r) => r.some(Boolean));
+      if (!rows.length) continue;
+      const w = Math.max(...rows.map((r) => r.length));
+      const fmt = (r: string[]) => `| ${Array.from({ length: w }, (_, i) => r[i] ?? '').join(' | ')} |`;
+      body.push(fmt(rows[0]), `|${'---|'.repeat(w)}`, ...rows.slice(1).map(fmt));
+    }
     if (!title && body.length === 0) continue;
     if (!title) {
       // No title placeholder: a short first line is the title, otherwise its first words are.

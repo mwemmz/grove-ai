@@ -24,7 +24,7 @@ async function fetchPack(code: string): Promise<NotesPack | null> {
 }
 
 /** Adds the notes from every pack this student may have that they don't have yet. Never throws. */
-export async function syncPacks(notes: Note[], courses: Course[]): Promise<{ notes: Note[]; newCourses: Course[]; added: { code: string; count: number }[] } | null> {
+export async function syncPacks(notes: Note[], courses: Course[]): Promise<{ notes: Note[]; newCourses: Course[]; added: { code: string; count: number }[]; updated: { code: string; count: number }[] } | null> {
   let list: PackSummary[];
   try {
     list = await listPacks();
@@ -34,10 +34,13 @@ export async function syncPacks(notes: Note[], courses: Course[]): Promise<{ not
   let current = notes;
   const newCourses: Course[] = [];
   const added: { code: string; count: number }[] = [];
+  const updated: { code: string; count: number }[] = [];
+  const revKey = (code: string) => `grove_pack_rev_${code}`;
+  const seenRev = (code: string) => { try { return localStorage.getItem(revKey(code)); } catch { return null; } };
   for (const p of list.filter((x) => x.forMe)) {
     const course = [...courses, ...newCourses].find((c) => c.code.toUpperCase() === p.code);
     const have = course ? current.filter((n) => n.courseId === course.id).length : 0;
-    if (have >= p.notes) continue; // nothing missing
+    if (have >= p.notes && seenRev(p.code) === p.updatedAt) continue; // nothing missing, nothing changed
     try {
       const pack = await fetchPack(p.code);
       if (!pack) continue;
@@ -45,9 +48,11 @@ export async function syncPacks(notes: Note[], courses: Course[]): Promise<{ not
       current = merged.notes;
       if (merged.newCourse) newCourses.push(merged.course);
       if (merged.added) added.push({ code: p.code, count: merged.added });
+      if (merged.updated) updated.push({ code: p.code, count: merged.updated });
+      try { localStorage.setItem(revKey(p.code), p.updatedAt); } catch { /* fine */ }
     } catch {
       /* one pack failing shouldn't stop the others */
     }
   }
-  return added.length || newCourses.length ? { notes: current, newCourses, added } : null;
+  return added.length || updated.length || newCourses.length ? { notes: current, newCourses, added, updated } : null;
 }

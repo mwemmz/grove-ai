@@ -24,6 +24,28 @@ function GroupView({ g }: { g: Group }) {
         <Inline text={g.text ?? ''} />
       </div>
     );
+  if (g.kind === 'table' && g.rows) {
+    const [head, ...rest] = g.rows;
+    return (
+      <div>
+        {label}
+        <div className="overflow-x-auto rounded-lg ring-1 ring-line">
+          <table className="w-full min-w-[28rem] border-collapse text-left text-sm leading-6">
+            <thead className="bg-raised">
+              <tr>{head.map((h, i) => <th key={i} scope="col" className="px-3 py-2 font-semibold text-text">{h}</th>)}</tr>
+            </thead>
+            <tbody className="divide-y divide-line">
+              {rest.map((r, i) => (
+                <tr key={i} className="align-top">
+                  {r.map((c, j) => (j === 0 ? <th key={j} scope="row" className="px-3 py-2 font-medium text-text">{c}</th> : <td key={j} className="px-3 py-2 text-muted"><Inline text={c} /></td>))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  }
   if (g.kind === 'defs')
     return (
       <div>

@@ -59,12 +59,21 @@ export function parseNotesPack(text: string): NotesPack | null {
 }
 
 /** Adds a pack's course (if missing) and any of its notes not already there, matched by course and title. */
-export function mergePack(pack: NotesPack, notes: Note[], courses: Course[]): { notes: Note[]; course: Course; newCourse: boolean; added: number } {
+export function mergePack(pack: NotesPack, notes: Note[], courses: Course[]): { notes: Note[]; course: Course; newCourse: boolean; added: number; updated: number } {
   let course = courses.find((c) => c.code.toUpperCase() === pack.course.code.toUpperCase());
   const newCourse = !course;
   if (!course) course = { id: `c-${pack.course.code.toLowerCase()}-${Date.now().toString(36)}`, ...pack.course };
   const have = new Set(notes.filter((n) => n.courseId === course!.id).map((n) => n.title));
   const now = new Date().toISOString();
+  // A pack the university has corrected replaces the older copy of the same note (same id, so flashcards stay linked).
+  const byTitle = new Map(pack.notes.map((n) => [n.title, n]));
+  let updated = 0;
+  const refreshed = notes.map((n) => {
+    const p = n.courseId === course!.id ? byTitle.get(n.title) : undefined;
+    if (!p || p.content === n.content) return n;
+    updated++;
+    return { ...n, content: p.content, summary: p.summary || p.content.replace(/\s+/g, ' ').slice(0, 140), tags: p.tags ?? n.tags, keyTakeaways: p.keyTakeaways ?? n.keyTakeaways, updatedAt: now };
+  });
   const fresh = pack.notes
     .filter((n) => !have.has(n.title))
     .map((n, i): Note => ({
@@ -79,5 +88,5 @@ export function mergePack(pack: NotesPack, notes: Note[], courses: Course[]): { 
       createdAt: now,
       updatedAt: now,
     }));
-  return { notes: [...fresh, ...notes], course, newCourse, added: fresh.length };
+  return { notes: [...fresh, ...refreshed], course, newCourse, added: fresh.length, updated };
 }

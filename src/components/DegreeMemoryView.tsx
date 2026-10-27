@@ -115,6 +115,7 @@ export const DegreeMemoryView: React.FC<DegreeMemoryViewProps> = ({
       const merged = mergePack(pack, notes, courses);
       if (merged.newCourse) onAddCourse?.(merged.course);
       const fresh = { length: merged.added };
+      const refreshed = merged.updated;
       const updated = merged.notes;
       setNotes(updated);
       storage.saveNotes(updated);
@@ -123,7 +124,9 @@ export const DegreeMemoryView: React.FC<DegreeMemoryViewProps> = ({
         ok: true,
         text:
           fresh.length === 0
-            ? `All ${pack.notes.length} ${pack.course.code} notes are already here.`
+            ? refreshed > 0
+              ? `Updated ${refreshed} ${pack.course.code} notes to the latest version.`
+              : `All ${pack.notes.length} ${pack.course.code} notes are already here.`
             : `Added ${fresh.length} ${pack.course.code} notes${pack.notes.length > fresh.length ? ` (${pack.notes.length - fresh.length} were already here)` : ''}. Open one to see the pictures beside the slides.`,
       });
       if (fileRef.current) fileRef.current.value = '';

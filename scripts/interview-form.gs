@@ -5,8 +5,7 @@
  *   1. When a student gets stuck, what actually happens, and does anyone at the university know? (the "unseen" claim)
  *   2. Why students do not ask lecturers or tutors. (the barriers a tool could remove)
  *   3. How students really use AI for study, and where it lets them down. (the "AI doesn't know my university" claim)
- *   4. Whether a university's own AI would be picked over ChatGPT, for which jobs, and what would stop them.
- *   5. Whether students would allow anonymous class totals of where they get stuck.
+ *   (The form never describes the product idea, so nothing about it leaks to respondents.)
  * It asks what people DID (last time they got stuck) more than what they THINK, because past behaviour is more honest.
  *
  * How to use:
@@ -17,7 +16,7 @@
  *      the key signals, two cross-checks, every question's counts, and students' own words. Run it again to refresh.
  */
 
-var FORM_TITLE = 'Grove research: how students at UNILUS get help';
+var FORM_TITLE = 'How students at UNILUS get help and study';
 var ASK = 'a lecturer or tutor';
 
 /* ------------------------------------------------------------------ */
@@ -82,18 +81,8 @@ var PAGES = [
     ]
   },
   {
-    title: 'A university\'s own AI',
-    help: 'Imagine an AI that answers only from your university\'s own course notes, rules and past projects, shows where each answer came from, and says "that is not in the library" when it does not know.',
+    title: 'One last thing',
     items: [
-      { id: 'who', type: 'grid', required: true, title: 'For each job, who or what would you ask first?',
-        rows: ['A question about my lecturer\'s notes or slides', 'A university rule or deadline', 'Writing or fixing code', 'Revising for a test', 'Choosing a final-year project idea'],
-        cols: ['The university\'s AI', 'ChatGPT or similar', 'A person (lecturer or classmate)', 'I would not ask anyone'] },
-      { id: 'blockers', type: 'cb', title: 'What would stop you using the university\'s AI? Tick all that apply.', other: true,
-        choices: ['It would say "I do not know" too often', 'I worry staff could see my questions', 'I already use ChatGPT and it is enough', 'It would be one more app to open',
-                  'I would worry about being accused of cheating', 'Nothing would stop me'] },
-      { id: 'anon', type: 'mc', required: true, title: 'Would you allow your study data (which topics you get stuck on, never your name) to be shown to lecturers as class totals?',
-        choices: ['Yes', 'Only if I opt in each time', 'No', 'Not sure'] },
-      { id: 'anonWorry', type: 'para', title: 'If you answered No or Not sure: what worries you?' },
       { id: 'lastTime', type: 'para', title: 'Tell us about a time you needed help with your studies and could not get it. What happened?' },
       { id: 'followUp', type: 'text', title: 'Optional: would you talk for 15 minutes? Leave a WhatsApp number or email. This is the ONLY question that is not anonymous. Leave it blank to stay anonymous.' }
     ]
@@ -107,13 +96,13 @@ var PAGES = [
 function createGroveForm() {
   var form = FormApp.create(FORM_TITLE);
   form.setDescription(
-    'A short survey (about 6 minutes) for a student project called Grove: an AI built on a university\'s own courses, notes and rules. ' +
+    'A short survey (about 5 minutes) for a student research project. ' +
     'It asks what really happens when you get stuck, and how you use AI to study.\n\n' +
     'It is anonymous: no names or student numbers are asked for. You can stop at any time. Answers are used only for this project.'
   );
   form.setCollectEmail(false);
   form.setProgressBar(true);
-  form.setConfirmationMessage('Thank you. Your answers help decide what Grove should and should not do.');
+  form.setConfirmationMessage('Thank you. Your answers will help improve how students are supported.');
 
   var consentItem = null;
   PAGES.forEach(function (page, pi) {
@@ -147,7 +136,7 @@ function createGroveForm() {
     consentItem.createChoice('No', FormApp.PageNavigationType.SUBMIT)
   ]);
 
-  var sheet = SpreadsheetApp.create('Grove research: responses');
+  var sheet = SpreadsheetApp.create('Student research: responses');
   form.setDestination(FormApp.DestinationType.SPREADSHEET, sheet.getId());
   PropertiesService.getScriptProperties().setProperty('SHEET_ID', sheet.getId());
 
@@ -261,15 +250,6 @@ function buildSummary() {
         'A gap an onboarding on AI use could fill.');
   share('Struggled to do a task alone after using AI for it', count(rng('aiAlone'), 'Yes'), null,
         'AI is being used to offload thinking. Grove should hold back answers and test recall.');
-  share('Would ask the university\'s AI first about lecturer notes',
-        count(rng('who', 'A question about my lecturer\'s notes or slides'), 'The university\'s AI'), null,
-        'The main use case is wanted.');
-  share('Would ask the university\'s AI first about rules and deadlines',
-        count(rng('who', 'A university rule or deadline'), 'The university\'s AI'), null,
-        'Rules and deadlines are a safe, valuable job for it.');
-  share('Would allow anonymous class totals (yes, or if they opt in)',
-        count(rng('anon'), 'Yes') + '+' + count(rng('anon'), 'Only if I opt in each time'), null,
-        'The staff view is worth building. If low, drop it.');
   var topBarrierRow = r;
   put(r, ['Biggest reason for not asking a lecturer or tutor', '', '', 'The most-ticked reason in the "why not" table below. Each one is a barrier a tool could try to remove.']);
   r += 2;

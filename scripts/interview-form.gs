@@ -8,7 +8,7 @@ function createGroveForm() {
   var form = FormApp.create('Grove research: how students get help at UNILUS');
   form.setDescription(
     'A short survey (about 5 minutes) for a student project called Grove: an AI built on the university\'s own courses, ' +
-    'policies and past projects. It asks how students get help and how lecturers and supervisors spot students who are struggling.\n\n' +
+    'policies and past projects. It asks how students get help and how lecturers spot students who are struggling.\n\n' +
     'It is anonymous: no names or student numbers are asked for. You can stop at any time. Answers are used only for this project.'
   );
   form.setCollectEmail(false);
@@ -39,16 +39,6 @@ function createGroveForm() {
     .setChoiceValues(['Yes', 'No', 'I have not asked it about those', 'Not sure']);
   form.addParagraphTextItem().setTitle('Think of a time you fell behind in a course. Who noticed first, and when?');
 
-  var fyp = form.addMultipleChoiceItem().setTitle('Have you started a final-year project or dissertation?').setRequired(true);
-  var fypPage = form.addPageBreakItem().setTitle('Final-year project');
-  form.addMultipleChoiceItem().setTitle('How long did you wait to be allocated a supervisor?')
-    .setChoiceValues(['Under 1 week', '1 to 2 weeks', '2 to 4 weeks', 'Over a month', 'Still waiting']);
-  form.addMultipleChoiceItem().setTitle('How often do you meet your supervisor?')
-    .setChoiceValues(['Every week', 'Every two weeks', 'Once a month', 'Less than once a month', 'Not yet met']);
-  form.addMultipleChoiceItem().setTitle('Have you looked at past final-year projects to help choose or shape yours?')
-    .setChoiceValues(['Yes, in the library', 'Yes, copies from other students', 'No, I did not know I could', 'No, I did not need to']);
-  form.addParagraphTextItem().setTitle('What was hardest about starting your project?');
-
   var studentEnd = form.addPageBreakItem().setTitle('A university\'s own AI');
   form.addScaleItem().setTitle('Would you use an AI that answers from your university\'s own course notes, rules and past projects, and says when it does not know?')
     .setBounds(1, 5).setLabels('Never', 'Definitely').setRequired(true);
@@ -60,14 +50,12 @@ function createGroveForm() {
   form.addParagraphTextItem().setTitle('Anything else you would want it to do, or never do?');
 
   /* ---------- lecturer section ---------- */
-  var lecturerPage = form.addPageBreakItem().setTitle('For lecturers and supervisors');
+  var lecturerPage = form.addPageBreakItem().setTitle('For lecturers');
   form.addMultipleChoiceItem().setTitle('How many students are in your largest class?')
     .setChoiceValues(['Under 30', '30 to 60', '60 to 100', '100 to 200', 'Over 200']).setRequired(true);
   form.addCheckboxItem().setTitle('How do you usually find out a student is struggling? (tick all that apply)')
     .setChoiceValues(['They ask me', 'Test or assignment marks', 'Attendance', 'I notice in class', 'A counsellor or another lecturer tells me', 'Usually only when they fail'])
     .showOtherOption(true);
-  form.addMultipleChoiceItem().setTitle('How many final-year students do you supervise at once?')
-    .setChoiceValues(['None', '1 to 3', '4 to 6', '7 to 10', 'More than 10']);
   form.addParagraphTextItem().setTitle('Which questions do students ask you most that are already answered in the handbook or course outline?');
   form.addCheckboxItem().setTitle('What worries you about students using a university AI? (tick all that apply)')
     .setChoiceValues(['Wrong answers', 'Cheating or AI-written work', 'Privacy of student data', 'Students depending on it', 'It replaces contact with lecturers', 'None of these'])
@@ -83,11 +71,7 @@ function createGroveForm() {
   ]);
   role.setChoices([
     role.createChoice('Student', studentPage),
-    role.createChoice('Lecturer or supervisor', lecturerPage),
-  ]);
-  fyp.setChoices([
-    fyp.createChoice('Yes', fypPage),
-    fyp.createChoice('No', studentEnd),
+    role.createChoice('Lecturer', lecturerPage),
   ]);
   // Students finish after their last page instead of running on into the lecturer section.
   lecturerPage.setGoToPage(FormApp.PageNavigationType.SUBMIT);

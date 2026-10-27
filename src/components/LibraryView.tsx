@@ -157,8 +157,8 @@ export const LibraryView: React.FC<LibraryViewProps> = ({ focusId, onFocusDone, 
         <div>
           <h2 className="font-display text-lg text-text">Starting your final-year project?</h2>
           <p className="mt-1 text-sm text-muted">
-            Describe your idea in a sentence or two. Grove finds past projects close to it, shows what they left open, and suggests what to ask your
-            supervisor while you wait to be allocated one.
+            Describe your idea in a sentence or two. Grove finds past projects close to it, shows what they left open, and suggests questions to bring to
+            your supervisor.
           </p>
         </div>
         <form onSubmit={find} className="space-y-3">

@@ -254,11 +254,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           </div>
 
           {/* AI Intelligence Provider */}
-          <div className="space-y-3 bg-slate-950/60 border border-slate-800 p-4 rounded-xl">
-            <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+          <details className="group space-y-3 bg-slate-950/60 border border-slate-800 p-4 rounded-xl">
+            <summary className="text-xs font-bold text-slate-300 uppercase tracking-wider cursor-pointer min-h-8 flex items-center gap-1.5">
               <Key className="h-3.5 w-3.5 text-teal-400" />
               AI engines
-            </h3>
+            </summary>
             <p className="text-xs leading-relaxed text-muted">
               Add a key for any provider. Grove tries them from the top. If one fails or runs out of quota, the next one picks up the same question. With no keys, Grove answers locally from your notes.
             </p>
@@ -409,14 +409,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             <p className="text-xs leading-relaxed text-muted">
               Keys stay in this browser and go only to their own provider. Providers that block browsers, such as NVIDIA, are reached through Grove's server, which passes the key on and does not store or log it. When you ask, the question, the few notes that match it and your last exchange are sent to the provider that answers. Use keys with spending limits, and remove them on a shared computer.
             </p>
-          </div>
+          </details>
 
           {/* Backup & Persistence */}
-          <div className="space-y-3 bg-slate-950/60 border border-slate-800 p-4 rounded-xl">
-            <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+          <details className="group space-y-3 bg-slate-950/60 border border-slate-800 p-4 rounded-xl">
+            <summary className="text-xs font-bold text-slate-300 uppercase tracking-wider cursor-pointer min-h-8 flex items-center gap-1.5">
               <Database className="h-3.5 w-3.5 text-blue-400" />
               Data Persistence & Portability
-            </h3>
+            </summary>
 
             <div className="flex flex-wrap gap-2">
               <button
@@ -439,7 +439,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 />
               </label>
             </div>
-          </div>
+          </details>
 
           <AccountPanel />
           <PacksAdmin />

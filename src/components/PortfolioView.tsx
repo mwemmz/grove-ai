@@ -94,6 +94,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({
             </div>
           </section>
 
+          {skills.length > 0 && (
           <section aria-labelledby="skills-h" className="space-y-4">
             <h2 id="skills-h" className="text-lg font-semibold text-text">Skills</h2>
             {categories.map((cat) => (
@@ -126,7 +127,10 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({
               </div>
             ))}
           </section>
+          )}
 
+
+          {projects.length > 0 && (
           <section aria-labelledby="proj-h" className="space-y-3">
             <h2 id="proj-h" className="text-lg font-semibold text-text">Projects</h2>
             <ul className="space-y-3">
@@ -161,6 +165,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({
               ))}
             </ul>
           </section>
+          )}
         </>
       )}
 

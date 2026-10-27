@@ -109,9 +109,9 @@ export const LearningProfileView: React.FC<LearningProfileViewProps> = ({
         subtitle={`These settings shape every answer. ${activity}.`}
       />
 
-      <section className="space-y-4" aria-labelledby="style-h">
-        <h2 id="style-h" className="text-lg font-semibold text-text">How Grove explains things</h2>
-        <div role="radiogroup" aria-labelledby="style-h" className="grid gap-2 sm:grid-cols-2">
+      <Disclosure summary={<span className="text-lg font-semibold text-text">How Grove explains things</span>}>
+      <section className="space-y-4" aria-label="How Grove explains things">
+        <div role="radiogroup" aria-label="How Grove explains things" className="grid gap-2 sm:grid-cols-2">
           {STYLES.map((s) => {
             const active = profile.explanationStyle === s.id;
             return (
@@ -152,6 +152,7 @@ export const LearningProfileView: React.FC<LearningProfileViewProps> = ({
           />
         </div>
       </section>
+      </Disclosure>
 
       <section className="space-y-3" aria-labelledby="mine-h">
         <div>
@@ -191,9 +192,9 @@ export const LearningProfileView: React.FC<LearningProfileViewProps> = ({
         </div>
       </section>
 
-      <section className="space-y-3" aria-labelledby="topics-h">
+      <Disclosure summary={<span className="text-lg font-semibold text-text">Topics to revisit</span>}>
+      <section className="space-y-3" aria-label="Topics to revisit">
         <div>
-          <h2 id="topics-h" className="text-lg font-semibold text-text">Topics to revisit</h2>
           <p className="text-sm text-muted">Added when you tap "I'm lost" or miss a flashcard.</p>
         </div>
 
@@ -244,11 +245,12 @@ export const LearningProfileView: React.FC<LearningProfileViewProps> = ({
           </button>
         )}
       </section>
+      </Disclosure>
 
-      <section className="space-y-3" aria-labelledby="noticed-h">
+      <Disclosure summary={<span className="text-lg font-semibold text-text">What Grove has noticed</span>}>
+      <section className="space-y-3" aria-label="What Grove has noticed">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h2 id="noticed-h" className="text-lg font-semibold text-text">What Grove has noticed</h2>
             <p className="text-sm text-muted">Turn off or delete anything you disagree with.</p>
           </div>
           <button onClick={() => setIsAddOpen(true)} className={quietBtn}>
@@ -296,6 +298,7 @@ export const LearningProfileView: React.FC<LearningProfileViewProps> = ({
           )}
         </Disclosure>
       </section>
+      </Disclosure>
 
       {isAddOpen && (
         <Modal title="Teach Grove how you learn" onClose={() => setIsAddOpen(false)}>

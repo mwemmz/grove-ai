@@ -145,7 +145,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({ focusId, onFocusDone, 
     <div className="space-y-5">
       <PageHeader
         title="Library"
-        subtitle="Your university's own material: past final-year projects, course outlines and policies. Grove answers from this first and shows which source it used."
+        subtitle="Your university's own projects, course outlines and policies. Grove answers from these first."
       />
 
       <p className="rounded-md bg-raised px-4 py-3 text-sm text-muted">
@@ -153,6 +153,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({ focusId, onFocusDone, 
         university would load its own, with permission from the authors.
       </p>
 
+      <Disclosure summary={<span className="text-text">Starting your final-year project? Find similar past projects</span>}>
       <section className={`${panel} space-y-4`} aria-label="Starting a final-year project">
         <div>
           <h2 className="font-display text-lg text-text">Starting your final-year project?</h2>
@@ -239,6 +240,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({ focusId, onFocusDone, 
           </div>
         )}
       </section>
+      </Disclosure>
 
       <section className={`${panel} space-y-4`} aria-label="Browse the library">
         <div className="flex flex-wrap items-center justify-between gap-3">

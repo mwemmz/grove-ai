@@ -32,11 +32,8 @@ interface ChatTutorViewProps {
   onOpenVisual?: (id: TopicId) => void;
 }
 
-const STARTER_PROMPTS = [
-  'What should a final-year project proposal include?',
-  'Has anyone done a project on mobile money fraud?',
-];
-const PLACEHOLDER = 'What should my project proposal include, and has anyone done something like my idea?';
+const FALLBACK_PROMPTS = ['What should a final-year project proposal include?', 'Has anyone done a project on mobile money fraud?'];
+const PLACEHOLDER = 'Ask about your notes, a concept, or a rule';
 
 const ADAPT_ACTIONS: { id: 'too-long' | 'analogy' | 'code' | 'lost' | 'quiz'; label: string }[] = [
   { id: 'too-long', label: 'Shorter' },
@@ -231,7 +228,7 @@ export const ChatTutorView: React.FC<ChatTutorViewProps> = ({
         className="space-y-3"
       >
         <label htmlFor="ask" className={labelCls}>
-          Ask anything. Grove answers from your university's library and your own notes, and says when it can't find it.
+          Ask anything. Answers come from your notes and the library, with sources.
         </label>
         <textarea
           id="ask"
@@ -258,7 +255,7 @@ export const ChatTutorView: React.FC<ChatTutorViewProps> = ({
 
       {!answer && !isLoading && (
         <div className="flex flex-wrap gap-2" aria-label="Suggestions">
-          {STARTER_PROMPTS.map((prompt) => (
+          {(notes.length ? [`Explain “${notes[0].title}” in simple terms`, `What are the key points of “${notes[0].title}”?`] : FALLBACK_PROMPTS).map((prompt) => (
             <button
               key={prompt}
               onClick={() => handleSend(prompt)}

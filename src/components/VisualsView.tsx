@@ -3,7 +3,7 @@ import '@hyperframes/player';
 import type { HyperframesPlayer } from '@hyperframes/player';
 import { Note, Course } from '../types';
 import { getStoredTheme, themeById, visualPalette } from '../themes';
-import { Segmented, labelCls, panel, primaryBtn, quietBtn, chip } from './ui';
+import { Segmented, field, labelCls, panel, primaryBtn, quietBtn, chip } from './ui';
 import type { StudyPreset } from './StudyView';
 import { EconLab } from './EconLab';
 import { picturesFor } from '../data/pictureMatch';
@@ -586,26 +586,17 @@ export const VisualsView: React.FC<VisualsViewProps> = ({ notes, courses, curren
 
       {view === 'animations' ? (
         <>
-          <div className="space-y-3">
-            {groups.filter((g) => shown.some((t) => t.group === g)).map((g) => (
-              <div key={g}>
-                <p className={labelCls}>{g}</p>
-                <div className="flex flex-wrap gap-2">
+          <div>
+            <label htmlFor="v-topic" className={labelCls}>Topic</label>
+            <select id="v-topic" value={topicId} onChange={(e) => setTopicId(e.target.value as TopicId)} className={field}>
+              {groups.filter((g) => shown.some((t) => t.group === g)).map((g) => (
+                <optgroup key={g} label={g}>
                   {shown.filter((t) => t.group === g).map((t) => (
-                    <button
-                      key={t.id}
-                      onClick={() => setTopicId(t.id)}
-                      aria-pressed={topicId === t.id}
-                      className={`min-h-10 rounded-md px-3.5 text-sm font-medium ring-1 transition-colors ${
-                        topicId === t.id ? 'bg-raised text-text ring-accent/70' : 'text-muted ring-line hover:bg-surface hover:text-text'
-                      }`}
-                    >
-                      {t.name}
-                    </button>
+                    <option key={t.id} value={t.id}>{t.name}</option>
                   ))}
-                </div>
-              </div>
-            ))}
+                </optgroup>
+              ))}
+            </select>
           </div>
           <TopicPlayer key={`${topic.id}-${themeId}`} topic={topic} courses={courses} notes={notes} onOpenNote={onOpenNote} onStartSession={onStartSession} />
         </>

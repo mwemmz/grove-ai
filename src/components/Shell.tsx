@@ -44,14 +44,14 @@ interface ShellProps {
  */
 export function Shell({ title, sidebar, panel, children, bottom }: ShellProps) {
   const [left, setLeft] = useState(() => matches(LG) && (readPref().left ?? true));
-  const [right, setRight] = useState(() => matches(XL) && (readPref().right ?? true));
+  const [right, setRight] = useState(() => matches(XL) && (readPref().right ?? false));
 
   // When the window crosses a breakpoint, fall back to the saved choice (wide) or close the drawer (narrow).
   useEffect(() => {
     const lg = window.matchMedia(LG);
     const xl = window.matchMedia(XL);
     const onLg = () => setLeft(lg.matches ? readPref().left ?? true : false);
-    const onXl = () => setRight(xl.matches ? readPref().right ?? true : false);
+    const onXl = () => setRight(xl.matches ? readPref().right ?? false : false);
     lg.addEventListener('change', onLg);
     xl.addEventListener('change', onXl);
     return () => {

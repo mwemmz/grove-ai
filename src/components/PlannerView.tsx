@@ -248,6 +248,8 @@ export const PlannerView: React.FC<PlannerViewProps> = ({ courses, profile, onSt
               ))}
             </div>
           </div>
+          <Disclosure summary={`Hours, start time, breaks (${inputs.hoursPerDay} h a day, ${inputs.sessionMinutes} min sessions)`}>
+          <div className="space-y-3">
           <div className="grid gap-3 sm:grid-cols-3">
             <div>
               <label htmlFor="p-hours" className={labelCls}>Hours on a study day</label>
@@ -285,6 +287,8 @@ export const PlannerView: React.FC<PlannerViewProps> = ({ courses, profile, onSt
               options={SESSION_OPTIONS.map((s) => ({ id: s, label: `${s} min` }))}
             />
           </div>
+          </div>
+          </Disclosure>
         </fieldset>
 
         <fieldset className="space-y-3">

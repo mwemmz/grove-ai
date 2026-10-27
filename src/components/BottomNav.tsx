@@ -1,12 +1,11 @@
 /* Phones only: the main sections one thumb-tap away. Everything else stays in the full menu. */
-import { BookOpen, Cpu, Library, Menu, NotebookText, Timer } from 'lucide-react';
+import { BookOpen, House, Menu, NotebookText, Timer } from 'lucide-react';
 import type { AppTab } from './Header';
 
 const ITEMS: { id: AppTab; label: string; Icon: typeof BookOpen }[] = [
-  { id: 'remember', label: 'Ask', Icon: BookOpen },
+  { id: 'today', label: 'Today', Icon: House },
   { id: 'notes', label: 'Notes', Icon: NotebookText },
-  { id: 'library', label: 'Library', Icon: Library },
-  { id: 'visuals', label: 'Visuals', Icon: Cpu },
+  { id: 'remember', label: 'Ask', Icon: BookOpen },
   { id: 'study', label: 'Study', Icon: Timer },
 ];
 

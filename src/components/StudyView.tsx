@@ -415,6 +415,7 @@ export const StudyView: React.FC<StudyViewProps> = ({ notes, courses, flashcards
   const [noteId, setNoteId] = useState(init.noteId);
   const [customTopic, setCustomTopic] = useState(init.customTopic);
   const [methodId, setMethodId] = useState<MethodId>(init.methodId);
+  const [allMethods, setAllMethods] = useState(false);
   const [length, setLength] = useState<Length>(init.length);
   const [startedAt, setStartedAt] = useState(0);
   const [endAt, setEndAt] = useState(0);
@@ -511,7 +512,7 @@ export const StudyView: React.FC<StudyViewProps> = ({ notes, courses, flashcards
                 </p>
               )}
               <div role="radiogroup" aria-label="Study method" className="grid gap-2 sm:grid-cols-2">
-                {STUDY_METHODS.map((m) => {
+                {(allMethods ? STUDY_METHODS : STUDY_METHODS.filter((m) => m.evidence === 'Strong' || m.id === methodId)).map((m) => {
                   const active = m.id === methodId;
                   return (
                     <button
@@ -533,6 +534,9 @@ export const StudyView: React.FC<StudyViewProps> = ({ notes, courses, flashcards
                   );
                 })}
               </div>
+              <button type="button" onClick={() => setAllMethods((v) => !v)} className="mt-2 min-h-9 text-sm text-accent hover:underline">
+                {allMethods ? 'Show the top methods only' : `Show all ${STUDY_METHODS.length} methods`}
+              </button>
               <div className="mt-3 rounded-md bg-bg p-4 ring-1 ring-line">
                 <p className="text-sm text-muted">Best for: <span className="text-text">{method.bestFor}</span></p>
                 <ol className="mt-2 flex flex-wrap gap-1.5 text-xs">

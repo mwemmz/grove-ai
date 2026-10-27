@@ -9,6 +9,7 @@ import { BottomNav } from './components/BottomNav';
 import { Sidebar } from './components/Sidebar';
 import { ProgressPanel } from './components/ProgressPanel';
 import { ChatTutorView, NEW_VIEW } from './components/ChatTutorView';
+import { TodayView } from './components/TodayView';
 import { DegreeMemoryView } from './components/DegreeMemoryView';
 import { StudyBlueprintsView } from './components/StudyBlueprintsView';
 import { PeerTutoringView } from './components/PeerTutoringView';
@@ -69,7 +70,7 @@ function GroveApp() {
   const accountName = user?.fullName || user?.username || '';
   // Decides programme-only material (e.g. BIT353 for IDs starting with BIT) for everything rendered below.
   setStudentId(user?.username);
-  const [activeTab, setActiveTab] = useState<AppTab>('remember');
+  const [activeTab, setActiveTab] = useState<AppTab>('today');
   const [isDataReady, setIsDataReady] = useState(false);
 
   const [notes, setNotes] = useState<Note[]>([]);
@@ -217,6 +218,7 @@ function GroveApp() {
 
   const handleOpenNoteDetail = (note: Note) => {
     setSelectedNoteForDetail(note);
+    try { localStorage.setItem('grove_last_note', note.id); } catch { /* private mode: fine */ }
     setActiveTab('notes');
   };
 
@@ -330,6 +332,17 @@ function GroveApp() {
               <button onClick={() => setPackNotice(null)} className="text-muted hover:text-text" aria-label="Dismiss">✕</button>
             </div>
           )}
+          {activeTab === 'today' && (
+            <TodayView
+              notes={notes}
+              courses={shownCourses}
+              flashcards={flashcards}
+              lastNoteId={(() => { try { return localStorage.getItem('grove_last_note'); } catch { return null; } })()}
+              onOpenNote={openNoteById}
+              onGo={goTo}
+            />
+          )}
+
           {activeTab === 'remember' && (
             <>
               <ChatTutorView

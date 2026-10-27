@@ -46,7 +46,8 @@ export const DegreeMemoryView: React.FC<DegreeMemoryViewProps> = ({
 }) => {
   const [query, setQuery] = useState('');
   const [saved, setSaved] = useState(false);
-  const [showAll, setShowAll] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const [openCourse, setOpenCourse] = useState<string | null>(null);
 
   const [newTitle, setNewTitle] = useState('');
   const [newCourseId, setNewCourseId] = useState(courses[0]?.id || '');
@@ -167,21 +168,41 @@ export const DegreeMemoryView: React.FC<DegreeMemoryViewProps> = ({
     setNewContent('');
     setUploadMsg(null);
     setSaved(true);
+    setAdding(false);
     setTimeout(() => setSaved(false), 2500);
   };
 
   const detail = selectedNoteForDetail;
 
-  const LIMIT = 8;
   const sorted = [...filtered].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  const collapsed = !showAll && !q && sorted.length > LIMIT;
-  const visible = collapsed ? sorted.slice(0, LIMIT) : sorted;
-  const byYear = [4, 3, 2, 1]
-    .map((y) => ({ year: y, items: visible.filter((n) => n.year === y).sort((a, b) => b.createdAt.localeCompare(a.createdAt)) }))
-    .filter((g) => g.items.length > 0);
+  const groups = Array.from(new Set(sorted.map((n) => n.courseId))).map((id) => ({
+    id,
+    course: courseOf(id),
+    items: sorted.filter((n) => n.courseId === id),
+  }));
+  // One course open at a time keeps the page short; a search opens everything that matches.
+  const isOpen = (id: string, i: number) => !!q || (openCourse === null ? i === 0 : openCourse === id);
 
   return (
-    <div className="grid items-start gap-5 md:grid-cols-[5fr_6fr]">
+    <div className="mx-auto max-w-3xl space-y-4">
+      <div className="flex items-center gap-3">
+        <input
+          id="n-search"
+          type="search"
+          aria-label="Search your notes"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search notes: ETL, circular flow, joins…"
+          className={`${field} flex-1`}
+        />
+        <button type="button" onClick={() => setAdding((v) => !v)} className={primaryBtn} aria-expanded={adding}>
+          {adding ? 'Close' : 'Add notes'}
+        </button>
+      </div>
+      {!adding && uploadMsg && <p role="status" className={`text-sm ${uploadMsg.ok ? 'text-accent' : 'text-warn'}`}>{uploadMsg.text}</p>}
+      {!adding && saved && <p role="status" className="text-sm text-accent">Saved.</p>}
+
+      {adding && (
       <form onSubmit={handleCreate} className={`${panel} space-y-4`}>
         <h3 className="text-[17px] text-text">Add to your grove</h3>
         {courses.length > 0 ? (
@@ -256,57 +277,44 @@ export const DegreeMemoryView: React.FC<DegreeMemoryViewProps> = ({
           {saved && <span role="status" className="text-sm text-accent">Saved.</span>}
         </div>
       </form>
+      )}
 
-      <section className={panel} aria-label="Your notes">
-        <h3 className="mb-3 text-[17px] text-text">Your notes</h3>
-        <label htmlFor="n-search" className={labelCls}>Search</label>
-        <input
-          id="n-search"
-          type="search"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="ETL, circular flow, joins…"
-          className={field}
-        />
-
-        <div className="mt-2">
-          {byYear.map((g) => (
-            <div key={g.year}>
-              <p className="mb-0.5 mt-4 font-mono text-xs uppercase tracking-[0.08em] text-accent">Year {g.year}</p>
-              <ul className="divide-y divide-line">
-                {g.items.map((note) => {
-                  const course = courseOf(note.courseId);
-                  return (
-                    <li key={note.id} className="py-3">
-                      <button onClick={() => setSelectedNoteForDetail(note)} className="block w-full text-left">
-                        <span className="block font-semibold text-text">{note.title}</span>
-                        <span className="block font-mono text-xs text-muted">
-                          {course ? course.name : 'Course'} · {new Date(note.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
-                        </span>
-                        <span className="mt-1 line-clamp-2 block text-muted">
-                          {note.summary || note.content.slice(0, 150)}
-                        </span>
+      <section aria-label="Your notes" className="space-y-2">
+        {groups.map((g, i) => {
+          const open = isOpen(g.id, i);
+          return (
+            <div key={g.id} className={`${panel} p-0!`}>
+              <button
+                type="button"
+                aria-expanded={open}
+                onClick={() => setOpenCourse(open && !q ? '' : g.id)}
+                className="flex w-full items-baseline justify-between gap-3 px-4 py-3 text-left"
+              >
+                <span className="min-w-0">
+                  <span className="block font-semibold text-text">{g.course ? g.course.name : 'Other notes'}</span>
+                  {g.course && <span className="font-mono text-xs text-muted">{g.course.code} · Year {g.course.year}</span>}
+                </span>
+                <span className="shrink-0 font-mono text-xs text-accent">{g.items.length} {g.items.length === 1 ? 'note' : 'notes'} {open ? '▾' : '▸'}</span>
+              </button>
+              {open && (
+                <ul className="divide-y divide-line border-t border-line">
+                  {g.items.map((note) => (
+                    <li key={note.id}>
+                      <button onClick={() => setSelectedNoteForDetail(note)} className="block min-h-11 w-full px-4 py-2.5 text-left hover:bg-raised">
+                        <span className="block text-text">{note.title}</span>
                       </button>
-                      {note.tags.length > 0 && (
-                        <p className="mt-1 font-mono text-[11px] text-warn">{note.tags.slice(0, 4).map((t) => `#${t.toLowerCase()}`).join(' ')}</p>
-                      )}
                     </li>
-                  );
-                })}
-              </ul>
+                  ))}
+                </ul>
+              )}
             </div>
-          ))}
-          {(collapsed || (showAll && !q && sorted.length > LIMIT)) && (
-            <button onClick={() => setShowAll((v) => !v)} className="mt-3 min-h-10 text-sm text-accent hover:underline">
-              {collapsed ? `Show all ${sorted.length} notes` : 'Show fewer'}
-            </button>
-          )}
-          {filtered.length === 0 && (
-            <p className="py-4 text-muted">
-              {notes.length === 0 ? 'No notes yet. Add your first one.' : 'No notes match that search.'}
-            </p>
-          )}
-        </div>
+          );
+        })}
+        {filtered.length === 0 && (
+          <p className="py-4 text-muted">
+            {notes.length === 0 ? 'No notes yet. Choose Add notes to start.' : 'No notes match that search.'}
+          </p>
+        )}
       </section>
 
       {detail && (

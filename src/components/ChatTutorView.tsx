@@ -283,10 +283,18 @@ export const ChatTutorView: React.FC<ChatTutorViewProps> = ({
             const tag = answer.appliedProfileAttributes?.find((a) => a.startsWith('Answered by') || a.startsWith('AI engine unavailable'));
             if (!tag) return null;
             const failed = tag.startsWith('AI engine unavailable');
+            const detail = (tag.match(/\((.*)\)\s*$/s) ?? [])[1];
+            const plain = failed ? 'The AI engines did not respond, so this answer comes from your notes. Try again in a minute.' : tag.replace(/,? after .*$/s, '');
             return (
-              <p role="status" className={`text-xs ${failed ? 'text-warn' : 'text-muted'}`}>
-                {tag}
-              </p>
+              <div role="status" className={`text-xs ${failed ? 'text-warn' : 'text-muted'}`}>
+                <p>{plain}</p>
+                {detail && (
+                  <details className="mt-1">
+                    <summary className="cursor-pointer">Details</summary>
+                    <p className="mt-1 break-words">{detail}</p>
+                  </details>
+                )}
+              </div>
             );
           })()}
 

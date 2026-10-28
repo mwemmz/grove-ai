@@ -186,7 +186,7 @@ export function AuthScreen() {
     <div className="mx-auto grid min-h-full max-w-6xl items-center gap-6 px-4 py-10 lg:grid-cols-[1.15fr_1fr] lg:gap-12 lg:px-10">
       {/* The hero: the word, and the cap in front of it, like a product on a studio set. */}
       <div className="relative mx-auto w-full max-w-sm text-center lg:max-w-none lg:text-left">
-        <p aria-hidden className="pointer-events-none select-none font-display text-[22vw] leading-[0.85] tracking-[-0.05em] text-text/[0.14] sm:text-[16vw] lg:text-[11rem]">
+        <p aria-hidden className="pointer-events-none select-none font-display text-[22vw] leading-[0.85] tracking-[-0.05em] text-text/[0.22] sm:text-[16vw] lg:text-[11rem]">
           Grove
         </p>
         <GradCap className="mx-auto -mt-[16vw] w-[64%] sm:-mt-[11vw] lg:-mt-36 lg:ml-[18%] lg:w-[62%]" />
@@ -195,7 +195,7 @@ export function AuthScreen() {
             <span className="flex h-9 w-9 items-center justify-center rounded-full bg-accent text-ink"><TreePine className="h-5 w-5" aria-hidden /></span>
             Grove
           </h1>
-          <p className="mt-2 text-muted lg:text-lg">Your university's own AI, from first lecture to graduation.</p>
+          <p className="mt-2 text-text/85 lg:text-lg">Your university's own AI, from first lecture to graduation.</p>
         </div>
       </div>
 

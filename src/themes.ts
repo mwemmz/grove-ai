@@ -21,7 +21,7 @@ export interface Theme {
 
 export const THEMES: Theme[] = [
   // From the studio references: cobalt with white pills; fog glass with ink pills; graphite with a citron spark.
-  { id: 'forma', name: 'Cobalt', mode: 'dark', bg: '#081747', side: '#06123a', surface: '#0e2163', raised: '#16307f', line: '#1e3888', text: '#f1f4ff', muted: '#aab7e4', accent: '#f3f6ff', onAccent: '#0c2266', warn: '#f5c451', glow: '#2d5bff' },
+  { id: 'forma', name: 'Cobalt', mode: 'dark', bg: '#071440', side: '#06113a', surface: '#13297a', raised: '#1d3a99', line: '#2d4cb0', text: '#f4f6ff', muted: '#c3cdf2', accent: '#f3f6ff', onAccent: '#0c2266', warn: '#f5c451', glow: '#2d5bff' },
   { id: 'fog', name: 'Fog', mode: 'light', bg: '#e6e9ed', side: '#f3f4f6', surface: '#f8f9fa', raised: '#e2e5ea', line: '#d0d5dc', text: '#15171b', muted: '#575e69', accent: '#15171b', onAccent: '#f8f9fa', warn: '#b45309', glow: '#8ea6c2' },
   { id: 'graphite', name: 'Graphite', mode: 'dark', bg: '#111214', side: '#0c0d0e', surface: '#1a1b1e', raised: '#25272a', line: '#323438', text: '#f1f1ee', muted: '#a09f99', accent: '#e4ef4c', onAccent: '#171a05', warn: '#f0a24a', glow: '#b89a62' },
   { id: 'grove', name: 'Grove', mode: 'dark', bg: '#0e1512', side: '#0b110e', surface: '#151f1a', raised: '#1b2b24', line: '#26352d', text: '#e5ede7', muted: '#92a59a', accent: '#5fc2a2', onAccent: '#08140f', warn: '#e0a94a' },
@@ -96,16 +96,18 @@ function atLeast(c: string, against: string, toward: string, min: number): strin
  */
 export function legible(t: Theme): Theme {
   const ink = t.mode === 'dark' ? '#ffffff' : '#000000';
-  const raised = atLeast(t.raised, t.surface, t.text, 1.32);
-  const muted = [t.bg, t.surface, raised].reduce((m, bg) => atLeast(m, bg, t.text, 4.6), t.muted);
+  const raised = atLeast(t.raised, t.surface, t.text, 1.4);
+  const muted = [t.bg, t.surface, raised].reduce((m, bg) => atLeast(m, bg, t.text, 5.5), t.muted);
   const accentText = [t.surface, raised].reduce((a, bg) => atLeast(a, bg, ink, 4.6), t.accent);
+  const surface = atLeast(t.surface, t.bg, t.text, 1.25);
   return {
     ...t,
+    surface,
     raised,
-    line: atLeast(t.line, t.surface, t.text, 1.7),
+    line: atLeast(t.line, t.surface, t.text, 1.9),
     muted,
     accent: contrast(t.accent, t.bg) >= 3 ? t.accent : accentText,
-    edge: atLeast(t.line, t.surface, t.text, 2.7),
+    edge: atLeast(t.line, t.surface, t.text, 3.2),
     accentText,
   } as Theme & { edge: string; accentText: string };
 }

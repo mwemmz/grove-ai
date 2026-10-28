@@ -184,8 +184,8 @@ export function Modal({
 }
 
 export const field =
-  'w-full rounded-2xl bg-surface px-4 py-2.5 text-sm text-text placeholder:text-muted ring-1 ring-line transition-shadow focus:outline-none focus:ring-2 focus:ring-accent/60';
-export const labelCls = 'mb-1.5 block text-xs font-medium uppercase tracking-[0.06em] text-muted';
+  'w-full rounded-2xl bg-bg/80 px-4 py-2.5 text-sm text-text placeholder:text-muted ring-1 ring-edge transition-shadow focus:outline-none focus:ring-2 focus:ring-accent-text';
+export const labelCls = 'mb-1.5 block text-xs font-semibold uppercase tracking-[0.06em] text-text/80';
 /** Main action: a full pill in the accent colour. Add an ArrowRight as the last child and it leans on hover. */
 export const primaryBtn =
   'nudge inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-accent px-5 text-sm font-semibold text-ink shadow-[0_8px_24px_-12px_var(--color-glow)] hover:brightness-110';

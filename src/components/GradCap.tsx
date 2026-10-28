@@ -62,7 +62,9 @@ export function GradCap({ className = '', still = false }: { className?: string;
             <path d="M28 96 L200 152 L372 96 L372 108 L200 165 L28 108 Z" fill={`url(#${g('edge')})`} />
             <path d="M200 38 L372 96 L200 152 L28 96 Z" fill={`url(#${g('top')})`} />
             <path d="M200 38 L372 96 L200 152 L28 96 Z" fill={`url(#${g('sheen')})`} />
-            <path d="M28 96 L200 38 L372 96" fill="none" stroke="#ffffff" strokeOpacity="0.28" strokeWidth="1.5" />
+            <path d="M28 96 L200 38 L372 96" fill="none" stroke="#ffffff" strokeOpacity="0.6" strokeWidth="2" />
+            <path d="M28 108 L200 165 L372 108" fill="none" stroke="#ffffff" strokeOpacity="0.22" strokeWidth="1.5" />
+            <path d="M98 196 Q200 250 302 196" fill="none" stroke="#ffffff" strokeOpacity="0.18" strokeWidth="1.5" transform="translate(0,2)" />
 
             {/* button, cord and tassel (the tassel sways on its own) */}
             <ellipse cx="200" cy="95" rx="11" ry="6" style={{ fill: tassel }} />

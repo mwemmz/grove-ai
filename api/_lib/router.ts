@@ -26,6 +26,7 @@ import {
 } from './collections.js';
 import { exportBackup, importBackup, resetBackup } from './backup.js';
 import { handlePacks } from './packs.js';
+import { readAuthEvents, writeAuthEvent } from './authlog.js';
 import type {
   ChatMessage,
   Course,
@@ -106,6 +107,11 @@ export async function handleRequest(req: HandlerReq, res: HandlerRes): Promise<v
   }
 
   const resource = segments[1];
+  if (resource === 'auth-log') {
+    if (req.method === 'POST') await writeAuthEvent(req, res);
+    else await readAuthEvents(req, res, await requireUser(req));
+    return;
+  }
   if (resource === 'packs' || resource === 'me') {
     await handlePacks(req, res, await requireUser(req), segments);
     return;

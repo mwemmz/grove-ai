@@ -30,7 +30,7 @@ interface Identity {
 
 const cache = new Map<string, { at: number; id: Identity }>();
 
-async function identity(clerkId: string): Promise<Identity> {
+export async function identity(clerkId: string): Promise<Identity> {
   const hit = cache.get(clerkId);
   if (hit && Date.now() - hit.at < 5 * 60_000) return hit.id;
   const secretKey = process.env.CLERK_SECRET_KEY;
@@ -47,7 +47,7 @@ export function primeIdentity(clerkId: string, id: Identity) {
 }
 
 /** GROVE_ADMINS: comma-separated emails or student IDs allowed to publish packs. */
-function isAdmin(id: Identity): boolean {
+export function isAdmin(id: Identity): boolean {
   const admins = (process.env.GROVE_ADMINS ?? '')
     .split(',')
     .map((s) => s.trim().toLowerCase())

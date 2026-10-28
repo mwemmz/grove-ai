@@ -20,6 +20,7 @@ import { LearningProfile } from '../types';
 import { storage } from '../services/storage';
 import { AccountPanel } from './AccountPanel';
 import { PacksAdmin } from './PacksAdmin';
+import { AuthTrail } from './AuthTrail';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -444,6 +445,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
           <AccountPanel />
           <PacksAdmin />
+          <AuthTrail />
 
           {/* Danger Zone: Reset to Demo */}
           <div className="pt-2 flex items-center justify-between border-t border-slate-800/80">

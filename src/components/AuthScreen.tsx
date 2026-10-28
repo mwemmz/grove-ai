@@ -6,6 +6,7 @@ import { useSignIn, useSignUp } from '@clerk/react';
 import { TreePine } from 'lucide-react';
 import { field, labelCls, primaryBtn } from './ui';
 import { GradCap } from './GradCap';
+import { logAuth } from '../services/authLog';
 
 type Mode = 'signin' | 'signup' | 'reset' | 'code';
 type Step = 'form' | 'code' | 'newPassword';
@@ -83,17 +84,26 @@ export function AuthScreen() {
   };
 
   /** Runs one Clerk call; returns true when it succeeded. */
-  const run = async (fn: () => Promise<{ error: unknown }>) => {
+  const who = () => (mode === 'signup' ? email || studentId : identifier).trim();
+  const run = async (fn: () => Promise<{ error: unknown }>, step = 'step') => {
+    const report = (ok: boolean, err?: unknown) => {
+      const e = (err ?? {}) as ClerkLikeError & { errors?: ClerkLikeError[] };
+      const first = e.errors?.[0] ?? e;
+      logAuth({ flow: mode, step, ok, who: who(), code: ok ? undefined : codeOf(err) ?? 'unknown', message: ok ? undefined : first.longMessage || first.message });
+    };
     try {
       const { error: err } = await fn();
       if (err) {
         if (codeOf(err) === 'strategy_for_user_invalid') setOfferCode(true);
         setError(describe(err));
+        report(false, err);
         return false;
       }
+      report(true);
       return true;
     } catch (err) {
       setError(describe(err));
+      report(false, err);
       return false;
     }
   };
@@ -101,18 +111,38 @@ export function AuthScreen() {
   const finishSignIn = async () => {
     if (!signIn) return;
     if (signIn.status === 'complete') {
-      await run(() => signIn.finalize());
+      await run(() => signIn.finalize(), 'finish sign-in');
       return;
     }
     // A new device or a second factor: Clerk emails a code before the session starts.
     if (signIn.status === 'needs_second_factor' || signIn.status === 'needs_client_trust') {
-      if (await run(() => signIn.mfa.sendEmailCode())) {
+      if (await run(() => signIn.mfa.sendEmailCode(), 'send new-device code')) {
         setStep('code');
         setNotice('We emailed you a 6-digit code to confirm it is you.');
       }
       return;
     }
     setError('This sign-in needs a step Grove does not support yet. Ask your administrator.');
+  };
+
+  /** Sends the current code again, through the same route that sent it the first time. */
+  const resend = async () => {
+    if (!signIn || !signUp || busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const ok =
+        mode === 'signup'
+          ? await run(() => signUp.verifications.sendEmailCode(), 'resend sign-up code')
+          : mode === 'reset'
+            ? await run(() => signIn.resetPasswordEmailCode.sendCode(), 'resend reset code')
+            : mode === 'code'
+              ? await run(() => signIn.emailCode.sendCode(), 'resend sign-in code')
+              : await run(() => signIn.mfa.sendEmailCode(), 'resend new-device code');
+      if (ok) setNotice('Sent again. It can take a minute to arrive.');
+    } finally {
+      setBusy(false);
+    }
   };
 
   const submit = async (e: React.FormEvent) => {
@@ -122,52 +152,54 @@ export function AuthScreen() {
     setError(null);
     try {
       if (mode === 'signin' && step === 'form') {
-        if (await run(() => signIn.password({ identifier: identifier.trim(), password }))) await finishSignIn();
+        if (await run(() => signIn.password({ identifier: identifier.trim(), password }), 'password')) await finishSignIn();
       } else if (mode === 'code' && step === 'form') {
-        if (!(await run(() => signIn.create({ identifier: identifier.trim() })))) return;
-        if (await run(() => signIn.emailCode.sendCode())) {
+        if (!(await run(() => signIn.create({ identifier: identifier.trim() }), 'find account'))) return;
+        if (await run(() => signIn.emailCode.sendCode(), 'send sign-in code')) {
           setStep('code');
           setNotice('We emailed you a 6-digit sign-in code.');
         }
       } else if (mode === 'code' && step === 'code') {
-        if (await run(() => signIn.emailCode.verifyCode({ code: code.trim() }))) await finishSignIn();
+        if (await run(() => signIn.emailCode.verifyCode({ code: code.trim() }), 'check sign-in code')) await finishSignIn();
       } else if (mode === 'signin' && step === 'code') {
-        if (await run(() => signIn.mfa.verifyEmailCode({ code: code.trim() }))) await finishSignIn();
+        if (await run(() => signIn.mfa.verifyEmailCode({ code: code.trim() }), 'check new-device code')) await finishSignIn();
       } else if (mode === 'signup' && step === 'form') {
         const [firstName, ...rest] = name.trim().split(/\s+/);
-        const ok = await run(() =>
-          signUp.password({
-            emailAddress: email.trim(),
-            password,
-            username: studentId.trim(),
-            firstName,
-            lastName: rest.join(' ') || undefined,
-          })
+        const ok = await run(
+          () =>
+            signUp.password({
+              emailAddress: email.trim(),
+              password,
+              username: studentId.trim(),
+              firstName,
+              lastName: rest.join(' ') || undefined,
+            }),
+          'create account',
         );
         if (!ok) return;
         if (signUp.status === 'complete') {
-          await run(() => signUp.finalize());
-        } else if (await run(() => signUp.verifications.sendEmailCode())) {
+          await run(() => signUp.finalize(), 'finish sign-up');
+        } else if (await run(() => signUp.verifications.sendEmailCode(), 'send sign-up code')) {
           setStep('code');
           setNotice(`We emailed a 6-digit code to ${email.trim()}. Enter it to finish.`);
         }
       } else if (mode === 'signup' && step === 'code') {
-        if (!(await run(() => signUp.verifications.verifyEmailCode({ code: code.trim() })))) return;
-        if (signUp.status === 'complete') await run(() => signUp.finalize());
+        if (!(await run(() => signUp.verifications.verifyEmailCode({ code: code.trim() }), 'check sign-up code'))) return;
+        if (signUp.status === 'complete') await run(() => signUp.finalize(), 'finish sign-up');
         else setError('Your account still needs: ' + (signUp.missingFields.join(', ') || 'more details') + '.');
       } else if (mode === 'reset' && step === 'form') {
-        if (!(await run(() => signIn.create({ identifier: identifier.trim() })))) return;
-        if (await run(() => signIn.resetPasswordEmailCode.sendCode())) {
+        if (!(await run(() => signIn.create({ identifier: identifier.trim() }), 'find account'))) return;
+        if (await run(() => signIn.resetPasswordEmailCode.sendCode(), 'send reset code')) {
           setStep('code');
           setNotice('If that account exists, we emailed it a 6-digit code.');
         }
       } else if (mode === 'reset' && step === 'code') {
-        if (await run(() => signIn.resetPasswordEmailCode.verifyCode({ code: code.trim() }))) {
+        if (await run(() => signIn.resetPasswordEmailCode.verifyCode({ code: code.trim() }), 'check reset code')) {
           setStep('newPassword');
           setNotice('Code accepted. Choose a new password.');
         }
       } else if (mode === 'reset' && step === 'newPassword') {
-        if (await run(() => signIn.resetPasswordEmailCode.submitPassword({ password: newPassword, signOutOfOtherSessions: true }))) await finishSignIn();
+        if (await run(() => signIn.resetPasswordEmailCode.submitPassword({ password: newPassword, signOutOfOtherSessions: true }), 'save new password')) await finishSignIn();
       }
     } finally {
       setBusy(false);
@@ -235,6 +267,15 @@ export function AuthScreen() {
           )}
 
           {notice && !error && <p className="text-sm text-muted" role="status">{notice}</p>}
+          {step === 'code' && (
+            <p className="text-xs text-muted">
+              No email after a minute? Check your spam or junk folder, then{' '}
+              <button type="button" onClick={resend} disabled={busy} className="font-medium text-accent-text underline-offset-2 hover:underline">
+                send it again
+              </button>
+              .
+            </p>
+          )}
           {error && <p className="text-sm text-warn" role="alert">{error}</p>}
 
           {offerCode && mode === 'signin' && (

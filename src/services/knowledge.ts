@@ -1,8 +1,7 @@
 /* The university library: material the institution owns (past final-year projects, course outlines,
    policies) that Grove answers from before it falls back to anything else.
-   Demo records ship with the app and are fictional. Anything added here stays in this browser. */
+   The library holds only what the student or their university adds. It stays in this browser. */
 import type { SourceRef } from '../types';
-import { DEMO_SOURCES } from '../data/universityPack';
 
 export type SourceKind = 'project' | 'course' | 'policy';
 
@@ -61,7 +60,7 @@ function writeAdded(list: Source[]) {
 }
 
 export const getAddedSources = (): Source[] => readAdded();
-export const getSources = (): Source[] => [...readAdded(), ...DEMO_SOURCES];
+export const getSources = (): Source[] => readAdded();
 
 export function addSource(input: { title: string; kind: SourceKind; meta?: string; text: string; tags?: string[] }): Source {
   const s: Source = {

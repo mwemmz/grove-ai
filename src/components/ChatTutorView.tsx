@@ -32,7 +32,7 @@ interface ChatTutorViewProps {
   onOpenVisual?: (id: TopicId) => void;
 }
 
-const FALLBACK_PROMPTS = ['What should a final-year project proposal include?', 'Has anyone done a project on mobile money fraud?'];
+const FALLBACK_PROMPTS: string[] = [];
 const PLACEHOLDER = 'Ask about your notes, a concept, or a rule';
 
 const ADAPT_ACTIONS: { id: 'too-long' | 'analogy' | 'code' | 'lost' | 'quiz'; label: string }[] = [

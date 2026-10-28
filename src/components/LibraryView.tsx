@@ -145,14 +145,15 @@ export const LibraryView: React.FC<LibraryViewProps> = ({ focusId, onFocusDone, 
     <div className="space-y-5">
       <PageHeader
         title="Library"
-        subtitle="Your university's own projects, course outlines and policies. Grove answers from these first."
+        subtitle="Policies, course outlines and past projects you add. Grove answers from these first."
       />
 
-      <p className="rounded-md bg-raised px-4 py-3 text-sm text-muted">
-        <span className="font-medium text-text">Sample records.</span> Everything marked “Demo record” is fictional, written to show how Grove works. A real
-        university would load its own, with permission from the authors.
-      </p>
-
+      {all.length === 0 ? (
+        <p className="rounded-md bg-raised px-4 py-3 text-sm text-muted" role="status">
+          Your library is empty. Add a handbook, course outline, policy or past project below and Grove will answer from it, with the source shown.
+        </p>
+      ) : (
+        <>
       <Disclosure summary={<span className="text-text">Starting your final-year project? Find similar past projects</span>}>
       <section className={`${panel} space-y-4`} aria-label="Starting a final-year project">
         <div>
@@ -324,12 +325,13 @@ export const LibraryView: React.FC<LibraryViewProps> = ({ focusId, onFocusDone, 
         )}
       </section>
 
+        </>
+      )}
+
       <section className={panel} aria-label="Add to the library">
-        <Disclosure summary="Add a source to the library (university staff)">
+        <Disclosure summary="Add to the library" defaultOpen={all.length === 0}>
           <p className="mb-3 max-w-prose text-sm text-muted">
-            In a real deployment only staff could add material, and the university would approve what goes in. Here, whatever you add stays in this browser
-            and Grove can answer from it straight away.
-          </p>
+            Add a policy, handbook, course outline or past project (PDF, Word or text). It stays on this device.</p>
           <form onSubmit={add} className="space-y-3">
             <div
               onClick={() => fileRef.current?.click()}

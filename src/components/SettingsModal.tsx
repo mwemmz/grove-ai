@@ -450,7 +450,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <button
                 type="button"
                 onClick={() => {
-                  if (window.confirm('Reset all notes, portfolio, and profile to the initial 4-year demo dataset?')) {
+                  if (window.confirm('Erase all notes, flashcards, portfolio and profile on this account? This cannot be undone.')) {
                     onResetDemo();
                     onClose();
                   }
@@ -458,7 +458,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 className="text-xs text-rose-400 hover:text-rose-300 flex items-center gap-1.5"
               >
                 <RefreshCw className="h-3.5 w-3.5" />
-                <span>Reset to 4-Year Demo Data</span>
+                <span>Erase all my data</span>
               </button>
 
             </div>

@@ -1,8 +1,14 @@
 /* Turn an uploaded study file into plain text, entirely in the browser (nothing is sent anywhere). */
+import { ocrDone, ocrImage } from './ocr';
 
 export const MAX_BYTES = 8 * 1024 * 1024;
 export const MAX_CHARS = 60_000;
-export const ACCEPT = '.txt,.md,.markdown,.csv,.json,.html,.htm,.pdf,.docx,.pptx,.pptm';
+export const ACCEPT = '.txt,.md,.markdown,.csv,.json,.html,.htm,.pdf,.docx,.pptx,.pptm,.png,.jpg,.jpeg,.webp';
+const IMAGE_EXT = ['png', 'jpg', 'jpeg', 'webp'];
+/** Scanned pages beyond this are skipped: reading a page takes a few seconds on a phone. */
+const MAX_OCR_PAGES = 40;
+
+export type Progress = (message: string) => void;
 
 const TEXT_EXT = ['txt', 'md', 'markdown', 'csv', 'json', 'html', 'htm'];
 
@@ -19,12 +25,13 @@ function tidy(raw: string): string {
   return raw.replace(/\r\n?/g, '\n').replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
 }
 
-async function pdfText(file: File): Promise<string> {
+async function pdfText(file: File, onProgress?: Progress): Promise<{ text: string; ocrPages: number }> {
   const pdfjs = await import('pdfjs-dist');
   const worker = (await import('pdfjs-dist/build/pdf.worker.min.mjs?url')).default;
   pdfjs.GlobalWorkerOptions.workerSrc = worker;
   const doc = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
   const pages: string[] = [];
+  let ocrPages = 0;
   for (let i = 1; i <= doc.numPages; i++) {
     const page = await doc.getPage(i);
     const content = await page.getTextContent();
@@ -36,10 +43,26 @@ async function pdfText(file: File): Promise<string> {
       if (item.hasEOL) { lines.push(line); line = ''; } else if (item.str && !item.str.endsWith(' ')) line += ' ';
     }
     if (line) lines.push(line);
-    pages.push(lines.join('\n'));
+    let text = lines.join('\n');
+    // A page with (almost) no text layer is a picture of a page: read it with OCR.
+    if ((text.match(/[A-Za-z0-9]/g) ?? []).length < 40 && ocrPages < MAX_OCR_PAGES) {
+      onProgress?.(`Reading scanned page ${i} of ${doc.numPages}…`);
+      const viewport = page.getViewport({ scale: 2 });
+      const canvas = document.createElement('canvas');
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      await page.render({ canvas, canvasContext: canvas.getContext('2d')!, viewport }).promise;
+      const read = (await ocrImage(canvas)).trim();
+      if (read) {
+        text = read;
+        ocrPages++;
+      }
+    }
+    pages.push(text);
     if (pages.join('\n\n').length > MAX_CHARS * 1.2) break;
   }
-  return pages.join('\n\n');
+  if (ocrPages) await ocrDone();
+  return { text: pages.join('\n\n'), ocrPages };
 }
 
 async function docxText(file: File): Promise<string> {
@@ -95,18 +118,23 @@ async function pptxText(file: File): Promise<string> {
   return slides.join('\n\n');
 }
 
-export async function extractText(file: File): Promise<ExtractedFile> {
+export async function extractText(file: File, onProgress?: Progress): Promise<ExtractedFile> {
   const e = ext(file.name);
   if (file.size > MAX_BYTES) throw new Error(`${file.name} is larger than 8 MB.`);
   let raw: string;
-  if (e === 'pdf') raw = await pdfText(file);
+  if (e === 'pdf') raw = (await pdfText(file, onProgress)).text;
+  else if (IMAGE_EXT.includes(e) || file.type.startsWith('image/')) {
+    onProgress?.(`Reading the text in ${file.name}…`);
+    raw = await ocrImage(file);
+    await ocrDone();
+  }
   else if (e === 'docx') raw = await docxText(file);
   else if (e === 'pptx' || e === 'pptm') raw = await pptxText(file);
   else if (TEXT_EXT.includes(e) || file.type.startsWith('text/')) {
     raw = await file.text();
     if (e === 'html' || e === 'htm') raw = new DOMParser().parseFromString(raw, 'text/html').body.textContent ?? '';
-  } else throw new Error(`${file.name}: this file type isn't supported. Use PDF, Word (.docx), PowerPoint (.pptx), text, Markdown or CSV.`);
+  } else throw new Error(`${file.name}: this file type isn't supported. Use PDF, Word (.docx), PowerPoint (.pptx), a photo (PNG or JPG), text, Markdown or CSV.`);
   const text = tidy(raw);
-  if (!text) throw new Error(`${file.name}: no readable text found. Scanned PDFs need OCR first.`);
+  if (!text) throw new Error(`${file.name}: no readable text found, even after reading the page images. Try a clearer scan or photo.`);
   return { title: baseName(file.name), text: text.slice(0, MAX_CHARS), truncated: text.length > MAX_CHARS };
 }

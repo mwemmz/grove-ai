@@ -21,6 +21,7 @@ import { storage } from '../services/storage';
 import { AccountPanel } from './AccountPanel';
 import { PacksAdmin } from './PacksAdmin';
 import { AuthTrail } from './AuthTrail';
+import { MeaningToggle } from './MeaningToggle';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -443,6 +444,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
           </details>
 
+          <MeaningToggle />
           <AccountPanel />
           <PacksAdmin />
           <AuthTrail />

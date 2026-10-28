@@ -3,6 +3,7 @@ import { RotateCw, Award, Plus, X } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { Flashcard, Note } from '../types';
 import { storage } from '../services/storage';
+import { previewIntervals, recallChance, review, type Quality } from '../services/memory';
 import { PageHeader, Segmented, Inline, quietBtn, primaryBtn, Portal } from './ui';
 import { makeCardsFromNotes } from '../services/cardMaker';
 
@@ -56,42 +57,16 @@ export const QuizView: React.FC<QuizViewProps> = ({
     setMadeMsg(`Made ${cards.length} cards from ${noteCount} ${noteCount === 1 ? 'note' : 'notes'}.`);
   };
 
+  const next = currentCard ? previewIntervals(currentCard) : null;
+
   const handleFlip = () => {
     setIsFlipped(!isFlipped);
   };
 
-  const handleScore = (quality: 'again' | 'hard' | 'good' | 'easy') => {
+  const handleScore = (quality: Quality) => {
     if (!currentCard) return;
-
-    let newInterval = currentCard.interval;
-    let newRepetition = currentCard.repetition;
-    let newStatus = currentCard.status;
-
-    if (quality === 'again') {
-      newInterval = 1;
-      newRepetition = 0;
-      newStatus = 'learning';
-    } else if (quality === 'hard') {
-      newInterval = Math.max(2, Math.round(currentCard.interval * 1.2));
-      newRepetition += 1;
-    } else if (quality === 'good') {
-      newInterval = Math.round(currentCard.interval * 1.5) + 3;
-      newRepetition += 1;
-      newStatus = 'learning';
-    } else if (quality === 'easy') {
-      newInterval = Math.round(currentCard.interval * 2.2) + 7;
-      newRepetition += 1;
-      newStatus = 'mastered';
-    }
-
-    const updatedCard: Flashcard = {
-      ...currentCard,
-      interval: newInterval,
-      repetition: newRepetition,
-      status: newStatus,
-      lastReviewed: todayStr(),
-      dueDate: addDays(newInterval),
-    };
+    // FSRS works out the next review from this card's own memory history.
+    const updatedCard: Flashcard = review(currentCard, quality);
 
     const updatedAll = flashcards.map(c => c.id === currentCard.id ? updatedCard : c);
     setFlashcards(updatedAll);
@@ -196,7 +171,7 @@ export const QuizView: React.FC<QuizViewProps> = ({
           {/* Progress Tracker */}
           <div className="flex items-center justify-between text-xs text-slate-400 px-1">
             <span>Card {currentIndex + 1} of {activeDeck.length}</span>
-            <span>Back in {currentCard.interval} {currentCard.interval === 1 ? 'day' : 'days'}</span>
+            <span>{currentCard.fsrs ? `Recall chance now: ${Math.round((recallChance(currentCard) ?? 0) * 100)}%` : 'New card'}</span>
           </div>
 
           {/* Flashcard Box */}
@@ -245,14 +220,14 @@ export const QuizView: React.FC<QuizViewProps> = ({
           </div>
 
           {/* Recall Scoring Buttons (Visible only when flipped) */}
-          {isFlipped ? (
+          {isFlipped && next ? (
             <div className="grid grid-cols-4 gap-2 pt-2 animate-fade-in">
               <button
                 onClick={() => handleScore('again')}
                 className="min-h-14 rounded-xl bg-surface ring-1 ring-line hover:bg-raised text-text p-3 text-center transition-colors"
               >
                 <div className="text-sm font-medium">Again</div>
-                <div className="text-xs text-muted">1 day</div>
+                <div className="text-xs text-muted">{next.again}</div>
               </button>
 
               <button
@@ -260,7 +235,7 @@ export const QuizView: React.FC<QuizViewProps> = ({
                 className="min-h-14 rounded-xl bg-surface ring-1 ring-line hover:bg-raised text-text p-3 text-center transition-colors"
               >
                 <div className="text-sm font-medium">Hard</div>
-                <div className="text-xs text-muted">+2 days</div>
+                <div className="text-xs text-muted">{next.hard}</div>
               </button>
 
               <button
@@ -268,7 +243,7 @@ export const QuizView: React.FC<QuizViewProps> = ({
                 className="min-h-14 rounded-xl bg-surface ring-1 ring-line hover:bg-raised text-text p-3 text-center transition-colors"
               >
                 <div className="text-sm font-medium">Good</div>
-                <div className="text-xs text-muted">+7 days</div>
+                <div className="text-xs text-muted">{next.good}</div>
               </button>
 
               <button
@@ -276,7 +251,7 @@ export const QuizView: React.FC<QuizViewProps> = ({
                 className="min-h-14 rounded-xl bg-accent text-ink hover:brightness-110 p-3 text-center transition-colors"
               >
                 <div className="text-sm font-medium">Easy</div>
-                <div className="text-xs text-ink/70">+14 days</div>
+                <div className="text-xs text-ink/70">{next.easy}</div>
               </button>
             </div>
           ) : (

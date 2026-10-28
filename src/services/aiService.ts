@@ -2,6 +2,7 @@ import { Note, LearningProfile, AcademicYear, MemoryLogEntry, StudentTier, Sourc
 import { storage } from './storage';
 import { searchSources, toRef, INSTITUTIONAL_RE, type Hit } from './knowledge';
 import { searchNotes, searchSections, answerFromNotes, groundingFor } from './noteSearch';
+import { hybridSections } from './semantic';
 import { providerLabel, buildSystemPrompt, buildUserPrompt, generateRouted, candidatesFor } from './llmService';
 
 export interface AIResponsePayload {
@@ -58,8 +59,11 @@ export const aiService = {
   ): Promise<AIResponsePayload> {
     const live = opts.live !== false; // demo seeding passes live:false so it never spends the student's key
     const qLower = question.toLowerCase();
-    const relevant = this.findRelevantNotes(question, allNotes);
-    const noteHits = searchSections(question, allNotes, 6);
+    const noteHits = await hybridSections(question, allNotes, 6);
+    // Notes in the order their best section ranked (meaning search can find a note the keywords missed).
+    const keywordRelevant = this.findRelevantNotes(question, allNotes);
+    const fromHits = [...new Map(noteHits.map((h) => [h.note.id, { note: h.note, score: h.score }])).values()];
+    const relevant = fromHits.length ? fromHits : keywordRelevant;
     const topNotes = relevant.slice(0, 3).map(r => r.note);
     const connections = this.findCrossYearConnections(topNotes.length > 0 ? topNotes : allNotes);
 

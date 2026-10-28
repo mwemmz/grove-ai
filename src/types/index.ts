@@ -134,6 +134,19 @@ export interface Flashcard {
   dueDate: string;
   lastReviewed?: string;
   status: 'new' | 'learning' | 'mastered';
+  /** FSRS memory state for this card (stability in days, difficulty 1-10, dates as ISO strings). */
+  fsrs?: {
+    due: string;
+    stability: number;
+    difficulty: number;
+    elapsed_days: number;
+    scheduled_days: number;
+    learning_steps: number;
+    reps: number;
+    lapses: number;
+    state: number;
+    last_review?: string;
+  };
 }
 
 export interface PortfolioSkill {

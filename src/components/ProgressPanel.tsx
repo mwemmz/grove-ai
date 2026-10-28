@@ -1,6 +1,7 @@
 import React, { useEffect, useReducer, useState } from 'react';
 import { Check, Play, X } from 'lucide-react';
-import { Note } from '../types';
+import { Flashcard, Note } from '../types';
+import { MemoryStrength } from './MemoryStrength';
 import { AppTab, GrowthRings } from './Header';
 import { studyStore } from '../services/studyStore';
 import { METHOD_BY_ID } from '../data/studyMethods';
@@ -16,6 +17,7 @@ export interface SourceRef {
 }
 
 interface ProgressPanelProps {
+  flashcards?: Flashcard[];
   notes: Note[];
   year: number;
   onYearChange: (year: number) => void;
@@ -30,6 +32,7 @@ interface ProgressPanelProps {
 const label = 'mb-2 font-mono text-xs uppercase tracking-[0.08em] text-muted';
 
 export const ProgressPanel: React.FC<ProgressPanelProps> = ({
+  flashcards = [],
   notes,
   year,
   onYearChange,
@@ -90,6 +93,8 @@ export const ProgressPanel: React.FC<ProgressPanelProps> = ({
             </p>
           </div>
         </section>
+
+        <MemoryStrength compact limit={6} flashcards={flashcards} notes={notes} onOpenNote={(id) => { onOpenNote(id); afterChoose(); }} onReview={() => { onTab('quiz'); afterChoose(); }} />
 
         <section aria-label="Today">
           <p className={label}>Today</p>

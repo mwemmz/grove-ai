@@ -63,6 +63,7 @@ export const DegreeMemoryView: React.FC<DegreeMemoryViewProps> = ({
   const fileRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
   const [reading, setReading] = useState(false);
+  const [readingMsg, setReadingMsg] = useState<string | null>(null);
   const [uploadMsg, setUploadMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   const q = query.trim().toLowerCase();
@@ -113,6 +114,7 @@ export const DegreeMemoryView: React.FC<DegreeMemoryViewProps> = ({
       const need = pack.audience ?? COURSE_AUDIENCE[pack.course.code.toUpperCase()];
       if (!canSee(need)) {
         setReading(false);
+    setReadingMsg(null);
         setUploadMsg({
           ok: false,
           text: `These ${pack.course.code} notes are only for students whose ID starts with ${need}. ${getStudentId() ? `Your student ID is ${getStudentId()}.` : 'Your account has no student ID.'}`,
@@ -128,6 +130,7 @@ export const DegreeMemoryView: React.FC<DegreeMemoryViewProps> = ({
       setNotes(updated);
       storage.saveNotes(updated);
       setReading(false);
+    setReadingMsg(null);
       setUploadMsg({
         ok: true,
         text:
@@ -142,12 +145,13 @@ export const DegreeMemoryView: React.FC<DegreeMemoryViewProps> = ({
     }
     for (const f of files) {
       try {
-        done.push(await extractText(f));
+        done.push(await extractText(f, setReadingMsg));
       } catch (err) {
         problems.push(err instanceof Error ? err.message : `${f.name}: could not be read.`);
       }
     }
     setReading(false);
+    setReadingMsg(null);
     if (done.length === 1) {
       setNewTitle(done[0].title);
       setNewContent(done[0].text);
@@ -259,8 +263,8 @@ export const DegreeMemoryView: React.FC<DegreeMemoryViewProps> = ({
           >
             <FileUp aria-hidden className="h-5 w-5 shrink-0 text-accent" />
             <span className="min-w-0">
-              {reading ? 'Reading…' : 'Choose files or drop them here'}
-              <span className="block text-xs text-muted">PDF, Word, PowerPoint, text, Markdown or CSV. Read on your device, up to 8 MB each.</span>
+              {reading ? readingMsg ?? 'Reading…' : 'Choose files or drop them here'}
+              <span className="block text-xs text-muted">PDF (scans too), Word, PowerPoint, photos of pages, text or CSV. Read on your device, up to 8 MB each.</span>
             </span>
           </label>
           {uploadMsg && (

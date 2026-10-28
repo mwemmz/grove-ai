@@ -5,6 +5,7 @@ import type { Course, Flashcard, Note } from '../types';
 import type { AppTab } from './Header';
 import { GradCap } from './GradCap';
 import { CourseCover } from './CourseCover';
+import { MemoryStrength } from './MemoryStrength';
 
 interface Props {
   notes: Note[];
@@ -113,6 +114,8 @@ export function TodayView({ notes: allNotes, courses, flashcards, lastNoteId, on
           </span>
         </button>
       )}
+
+      <MemoryStrength flashcards={flashcards} notes={allNotes} onOpenNote={onOpenNote} onReview={() => onGo('quiz')} />
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:grid-rows-2">
         <Tile tall icon={Timer} title="Start a study session" detail="Pick a method and a timer" onClick={() => onGo('study')} />

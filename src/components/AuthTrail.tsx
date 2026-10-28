@@ -46,8 +46,8 @@ export function AuthTrail() {
     setErr(null);
     try {
       const r = await apiGet<{ events: Ev[]; account?: Account[] }>(`/auth-log?who=${encodeURIComponent(who.trim())}${lookup && who.trim() ? '&lookup=1' : ''}`);
-      setEvents(r.events);
-      setAccounts(lookup ? r.account ?? [] : null);
+      setEvents(Array.isArray(r?.events) ? r.events : []);
+      setAccounts(lookup ? (Array.isArray(r?.account) ? r.account : []) : null);
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Could not load the trail.');
     } finally {

@@ -42,6 +42,7 @@ import { getMe, syncPacks } from './services/packs';
 import { setTokenProvider } from './lib/api';
 import { Copilot } from './components/Copilot';
 import { copilot } from './services/copilot';
+import { indexNotes, warmUp } from './services/semantic';
 
 function LoadingScreen({ label }: { label: string }) {
   return (
@@ -92,6 +93,19 @@ function GroveApp() {
   const [isDataReady, setIsDataReady] = useState(false);
 
   const [notes, setNotes] = useState<Note[]>([]);
+  // Search by meaning: load the model when the browser is idle, then keep note vectors up to date.
+  useEffect(() => {
+    const go = () => void warmUp().then((ok) => ok && indexNotes(notesRef.current));
+    const w = window as unknown as { requestIdleCallback?: (f: () => void) => number };
+    if (w.requestIdleCallback) w.requestIdleCallback(go);
+    else setTimeout(go, 3000);
+  }, []);
+  const notesRef = useRef(notes);
+  useEffect(() => {
+    notesRef.current = notes;
+    indexNotes(notes);
+  }, [notes]);
+
   const [courses, setCourses] = useState<Course[]>([]);
   const shownCourses = courses.filter((c) => canSeeCourse(c.code));
   const [profile, setProfile] = useState<LearningProfile>(() => storage.getProfile());
@@ -332,6 +346,7 @@ function GroveApp() {
         )}
         panel={(api) => (
           <ProgressPanel
+            flashcards={flashcards}
             notes={notes}
             year={profile.currentYear}
             onYearChange={handleYearChange}

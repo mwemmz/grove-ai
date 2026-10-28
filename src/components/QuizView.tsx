@@ -3,7 +3,18 @@ import { RotateCw, Award, Plus, X } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { Flashcard, Note } from '../types';
 import { storage } from '../services/storage';
-import { PageHeader, Segmented, Inline, quietBtn } from './ui';
+import { PageHeader, Segmented, Inline, quietBtn, primaryBtn } from './ui';
+import { makeCardsFromNotes } from '../services/cardMaker';
+
+const todayStr = () => new Date().toISOString().split('T')[0];
+const addDays = (days: number) => new Date(Date.now() + days * 86400000).toISOString().split('T')[0];
+/** A study session: the cards that are due, oldest first, a manageable few at a time. */
+const buildQueue = (cards: Flashcard[], year: number | 'all') =>
+  cards
+    .filter((c) => (year === 'all' || c.year === year) && c.dueDate.slice(0, 10) <= todayStr())
+    .sort((a, b) => a.dueDate.localeCompare(b.dueDate))
+    .slice(0, 20)
+    .map((c) => c.id);
 
 interface QuizViewProps {
   flashcards: Flashcard[];
@@ -22,9 +33,28 @@ export const QuizView: React.FC<QuizViewProps> = ({
   const [sessionCompleted, setSessionCompleted] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
-  // Filter flashcards
-  const activeDeck = flashcards.filter(c => selectedYear === 'all' || c.year === selectedYear);
-  const currentCard = activeDeck[currentIndex] || activeDeck[0];
+  const [queue, setQueue] = useState<string[]>(() => buildQueue(flashcards, 'all'));
+  const [madeMsg, setMadeMsg] = useState('');
+  // The session is fixed when it starts, so scoring a card (which moves its due date) never shifts the cards after it.
+  const activeDeck = queue.map((id) => flashcards.find((c) => c.id === id)).filter((c): c is Flashcard => !!c);
+  const currentCard = activeDeck[currentIndex];
+  const dueTotal = flashcards.filter((c) => c.dueDate.slice(0, 10) <= todayStr()).length;
+
+  const makeFromNotes = () => {
+    const { cards, noteCount } = makeCardsFromNotes(notes, flashcards);
+    if (cards.length === 0) {
+      setMadeMsg(notes.length === 0 ? 'Add some notes first, then Grove can make cards from them.' : 'Every note already has its cards.');
+      return;
+    }
+    const all = [...cards, ...flashcards];
+    setFlashcards(all);
+    storage.saveFlashcards(all);
+    setQueue(buildQueue(all, selectedYear));
+    setCurrentIndex(0);
+    setIsFlipped(false);
+    setSessionCompleted(false);
+    setMadeMsg(`Made ${cards.length} cards from ${noteCount} ${noteCount === 1 ? 'note' : 'notes'}.`);
+  };
 
   const handleFlip = () => {
     setIsFlipped(!isFlipped);
@@ -59,7 +89,8 @@ export const QuizView: React.FC<QuizViewProps> = ({
       interval: newInterval,
       repetition: newRepetition,
       status: newStatus,
-      lastReviewed: new Date().toISOString().split('T')[0],
+      lastReviewed: todayStr(),
+      dueDate: addDays(newInterval),
     };
 
     const updatedAll = flashcards.map(c => c.id === currentCard.id ? updatedCard : c);
@@ -78,7 +109,8 @@ export const QuizView: React.FC<QuizViewProps> = ({
     }
   };
 
-  const resetSession = () => {
+  const resetSession = (year: number | 'all' = selectedYear) => {
+    setQueue(buildQueue(flashcards, year));
     setCurrentIndex(0);
     setIsFlipped(false);
     setSessionCompleted(false);
@@ -125,17 +157,20 @@ export const QuizView: React.FC<QuizViewProps> = ({
         title="Recall"
         subtitle="Flashcards from your notes, timed to come back just before you would forget them."
         action={
-          <button onClick={() => setIsCreateModalOpen(true)} className={quietBtn}>
-            <Plus className="h-4 w-4" />
-            Add flashcard
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button onClick={makeFromNotes} className={quietBtn}>From my notes</button>
+            <button onClick={() => setIsCreateModalOpen(true)} className={quietBtn}>
+              <Plus className="h-4 w-4" />
+              Add flashcard
+            </button>
+          </div>
         }
       />
 
       <Segmented
         label="Filter by year"
         value={String(selectedYear)}
-        onChange={(v) => { setSelectedYear(v === 'all' ? 'all' : Number(v)); resetSession(); }}
+        onChange={(v) => { const y = v === 'all' ? 'all' : Number(v); setSelectedYear(y); resetSession(y); }}
         options={[
           { id: 'all', label: 'All' },
           { id: '1', label: 'Year 1' },
@@ -145,8 +180,17 @@ export const QuizView: React.FC<QuizViewProps> = ({
         ]}
       />
 
+      {madeMsg && <p role="status" className="text-sm text-accent">{madeMsg}</p>}
+
       {/* Card Arena */}
-      {!sessionCompleted && currentCard ? (
+      {flashcards.length === 0 ? (
+        <div className="rounded-2xl bg-surface p-10 text-center space-y-3">
+          <Award className="mx-auto h-8 w-8 text-accent" />
+          <h2 className="text-xl font-semibold text-text">No cards yet</h2>
+          <p className="mx-auto max-w-sm text-sm text-muted">Grove can turn your notes into questions: definitions, comparisons, lists and steps. No AI key needed.</p>
+          <div className="pt-3"><button onClick={makeFromNotes} className={primaryBtn}>Make cards from my notes</button></div>
+        </div>
+      ) : !sessionCompleted && currentCard ? (
         <div className="space-y-4">
           
           {/* Progress Tracker */}
@@ -251,13 +295,15 @@ export const QuizView: React.FC<QuizViewProps> = ({
         /* Session Completed Screen */
         <div className="rounded-2xl bg-surface p-10 text-center space-y-3">
           <Award className="mx-auto h-8 w-8 text-accent" />
-          <h2 className="text-xl font-semibold text-text">Session done</h2>
+          <h2 className="text-xl font-semibold text-text">{activeDeck.length === 0 && !sessionCompleted ? 'All caught up' : 'Session done'}</h2>
           <p className="mx-auto max-w-sm text-sm text-muted">
-            Your review dates are updated. The cards you found hard will come back sooner.
+            {activeDeck.length === 0 && !sessionCompleted
+              ? 'No cards are due right now. They come back just before you would forget them.'
+              : `Your review dates are updated. The cards you found hard will come back sooner.${dueTotal ? ` ${dueTotal} still due.` : ''}`}
           </p>
           <div className="pt-3">
             <button
-              onClick={resetSession}
+              onClick={() => resetSession()}
               className="min-h-11 rounded-xl bg-accent px-6 text-sm font-semibold text-ink transition-[filter] hover:brightness-110"
             >
               Go again

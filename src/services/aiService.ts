@@ -1,6 +1,7 @@
 import { Note, LearningProfile, AcademicYear, MemoryLogEntry, StudentTier, SourceRef } from '../types';
 import { storage } from './storage';
-import { searchSources, toRef, tokens, INSTITUTIONAL_RE, type Hit } from './knowledge';
+import { searchSources, toRef, INSTITUTIONAL_RE, type Hit } from './knowledge';
+import { searchNotes, searchSections, answerFromNotes, groundingFor } from './noteSearch';
 import { providerLabel, buildSystemPrompt, buildUserPrompt, generateRouted, candidatesFor } from './llmService';
 
 export interface AIResponsePayload {
@@ -35,42 +36,7 @@ export const aiService = {
    * Search notes for relevance against a user query
    */
   findRelevantNotes(query: string, allNotes: Note[]): { note: Note; score: number }[] {
-    const q = query.toLowerCase();
-    // Meaningful words only (no "how", "does", "work"), stemmed, so a stray common word can't pull in a note.
-    const queryTokens = [...new Set(tokens(query))];
-
-    const scored = allNotes.map(note => {
-      let score = 0;
-      const titleLower = note.title.toLowerCase();
-      const contentLower = note.content.toLowerCase();
-      const tagsLower = note.tags.map(t => t.toLowerCase());
-
-      queryTokens.forEach(token => {
-        if (titleLower.includes(token)) score += 10;
-        if (tagsLower.some(t => t.includes(token))) score += 8;
-        if (contentLower.includes(token)) score += 3;
-      });
-
-      // Special thematic matches
-      if ((q.includes('consensus') || q.includes('raft') || q.includes('mutex') || q.includes('lock')) &&
-          (note.tags.includes('Consensus') || note.tags.includes('Concurrency') || note.tags.includes('Locks'))) {
-        score += 15;
-      }
-      if ((q.includes('storage') || q.includes('lsm') || q.includes('b+ tree') || q.includes('database')) &&
-          (note.tags.includes('Databases') || note.tags.includes('Storage Engines'))) {
-        score += 15;
-      }
-      if ((q.includes('memory') || q.includes('pointer') || q.includes('zero-copy') || q.includes('sendfile')) &&
-          (note.tags.includes('Memory') || note.tags.includes('Zero-Copy') || note.tags.includes('C'))) {
-        score += 15;
-      }
-
-      return { note, score };
-    });
-
-    return scored
-      .filter(item => item.score > 0)
-      .sort((a, b) => b.score - a.score);
+    return searchNotes(query, allNotes).map(({ note, score }) => ({ note, score }));
   },
 
   /**
@@ -93,6 +59,7 @@ export const aiService = {
     const live = opts.live !== false; // demo seeding passes live:false so it never spends the student's key
     const qLower = question.toLowerCase();
     const relevant = this.findRelevantNotes(question, allNotes);
+    const noteHits = searchSections(question, allNotes, 6);
     const topNotes = relevant.slice(0, 3).map(r => r.note);
     const connections = this.findCrossYearConnections(topNotes.length > 0 ? topNotes : allNotes);
 
@@ -101,14 +68,16 @@ export const aiService = {
     const rawHits = searchSources(question, { n: 4 });
     // A question about a rule is answered by a rule. A past project that merely shares a word is not an answer.
     const strongProject = rawHits.some((h) => h.source.kind === 'project' && h.score >= 12);
-    const libHits = institutional && !strongProject && !rawHits.some((h) => h.source.kind !== 'project') ? [] : rawHits;
+    // A question the student's own notes can answer is not handed to a library record that only shares a word like "data".
+    const wantsLibrary = institutional || /\b(projects?|dissertations?|thesis|capstone|polic(y|ies)|handbook|outline|syllabus|library|supervisors?)\b/i.test(question);
+    const libHits = (noteHits.length > 0 && !wantsLibrary) || (institutional && !strongProject && !rawHits.some((h) => h.source.kind !== 'project')) ? [] : rawHits;
 
     const citedNotes = topNotes.map(n => ({
       noteId: n.id,
       courseCode: n.courseId.replace(/^c-/, '').split('-')[0].toUpperCase(),
       year: n.year,
       title: n.title,
-      relevanceQuote: n.keyTakeaways[0] || n.summary,
+      relevanceQuote: noteHits.find((h) => h.note.id === n.id)?.section.title ?? (n.keyTakeaways[0] || n.summary),
     }));
 
     // Retrieve matching senior tips from students who cleared the course
@@ -161,7 +130,7 @@ export const aiService = {
         // the library answered, so loosely matching notes and cross-year links would only be noise
         ? this.generateLibraryResponse(libHits, [], [], appliedAttributes, /\b(deadlines?|due|dates?|when|fees?|how much|how many|limit)\b/i.test(question))
         : topNotes.length > 0 && !notInLibrary
-          ? this.generateAdaptiveResponse(question, topNotes, profile, citedNotes, connections, appliedAttributes)
+          ? this.generateNotesResponse(question, allNotes, noteHits, profile, citedNotes, appliedAttributes)
           : {
               text: greeting
                 ? `Hi${profile.studentName ? ` ${profile.studentName.split(' ')[0]}` : ''}! Ask me about your course, the final-year project process, or something you have studied. I answer from your university's library and your own notes, and I tell you when I cannot find it.`
@@ -180,10 +149,10 @@ export const aiService = {
     // Never spend the student's key guessing at a rule the library doesn't contain.
     const ready = live && candidatesFor(task).length > 0 && !notInLibrary;
     if (!ready) {
-      resp.appliedProfileAttributes = ['Answered by Local Grove. Add an AI key in Settings for fuller answers.', ...resp.appliedProfileAttributes];
+      resp.appliedProfileAttributes = ['Answered from your notes, no AI engine used. Add an AI key in Settings for a fuller written answer.', ...resp.appliedProfileAttributes];
     } else {
       try {
-        const grounding = relevant.slice(0, 5).map((r) => r.note);
+        const grounding = noteHits.length ? groundingFor(noteHits) : relevant.slice(0, 5).map((r) => r.note);
         const out = await generateRouted(task, buildSystemPrompt(profile), buildUserPrompt(question, grounding, opts.previous, libHits.map((h) => ({ title: h.source.title, meta: h.source.meta, text: h.source.text }))));
         if (out) {
           const label = providerLabel(out.provider);
@@ -270,49 +239,28 @@ export const aiService = {
   },
 
   /** Without an AI key: quote the slides or paragraphs from the student's own notes that best match the question. */
-  generateAdaptiveResponse(
+  /** The no-AI answer: built from the matching section of the student's notes, shaped like the question. */
+  generateNotesResponse(
     question: string,
-    notes: Note[],
+    allNotes: Note[],
+    hits: ReturnType<typeof searchSections>,
     profile: LearningProfile,
     citedNotes: AIResponsePayload['citedNotes'],
-    connections: AIResponsePayload['yearConnections'],
     appliedAttributes: string[]
   ): AIResponsePayload {
-    const qt = new Set(tokens(question));
-    const passages: { note: Note; text: string; score: number }[] = [];
-    for (const note of notes) {
-      for (const para of note.content.split(/\n{2,}/)) {
-        const words = tokens(para);
-        if (words.length < 4) continue;
-        const hit = new Set(words.filter((w) => qt.has(w)));
-        if (hit.size === 0) continue;
-        passages.push({ note, text: para.trim(), score: hit.size * 3 + Math.min(words.filter((w) => qt.has(w)).length, 6) });
-      }
-    }
-    passages.sort((a, b) => b.score - a.score);
-    const take = passages.slice(0, profile.answerLength === 'concise' ? 2 : 3);
-    if (take.length === 0) {
+    const local = answerFromNotes(question, allNotes, { concise: profile.answerLength === 'concise', hits });
+    if (!local) {
       return {
-        text: `Your notes mention this, but no single passage answers it directly. Open the notes listed below, or connect an AI engine in Settings for a written explanation from them.`,
+        text: `Your notes mention this, but no single section answers it directly. Open the notes listed below, or connect an AI engine in Settings for a written explanation from them.`,
         citedNotes,
         yearConnections: [],
         appliedProfileAttributes: appliedAttributes,
       };
     }
-    const clip = (t: string) => (t.length > 520 ? t.slice(0, 517).replace(/\s+\S*$/, '') + '…' : t);
-    const quote = (t: string) => {
-      // A slide has a real title line ("### …"); any other paragraph is quoted whole.
-      if (!t.startsWith('### ')) return `> ${clip(t.replace(/\s+/g, ' ').trim())}`;
-      const [head, ...rest] = t.slice(4).split('\n');
-      const body = rest.join(' ').replace(/\s+/g, ' ').trim();
-      return body ? `**${head}**\n> ${clip(body)}` : `> ${head}`;
-    };
-    const parts = ['### From your notes'];
-    for (const p of take) parts.push(`${quote(p.text)}\n\nFrom **${p.note.title}** (Year ${p.note.year}).`);
-    parts.push('These are your own notes, quoted. Connect an AI engine in Settings and Grove will explain them in its own words, still citing the notes.');
+    const used = new Set(local.used.map((u) => u.note.id));
     return {
-      text: parts.join('\n\n'),
-      citedNotes: citedNotes.filter((c) => take.some((p) => p.note.id === c.noteId)).concat(citedNotes.filter((c) => !take.some((p) => p.note.id === c.noteId))).slice(0, 3),
+      text: local.text,
+      citedNotes: citedNotes.filter((c) => used.has(c.noteId)).concat(citedNotes.filter((c) => !used.has(c.noteId))).slice(0, 3),
       yearConnections: [],
       appliedProfileAttributes: appliedAttributes,
     };

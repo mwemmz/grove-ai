@@ -23,6 +23,8 @@ export interface Section {
   groups: Group[];
   /** The section's text as it was written, used to match animated pictures. */
   raw: string;
+  /** Set when the slide was one numbered step in a run ("1. Input", "2. Splitting"). */
+  step?: number;
 }
 
 export interface Node {
@@ -108,10 +110,11 @@ export function parseSections(content: string, fallbackTitle = 'Overview'): Sect
       body = [title, ...body];
       title = titleFrom(title);
     }
+    const stepNo = /^(\d{1,2})\s*[.)]\s*(?=[A-Za-z])/.exec(title.trim());
     title = tidyTitle(title) || title;
     body = body.filter((l) => !META.test(l.trim()));
     const raw = [`### ${title}`, ...body].join('\n');
-    out.push({ id: '', title, groups: parseGroups(body), raw });
+    out.push({ id: '', title, groups: parseGroups(body), raw, ...(stepNo ? { step: Number(stepNo[1]) } : {}) });
   });
 
   // Tidy the result the way a person reading the slides would: drop empty and closing slides,
@@ -140,6 +143,14 @@ export function parseSections(content: string, fallbackTitle = 'Overview'): Sect
   }
   // The same heading used again further on (slides often repeat one) gets a part number so the outline is unambiguous.
   const seen = new Map<string, number>();
+  // "1. Input", "2. Splitting"… is a sequence worth keeping in order: keep the number when a neighbour carries the next or previous one.
+  tidy.forEach((s, i) => {
+    if (s.step === undefined) return;
+    const a = tidy[i - 1]?.step;
+    const b = tidy[i + 1]?.step;
+    if (a === s.step - 1 || b === s.step + 1) s.title = `${s.step}. ${s.title}`;
+    else delete s.step;
+  });
   return tidy.map((s, i) => {
     const k = s.title.toLowerCase();
     const n = (seen.get(k) ?? 0) + 1;

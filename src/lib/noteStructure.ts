@@ -73,8 +73,10 @@ export const clip = (s: string, n: number) => (s.length > n ? s.slice(0, n - 1).
 /** A heading line for a block with no usable title: the first few words of its first line. */
 function titleFrom(line: string): string {
   const first = clean(line).replace(/^[-*•–]\s*/, '');
-  const clause = first.split(/[.:;]\s/)[0];
-  return clip(clause, 56);
+  const num = /^(\d{1,2})\s*[.)]\s+(?=[A-Za-z])/.exec(first);
+  const body = num ? first.slice(num[0].length) : first;
+  const clause = body.split(/[.:;]\s/)[0];
+  return clip(num ? `${num[1]}. ${clause}` : clause, 56);
 }
 
 /* ---------- splitting into sections ---------- */
@@ -100,7 +102,7 @@ export function parseSections(content: string, fallbackTitle = 'Overview'): Sect
     let body = b.body;
     const firstIdx = body.findIndex((l) => l.trim());
     // Old imports gave a long first line, or the word "Slide", as the heading. Use the real first words instead.
-    if (!title || GENERIC.test(title) || !/[A-Za-z0-9]/.test(title)) {
+    if (!title || GENERIC.test(title) || !/[A-Za-z]/.test(title)) {
       if (firstIdx >= 0) {
         title = titleFrom(body[firstIdx]);
         if (clean(body[firstIdx]).length <= 56 && !/[.:]$/.test(clean(body[firstIdx]))) body = body.filter((_, j) => j !== firstIdx);

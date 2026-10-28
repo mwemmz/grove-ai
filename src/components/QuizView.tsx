@@ -3,7 +3,7 @@ import { RotateCw, Award, Plus, X } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { Flashcard, Note } from '../types';
 import { storage } from '../services/storage';
-import { PageHeader, Segmented, Inline, quietBtn, primaryBtn } from './ui';
+import { PageHeader, Segmented, Inline, quietBtn, primaryBtn, Portal } from './ui';
 import { makeCardsFromNotes } from '../services/cardMaker';
 
 const todayStr = () => new Date().toISOString().split('T')[0];
@@ -314,7 +314,7 @@ export const QuizView: React.FC<QuizViewProps> = ({
 
       {/* Create Flashcard Modal */}
       {isCreateModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
+        <Portal><div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
           <div className="w-full max-w-lg max-h-[85dvh] overflow-y-auto rounded-2xl bg-surface border border-line p-6 shadow-2xl shadow-black/40 text-slate-200 animate-enter">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-base font-bold text-text">Create Degree Flashcard</h3>
@@ -389,7 +389,7 @@ export const QuizView: React.FC<QuizViewProps> = ({
               </div>
             </form>
           </div>
-        </div>
+        </div></Portal>
       )}
 
     </div>

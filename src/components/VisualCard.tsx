@@ -40,7 +40,7 @@ export default function VisualCard({ topicId, onOpen }: { topicId: TopicId; onOp
   const step = topic.steps[i];
 
   return (
-    <figure className="overflow-hidden rounded-[10px] bg-surface ring-1 ring-line" aria-label={`Picture: ${topic.name}`}>
+    <figure className="overflow-hidden rounded-[22px] bg-surface ring-1 ring-line" aria-label={`Picture: ${topic.name}`}>
       <div className="relative w-full bg-bg" style={{ aspectRatio: '16 / 9' }}>
         <hyperframes-player
           ref={ref}

@@ -1,4 +1,5 @@
 import { ThemePicker } from './ThemePicker';
+import { Portal } from './ui';
 import { resolveProvider, testKey, type LiveProvider } from '../services/llmService';
 import { searchCatalog, validBaseUrl } from '../shared/providerCatalog';
 import type { AiConfig } from '../services/storage';
@@ -164,7 +165,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
+    <Portal><div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
       <div className="relative w-full max-w-xl max-h-[90dvh] overflow-y-auto rounded-2xl bg-surface border border-line p-6 shadow-2xl shadow-black/40 text-slate-200 animate-enter">
         
         {/* Close Button */}
@@ -473,6 +474,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
         </form>
       </div>
-    </div>
+    </div></Portal>
   );
 };

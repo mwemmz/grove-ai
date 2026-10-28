@@ -70,7 +70,7 @@ export const ProgressPanel: React.FC<ProgressPanelProps> = ({
       </div>
 
       <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-4 pb-6">
-        <section className="flex items-center gap-4 rounded-[10px] bg-surface p-4 ring-1 ring-line" aria-label="Your growth">
+        <section className="flex items-center gap-4 rounded-[22px] bg-surface p-4 ring-1 ring-line" aria-label="Your growth">
           <GrowthRings notes={notes} year={year} className="h-20 w-20" />
           <div className="min-w-0 text-sm text-muted">
             <label className="flex items-center gap-2">

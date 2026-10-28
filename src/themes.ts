@@ -15,19 +15,25 @@ export interface Theme {
   accent: string;
   onAccent: string; // text on top of a solid accent button
   warn: string;
+  /** Colour of the ambient light behind the panels. Defaults to the accent. */
+  glow?: string;
 }
 
 export const THEMES: Theme[] = [
+  // From the studio references: cobalt with white pills; fog glass with ink pills; graphite with a citron spark.
+  { id: 'forma', name: 'Cobalt', mode: 'dark', bg: '#081747', side: '#06123a', surface: '#0e2163', raised: '#16307f', line: '#1e3888', text: '#f1f4ff', muted: '#aab7e4', accent: '#f3f6ff', onAccent: '#0c2266', warn: '#f5c451', glow: '#2d5bff' },
+  { id: 'fog', name: 'Fog', mode: 'light', bg: '#e6e9ed', side: '#f3f4f6', surface: '#f8f9fa', raised: '#e2e5ea', line: '#d0d5dc', text: '#15171b', muted: '#575e69', accent: '#15171b', onAccent: '#f8f9fa', warn: '#b45309', glow: '#8ea6c2' },
+  { id: 'graphite', name: 'Graphite', mode: 'dark', bg: '#111214', side: '#0c0d0e', surface: '#1a1b1e', raised: '#25272a', line: '#323438', text: '#f1f1ee', muted: '#a09f99', accent: '#e4ef4c', onAccent: '#171a05', warn: '#f0a24a', glow: '#b89a62' },
   { id: 'grove', name: 'Grove', mode: 'dark', bg: '#0e1512', side: '#0b110e', surface: '#151f1a', raised: '#1b2b24', line: '#26352d', text: '#e5ede7', muted: '#92a59a', accent: '#5fc2a2', onAccent: '#08140f', warn: '#e0a94a' },
   { id: 'midnight', name: 'Midnight', mode: 'dark', bg: '#0b1220', side: '#080e19', surface: '#111a2c', raised: '#18243b', line: '#27375a', text: '#e6ecf7', muted: '#93a3c0', accent: '#6cb0f5', onAccent: '#06121f', warn: '#e0a94a' },
-  { id: 'cobalt-day', name: 'Cobalt', mode: 'light', bg: '#f4f7fc', side: '#ffffff', surface: '#ffffff', raised: '#e8eef9', line: '#d3dcee', text: '#0f1b33', muted: '#52607d', accent: '#1d4ed8', onAccent: '#ffffff', warn: '#b45309' },
+  { id: 'cobalt-day', name: 'Cobalt Day', mode: 'light', bg: '#f4f7fc', side: '#ffffff', surface: '#ffffff', raised: '#e8eef9', line: '#d3dcee', text: '#0f1b33', muted: '#52607d', accent: '#1d4ed8', onAccent: '#ffffff', warn: '#b45309' },
   { id: 'burgundy-noir', name: 'Burgundy', mode: 'dark', bg: '#0c0a0b', side: '#080607', surface: '#151012', raised: '#21171b', line: '#38272d', text: '#f0e8ea', muted: '#aa969d', accent: '#d9506f', onAccent: '#180509', warn: '#e0a94a' },
   { id: 'rosewood-day', name: 'Rosewood', mode: 'light', bg: '#faf7f8', side: '#ffffff', surface: '#ffffff', raised: '#f5e9ed', line: '#e5d4da', text: '#24121a', muted: '#6d5560', accent: '#8c1c3b', onAccent: '#ffffff', warn: '#a15c07' },
   { id: 'grove-day', name: 'Meadow', mode: 'light', bg: '#f3f8f5', side: '#ffffff', surface: '#ffffff', raised: '#e5f1ea', line: '#cfe0d6', text: '#10241b', muted: '#506a5d', accent: '#17755a', onAccent: '#ffffff', warn: '#a15c07' },
 ];
 
 const KEY = 'grove_theme_v1';
-export const DEFAULT_THEME = 'grove';
+export const DEFAULT_THEME = 'forma';
 
 const hex = (h: string) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
 const mix = (a: string, b: string, t: number) => {
@@ -88,6 +94,7 @@ export function applyTheme(id: string, persist = true): void {
   set('--color-ink', t.onAccent);
   set('--color-on-accent', t.onAccent);
   set('--color-warn', t.warn);
+  set('--color-glow', t.glow ?? t.accent);
 
   // Legacy slate-* classes: 950 is the deepest surface, 100 the strongest text.
   const ramp = dark

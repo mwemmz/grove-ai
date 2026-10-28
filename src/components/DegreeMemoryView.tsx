@@ -1,6 +1,6 @@
 import { isPastPaper, compareNotes } from '../lib/noteOrder';
 import React, { useRef, useState } from 'react';
-import { FileUp } from 'lucide-react';
+import { ArrowRight, ChevronRight, FileUp } from 'lucide-react';
 import { Note, Course, AcademicYear } from '../types';
 import { storage } from '../services/storage';
 import { ACCEPT, extractText } from '../services/fileText';
@@ -292,28 +292,45 @@ export const DegreeMemoryView: React.FC<DegreeMemoryViewProps> = ({
         {groups.map((g, i) => {
           const open = isOpen(g.id, i);
           return (
-            <div key={g.id} className={`${panel} p-0!`}>
+            <div key={g.id} className={`${panel} p-2!`}>
               <button
                 type="button"
                 aria-expanded={open}
                 onClick={() => setOpenCourse(open && !q ? '' : g.id)}
-                className="flex w-full items-baseline justify-between gap-3 px-4 py-3 text-left"
+                className="flex w-full items-center justify-between gap-3 rounded-[18px] px-3 py-3 text-left hover:bg-raised/50"
               >
                 <span className="min-w-0">
-                  <span className="block font-semibold text-text">{g.course ? g.course.name : 'Other notes'}</span>
-                  {g.course && <span className="font-mono text-xs text-muted">{g.course.code} · Year {g.course.year}</span>}
+                  <span className="block font-display text-lg leading-snug text-text">{g.course ? g.course.name : 'Other notes'}</span>
+                  {g.course && <span className="mt-1 inline-flex items-center gap-2 font-mono text-xs text-muted"><span className="rounded-full bg-raised px-2 py-0.5 text-text">{g.course.code}</span>Year {g.course.year}</span>}
                 </span>
-                <span className="shrink-0 font-mono text-xs text-accent">{g.items.length} {papers ? (g.items.length === 1 ? 'paper' : 'papers') : g.items.length === 1 ? 'note' : 'notes'} {open ? '▾' : '▸'}</span>
+                <span className="flex shrink-0 items-center gap-2 text-sm text-muted">
+                  {g.items.length} {papers ? (g.items.length === 1 ? 'paper' : 'papers') : g.items.length === 1 ? 'note' : 'notes'}
+                  <span className={`flex h-8 w-8 items-center justify-center rounded-full ring-1 ring-line transition-transform duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] ${open ? 'rotate-90 bg-accent text-ink ring-accent' : ''}`}>
+                    <ChevronRight aria-hidden className="h-4 w-4" />
+                  </span>
+                </span>
               </button>
               {open && (
-                <ul className="divide-y divide-line border-t border-line">
-                  {g.items.map((note) => (
-                    <li key={note.id}>
-                      <button onClick={() => setSelectedNoteForDetail(note)} className="block min-h-11 w-full px-4 py-2.5 text-left hover:bg-raised">
-                        <span className="block text-text">{note.title}</span>
-                      </button>
-                    </li>
-                  ))}
+                <ul className="stagger mt-1 space-y-0.5 pb-1">
+                  {g.items.map((note) => {
+                    const m = /^(?:unit|week|chapter|lecture|topic)\s*([\d.]+)\s*[·:\-]\s*(.+)$/i.exec(note.title);
+                    return (
+                      <li key={note.id}>
+                        <button
+                          onClick={() => setSelectedNoteForDetail(note)}
+                          className="nudge group flex min-h-12 w-full items-center gap-3 rounded-[16px] px-3 py-2 text-left hover:bg-raised/70"
+                        >
+                          {m && (
+                            <span className="flex h-8 min-w-8 shrink-0 items-center justify-center rounded-full bg-raised px-2 font-mono text-xs text-text ring-1 ring-line group-hover:bg-accent group-hover:text-ink group-hover:ring-accent">
+                              {m[1]}
+                            </span>
+                          )}
+                          <span className="min-w-0 flex-1 text-text">{m ? m[2] : note.title}</span>
+                          <ArrowRight aria-hidden className="h-4 w-4 shrink-0 text-muted opacity-0 group-hover:opacity-100" />
+                        </button>
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
             </div>

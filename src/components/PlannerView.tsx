@@ -355,7 +355,7 @@ export const PlannerView: React.FC<PlannerViewProps> = ({ courses, profile, onSt
       </section>
 
       {plan && plan.warnings.length > 0 && (
-        <section className="rounded-[10px] bg-surface p-4 ring-1 ring-warn/50" role="status">
+        <section className="rounded-[22px] bg-surface p-4 ring-1 ring-warn/50" role="status">
           <ul className="list-disc space-y-1 pl-5 text-text">
             {plan.warnings.map((w, i) => <li key={i}>{w}</li>)}
           </ul>

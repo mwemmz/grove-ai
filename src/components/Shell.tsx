@@ -94,55 +94,56 @@ export function Shell({ title, sidebar, panel, children, bottom }: ShellProps) {
   };
 
   return (
-    <div className="app-shell relative flex h-dvh overflow-clip bg-bg font-sans text-text selection:bg-accent/30">
-      {left && <div aria-hidden onClick={() => setLeft(false)} className="no-print fixed inset-0 z-30 animate-fade-in bg-black/60 lg:hidden" />}
-      {right && <div aria-hidden onClick={() => setRight(false)} className="no-print fixed inset-0 z-30 animate-fade-in bg-black/60 xl:hidden" />}
+    <div className="app-shell relative isolate flex h-dvh overflow-clip bg-bg font-sans text-text selection:bg-accent/30">
+      <div aria-hidden className="ambient no-print" style={{ zIndex: -1 }} />
+      {left && <div aria-hidden onClick={() => setLeft(false)} className="no-print fixed inset-0 z-30 animate-fade-in bg-black/50 backdrop-blur-[2px] lg:hidden" />}
+      {right && <div aria-hidden onClick={() => setRight(false)} className="no-print fixed inset-0 z-30 animate-fade-in bg-black/50 backdrop-blur-[2px] xl:hidden" />}
 
       <aside
         id="grove-sidebar"
         aria-label="Navigation and recent questions"
         inert={!left}
-        className={`no-print fixed inset-y-0 left-0 z-40 overflow-hidden border-r border-line bg-side transition-transform duration-200 lg:static lg:z-auto lg:shrink-0 lg:translate-x-0 lg:transition-[width] ${
+        className={`no-print glass-strong fixed inset-y-0 left-0 z-40 overflow-hidden border-r border-line/70 transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] lg:static lg:z-auto lg:shrink-0 lg:translate-x-0 lg:transition-[width] ${
           left ? 'translate-x-0 lg:w-72' : '-translate-x-full lg:w-0 lg:border-r-0'
         }`}
       >
         <div className="h-full w-[84vw] max-w-[300px] lg:w-72 lg:max-w-none">{sidebar(leftApi)}</div>
       </aside>
 
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="no-print flex h-14 shrink-0 items-center gap-2 border-b border-line px-2 sm:px-4">
+      <div className="relative flex min-w-0 flex-1 flex-col">
+        <header className="no-print flex h-16 shrink-0 items-center gap-2 px-2 sm:px-4">
           <button
             onClick={() => setLeftPref(!left)}
             aria-label={left ? 'Close menu' : 'Open menu'}
             aria-expanded={left}
             aria-controls="grove-sidebar"
-            className="flex h-11 w-11 items-center justify-center rounded-md text-muted hover:bg-raised hover:text-text"
+            className="flex h-11 w-11 items-center justify-center rounded-full text-muted hover:bg-surface hover:text-text"
           >
             <Menu className="h-5 w-5" />
           </button>
-          <p className="min-w-0 flex-1 truncate font-display text-lg text-text">{title}</p>
+          <p key={title} className="animate-fade-in min-w-0 flex-1 truncate font-display text-xl text-text">{title}</p>
           <button
             onClick={() => setRightPref(!right)}
             aria-label={right ? 'Close progress panel' : 'Open progress panel'}
             aria-expanded={right}
             aria-controls="grove-panel"
-            className="flex h-11 items-center gap-2 rounded-md px-3 text-sm text-muted hover:bg-raised hover:text-text"
+            className={`flex h-10 items-center gap-2 rounded-full px-4 text-sm ring-1 ${right ? 'bg-accent text-ink ring-accent' : 'bg-surface/60 text-muted ring-line hover:text-text'}`}
           >
             <PanelRight className="h-5 w-5" />
             <span className="hidden sm:inline">Progress</span>
           </button>
         </header>
         <main className="app-main relative min-h-0 flex-1 overflow-y-auto">
-          <div className="mx-auto w-full max-w-[820px] px-4 pb-20 pt-6 sm:px-8">{children}</div>
+          <div key={title} className="view-enter mx-auto w-full max-w-[860px] px-4 pb-28 pt-4 sm:px-8 lg:pb-16">{children}</div>
         </main>
-        {bottom && <div className="no-print shrink-0 lg:hidden">{bottom(() => setLeftPref(true))}</div>}
+        {bottom && <div className="no-print pointer-events-none absolute inset-x-0 bottom-0 z-20 lg:hidden">{bottom(() => setLeftPref(true))}</div>}
       </div>
 
       <aside
         id="grove-panel"
         aria-label="Progress"
         inert={!right}
-        className={`no-print fixed inset-y-0 right-0 z-40 overflow-hidden border-l border-line bg-side transition-transform duration-200 xl:static xl:z-auto xl:shrink-0 xl:translate-x-0 xl:transition-[width] ${
+        className={`no-print glass-strong fixed inset-y-0 right-0 z-40 overflow-hidden border-l border-line/70 transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] xl:static xl:z-auto xl:shrink-0 xl:translate-x-0 xl:transition-[width] ${
           right ? 'translate-x-0 xl:w-80' : 'translate-x-full xl:w-0 xl:border-l-0'
         }`}
       >

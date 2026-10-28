@@ -339,7 +339,7 @@ function GroveApp() {
       >
         <div className="space-y-5">
           {packNotice && (
-            <div role="status" className="flex items-start justify-between gap-3 rounded-[10px] bg-surface px-4 py-3 text-sm text-text ring-1 ring-accent/50">
+            <div role="status" className="flex items-start justify-between gap-3 rounded-[22px] bg-surface px-4 py-3 text-sm text-text ring-1 ring-accent/50">
               <span>{packNotice} Find them under Notes.</span>
               <button onClick={() => setPackNotice(null)} className="text-muted hover:text-text" aria-label="Dismiss">✕</button>
             </div>
@@ -352,6 +352,7 @@ function GroveApp() {
               lastNoteId={(() => { try { return localStorage.getItem('grove_last_note'); } catch { return null; } })()}
               onOpenNote={openNoteById}
               onGo={goTo}
+              name={profile.studentName}
             />
           )}
 

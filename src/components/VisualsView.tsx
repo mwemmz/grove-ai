@@ -189,7 +189,7 @@ function TopicPlayer({
                   key={p.id}
                   onClick={() => clickPart(p.id)}
                   aria-label={mode === 'quiz' ? `Choose ${p.name}` : `Explain ${p.name}`}
-                  className={`absolute rounded-[10px] outline-offset-2 transition-colors hover:bg-accent/15 focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent ${
+                  className={`absolute rounded-[22px] outline-offset-2 transition-colors hover:bg-accent/15 focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent ${
                     isTarget || isAnswer ? 'bg-accent/15 ring-2 ring-accent' : ''
                   } ${wasPicked && picked !== cpuQ?.answer ? 'bg-warn/15 ring-2 ring-warn' : ''}`}
                   style={{
@@ -455,7 +455,7 @@ function ProgrammeMap({
                         key={c.id}
                         onClick={() => setSel(isSel ? null : c.code)}
                         aria-pressed={isSel}
-                        className={`block w-full rounded-[10px] bg-surface p-3 text-left ring-1 transition-colors hover:bg-raised ${
+                        className={`block w-full rounded-[22px] bg-surface p-3 text-left ring-1 transition-colors hover:bg-raised ${
                           isSel ? 'ring-2 ring-accent' : isBefore ? 'ring-2 ring-warn/80' : isAfter ? 'ring-2 ring-accent/50' : 'ring-line'
                         } ${sel && !isSel && !isBefore && !isAfter ? 'opacity-50' : ''}`}
                       >

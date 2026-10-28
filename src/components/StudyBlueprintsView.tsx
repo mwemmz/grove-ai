@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Clock, CheckCircle2, Calendar, BookmarkCheck, Sparkles, TrendingUp, Plus, X } from 'lucide-react';
 import { StudyBlueprint, StudentTier, WorkEthicArchetype } from '../types';
 import { storage } from '../services/storage';
-import { PageHeader, Toast, quietBtn } from './ui';
+import { PageHeader, Toast, quietBtn, Portal } from './ui';
 
 interface StudyBlueprintsViewProps {
   blueprints: StudyBlueprint[];
@@ -359,7 +359,7 @@ export const StudyBlueprintsView: React.FC<StudyBlueprintsViewProps> = ({
 
       {/* Publish Blueprint Modal */}
       {isSubmitModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
+        <Portal><div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
           <div className="w-full max-w-xl max-h-[90dvh] overflow-y-auto rounded-2xl bg-surface border border-line p-6 shadow-2xl shadow-black/40 text-slate-200 animate-enter">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-base font-bold text-text flex items-center gap-2">
@@ -500,7 +500,7 @@ export const StudyBlueprintsView: React.FC<StudyBlueprintsViewProps> = ({
               </div>
             </form>
           </div>
-        </div>
+        </div></Portal>
       )}
 
     </div>

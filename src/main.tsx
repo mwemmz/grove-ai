@@ -1,6 +1,10 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ClerkProvider } from '@clerk/react';
+import '@fontsource-variable/outfit';
+import '@fontsource-variable/figtree';
+import '@fontsource/jetbrains-mono/400.css';
+import '@fontsource/jetbrains-mono/500.css';
 import './index.css';
 import App from './App.tsx';
 import { applyTheme, getStoredTheme } from './themes';

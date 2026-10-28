@@ -1,5 +1,6 @@
 /* Full-screen note reader: headed sections, an outline to jump around, diagrams drawn from the note's own structure,
    animated pictures beside the matching idea, and recall prompts. */
+import { createPortal } from 'react-dom';
 import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { lazyWithReload } from '../lib/lazyReload';
@@ -163,9 +164,10 @@ export function NoteReader({
     setActive(`sec-${id}`);
   };
 
-  return (
-    <div role="dialog" aria-modal="true" aria-label={note.title} className="fixed inset-0 z-50 flex flex-col bg-bg animate-fade-in">
-      <header className="relative flex items-center gap-3 border-b border-line bg-side px-3 py-2 pt-[max(0.5rem,env(safe-area-inset-top))] sm:px-5">
+  return createPortal(
+    <div role="dialog" aria-modal="true" aria-label={note.title} className="view-enter fixed inset-0 z-50 isolate flex flex-col bg-bg">
+      <div aria-hidden className="ambient" style={{ zIndex: -1 }} />
+      <header className="glass-strong relative flex items-center gap-3 border-b border-line/70 px-3 py-2 pt-[max(0.5rem,env(safe-area-inset-top))] sm:px-5">
         <button onClick={onClose} className="flex min-h-10 items-center gap-1.5 rounded-md px-2 text-sm text-muted hover:bg-raised hover:text-text">
           <ArrowLeft className="h-4 w-4" /> Notes
         </button>
@@ -306,5 +308,5 @@ export function NoteReader({
         </div>
       </div>
     </div>
-  );
+  , document.body);
 }

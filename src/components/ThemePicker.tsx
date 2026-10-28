@@ -23,13 +23,13 @@ export const ThemePicker = ({ compact = false }: { compact?: boolean }) => {
             role="radio"
             aria-checked={on}
             onClick={() => applyTheme(t.id)}
-            className={`flex items-center gap-2 rounded-lg border p-1.5 text-left text-xs ${
+            className={`flex items-center gap-2 rounded-full border p-1 pr-3 text-left text-xs ${
               on ? 'border-accent bg-raised text-text' : 'border-line text-muted hover:bg-raised hover:text-text'
             }`}
           >
             <span
               aria-hidden
-              className="relative flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-md border"
+              className="relative flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full border"
               style={{ background: t.bg, borderColor: t.line }}
             >
               <span className="absolute bottom-0 left-0 right-0 h-3" style={{ background: t.surface }} />

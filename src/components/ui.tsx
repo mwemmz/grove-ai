@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { ChevronDown, Check } from 'lucide-react';
+import React, { useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { ChevronDown, Check, X } from 'lucide-react';
 
 /** One consistent page title: a heading, one line of context, an optional action. */
 export function PageHeader({
@@ -22,7 +23,9 @@ export function PageHeader({
   );
 }
 
-/** Two-to-four option switch used instead of a second row of nav tabs. */
+/** Two-to-four option switch used instead of a second row of nav tabs.
+ *  The active pill slides between options: a copy of the labels in active colours sits on top and is clipped to the
+ *  chosen option, so the colour change travels with the pill instead of two colours cross-fading. */
 export function Segmented<T extends string>({
   value,
   options,
@@ -34,25 +37,60 @@ export function Segmented<T extends string>({
   onChange: (id: T) => void;
   label: string;
 }) {
+  const track = useRef<HTMLDivElement>(null);
+  const refs = useRef(new Map<string, HTMLButtonElement>());
+  const [clip, setClip] = useState<string | null>(null);
+
+  useLayoutEffect(() => {
+    const t = track.current;
+    if (!t) return;
+    const measure = () => {
+      const b = refs.current.get(value);
+      if (!b) return setClip(null);
+      const top = b.offsetTop, left = b.offsetLeft;
+      const right = t.clientWidth - left - b.offsetWidth, bottom = t.clientHeight - top - b.offsetHeight;
+      setClip(`inset(${top}px ${right}px ${bottom}px ${left}px round 999px)`);
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(t);
+    return () => ro.disconnect();
+  }, [value, options.length]);
+
+  const row = (active: boolean) =>
+    options.map((o) => (
+      <button
+        key={o.id}
+        ref={active ? undefined : (el) => { if (el) refs.current.set(o.id, el); else refs.current.delete(o.id); }}
+        role={active ? undefined : 'tab'}
+        aria-selected={active ? undefined : value === o.id}
+        tabIndex={active ? -1 : undefined}
+        onClick={active ? undefined : () => onChange(o.id)}
+        className={`min-h-9 whitespace-nowrap rounded-full px-4 text-sm font-medium ${
+          active ? 'text-ink' : value === o.id ? 'text-text' : 'text-muted hover:text-text'
+        }`}
+      >
+        {o.label}
+      </button>
+    ));
+
   return (
     <div
+      ref={track}
       role="tablist"
       aria-label={label}
-      className="inline-flex max-w-full flex-wrap gap-0.5 rounded-md bg-surface p-1 ring-1 ring-line"
+      className="relative inline-flex max-w-full flex-wrap gap-0.5 rounded-full bg-surface/70 p-1 ring-1 ring-line"
     >
-      {options.map((o) => (
-        <button
-          key={o.id}
-          role="tab"
-          aria-selected={value === o.id}
-          onClick={() => onChange(o.id)}
-          className={`min-h-9 whitespace-nowrap rounded px-3.5 text-sm font-medium transition-colors ${
-            value === o.id ? 'bg-raised text-text' : 'text-muted hover:text-text'
-          }`}
+      {row(false)}
+      {clip && (
+        <div
+          aria-hidden
+          className="slide-indicator pointer-events-none absolute inset-0 flex flex-wrap gap-0.5 rounded-full bg-accent p-1"
+          style={{ clipPath: clip, transition: 'clip-path 320ms var(--ease-out-expo)' }}
         >
-          {o.label}
-        </button>
-      ))}
+          {row(true)}
+        </div>
+      )}
     </div>
   );
 }
@@ -78,7 +116,7 @@ export function Disclosure({
         <ChevronDown className={`h-4 w-4 transition-transform ${open ? '' : '-rotate-90'}`} />
         <span>{summary}</span>
       </button>
-      {open && <div className="mt-2 animate-fade-in">{children}</div>}
+      {open && <div className="mt-2 animate-slide-up">{children}</div>}
     </div>
   );
 }
@@ -91,12 +129,17 @@ export function Toast({ message }: { message: string | null }) {
       role="status"
       className="pointer-events-none fixed inset-x-0 bottom-24 z-50 flex justify-center px-4 sm:bottom-8"
     >
-      <div className="animate-slide-up flex items-center gap-2 rounded-full bg-raised px-4 py-2 text-sm text-text shadow-lg ring-1 ring-line">
-        <Check className="h-4 w-4 text-accent" />
+      <div className="animate-slide-up glass flex items-center gap-2 rounded-full px-4 py-2.5 text-sm text-text ring-1 ring-line">
+        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-accent text-ink"><Check className="h-3 w-3" /></span>
         <span>{message}</span>
       </div>
     </div>
   );
+}
+
+/** Renders full-screen layers on <body>, so no transformed or frosted ancestor can trap them. */
+export function Portal({ children }: { children: React.ReactNode }) {
+  return createPortal(children, document.body);
 }
 
 /** Full-screen dialog shell shared by every "add something" form. */
@@ -111,44 +154,45 @@ export function Modal({
   children: React.ReactNode;
   wide?: boolean;
 }) {
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-0 sm:items-center sm:p-4 animate-fade-in"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-0 backdrop-blur-sm sm:items-center sm:p-4 animate-fade-in"
       onMouseDown={(e) => e.target === e.currentTarget && onClose()}
     >
       <div
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className={`flex max-h-[90dvh] w-full flex-col rounded-t-2xl bg-surface ring-1 ring-line sm:rounded-[10px] ${
+        className={`dialog-in flex max-h-[90dvh] w-full flex-col rounded-t-[28px] bg-surface ring-1 ring-line shadow-2xl sm:rounded-[28px] ${
           wide ? 'sm:max-w-3xl' : 'sm:max-w-lg'
         }`}
       >
-        <div className="flex items-center justify-between px-5 py-4">
+        <div className="flex items-center justify-between px-6 pb-3 pt-5">
           <h2 className="font-display text-lg text-text">{title}</h2>
           <button
             onClick={onClose}
             aria-label="Close"
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-muted hover:bg-raised hover:text-text"
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-raised text-muted hover:text-text"
           >
-            ✕
+            <X className="h-4 w-4" />
           </button>
         </div>
-        <div className="overflow-y-auto px-5 pb-5">{children}</div>
+        <div className="overflow-y-auto px-6 pb-6">{children}</div>
       </div>
     </div>
-  );
+  , document.body);
 }
 
 export const field =
-  'w-full rounded-md bg-surface px-3 py-2.5 text-sm text-text placeholder:text-muted/70 ring-1 ring-line focus:outline-none focus:ring-accent/70';
+  'w-full rounded-2xl bg-surface px-4 py-2.5 text-sm text-text placeholder:text-muted ring-1 ring-line transition-shadow focus:outline-none focus:ring-2 focus:ring-accent/60';
 export const labelCls = 'mb-1.5 block text-xs font-medium uppercase tracking-[0.06em] text-muted';
+/** Main action: a full pill in the accent colour. Add an ArrowRight as the last child and it leans on hover. */
 export const primaryBtn =
-  'inline-flex min-h-10 items-center justify-center gap-2 rounded-md bg-accent px-4 text-sm font-semibold text-ink hover:brightness-110 transition-[filter]';
+  'nudge inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-accent px-5 text-sm font-semibold text-ink shadow-[0_8px_24px_-12px_var(--color-glow)] hover:brightness-110';
 export const quietBtn =
-  'inline-flex min-h-10 items-center justify-center gap-2 rounded-md px-4 text-sm font-medium text-text ring-1 ring-line hover:bg-raised transition-colors';
-/** The one container style used everywhere: a bordered surface with 10px corners. */
-export const panel = 'rounded-[10px] bg-surface p-5 ring-1 ring-line';
+  'inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-surface/60 px-5 text-sm font-medium text-text ring-1 ring-line hover:bg-raised';
+/** The one container style used everywhere: a frosted panel with 24px corners. */
+export const panel = 'glass rounded-[24px] p-5 ring-1 ring-line/80';
 export const chip =
   'inline-flex items-center gap-1.5 rounded-full bg-raised px-2.5 py-0.5 font-mono text-xs text-text';
 

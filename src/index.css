@@ -4,8 +4,14 @@
   --default-transition-duration: 150ms;
   --default-transition-timing-function: cubic-bezier(0.23, 1, 0.32, 1);
 
-  --font-sans: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-display: "Young Serif", Georgia, serif;
+  --font-sans: "Figtree Variable", "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Outfit Variable", "Outfit", "Figtree", system-ui, sans-serif;
+
+  /* Shape rule: actions, chips and navigation are full pills; controls 12px; panels 22-26px. */
+  --radius-md: 12px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+  --radius-2xl: 24px;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
 
   /* Grove palette: deep green-black, one mint accent, warm gold for small marks */
@@ -21,6 +27,7 @@
   --color-ink: #08140f;
   --color-warn: #e0a94a;
   --color-on-accent: #08140f;
+  --color-glow: #2f8f73;
 
   /* Views still using slate-* pick up the same greens */
   --color-slate-950: #0b110e;
@@ -38,7 +45,8 @@
 @layer base {
   h1, h2, h3 {
     font-family: var(--font-display);
-    font-weight: 400;
+    font-weight: 600;
+    letter-spacing: -0.02em;
     text-wrap: balance;
   }
   :root {
@@ -108,9 +116,10 @@
   }
 }
 
-/* Young Serif has one weight: keep Tailwind font-semibold from faux-bolding headings */
-h1, h2, h3 {
-  font-weight: 400;
+/* Display type: Outfit, set tight. */
+.font-display {
+  font-weight: 600;
+  letter-spacing: -0.02em;
 }
 
 /* Tap targets respond instantly (no double-tap zoom delay) */
@@ -118,9 +127,9 @@ button, [role="button"], a, label[for] {
   touch-action: manipulation;
 }
 
-/* Tactile press: instant scale feedback, strong ease-out */
+/* Tactile press: instant scale feedback, strong ease-out (feedback, 100-160ms) */
 button, [role="button"], .interactive-press {
-  transition: transform 120ms cubic-bezier(0.23, 1, 0.32, 1), background-color 150ms ease, border-color 150ms ease;
+  transition: transform 140ms var(--ease-out), background-color 180ms ease, border-color 180ms ease, color 180ms ease, box-shadow 180ms ease, filter 180ms ease;
 }
 
 button:active:not(:disabled), [role="button"]:active:not(:disabled), .interactive-press:active {
@@ -135,53 +144,106 @@ button:disabled, [role="button"]:disabled {
 
 /* Touch-safe hover lift: never fires false hovers on tap */
 @media (hover: hover) and (pointer: fine) {
+  .hover-lift { transition: transform 220ms var(--ease-out), box-shadow 220ms ease, background-color 180ms ease; }
   .hover-lift:hover {
     transform: translateY(-2px);
+    box-shadow: 0 14px 34px -18px color-mix(in srgb, var(--color-glow) 70%, transparent);
   }
+  /* The arrow in a primary action leans toward where it goes. */
+  .nudge svg:last-child { transition: transform 200ms var(--ease-out); }
+  .nudge:hover svg:last-child { transform: translateX(3px); }
 }
 
-/* Entrance animations: scale(0.96) + opacity, never from nothing */
+/* ---------- Material: frosted panels over the ambient light ---------- */
+.glass {
+  background: color-mix(in srgb, var(--color-surface) 74%, transparent);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  backdrop-filter: blur(20px) saturate(150%);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, #ffffff 9%, transparent),
+    0 1px 2px color-mix(in srgb, var(--color-bg) 40%, transparent),
+    0 18px 48px -28px color-mix(in srgb, var(--color-glow) 45%, transparent);
+}
+.glass-strong {
+  background: color-mix(in srgb, var(--color-side) 82%, transparent);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  backdrop-filter: blur(24px) saturate(160%);
+}
+@media (prefers-reduced-transparency: reduce) {
+  .glass, .glass-strong { background: var(--color-surface); backdrop-filter: none; -webkit-backdrop-filter: none; }
+}
+
+/* Ambient light behind everything: two soft pools of the theme's glow. Fixed, never scrolls, never takes clicks. */
+.ambient {
+  position: fixed;
+  inset: -20%;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(40% 35% at 18% 12%, color-mix(in srgb, var(--color-glow) 42%, transparent), transparent 70%),
+    radial-gradient(38% 40% at 88% 78%, color-mix(in srgb, var(--color-glow) 30%, transparent), transparent 70%),
+    radial-gradient(30% 30% at 70% 8%, color-mix(in srgb, var(--color-glow) 16%, transparent), transparent 70%);
+  animation: drift 38s var(--ease-in-out) infinite alternate;
+}
+@keyframes drift {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to { transform: translate3d(-3%, 2%, 0) scale(1.06); }
+}
+
+/* ---------- Motion ---------- */
+/* Entrances: scale(0.96) + opacity, never from nothing */
 @keyframes fadeInScale {
-  from {
-    opacity: 0;
-    transform: scale(0.96) translateY(4px);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
+  from { opacity: 0; transform: scale(0.96) translateY(4px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
 }
-
 @keyframes slideUpFade {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
 }
-
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+/* A new screen settles in: short rise with a touch of blur to bridge the old and new content. */
+@keyframes viewIn {
+  from { opacity: 0; transform: translateY(10px); filter: blur(4px); }
+  to { opacity: 1; transform: translateY(0); filter: blur(0); }
+}
+@keyframes sheetUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes growX {
+  from { transform: scaleX(0.02); }
+  to { transform: scaleX(1); }
 }
 
-.animate-enter {
-  animation: fadeInScale 220ms var(--ease-out-expo) forwards;
+.animate-enter { animation: fadeInScale 240ms var(--ease-out-expo) backwards; }
+.animate-slide-up { animation: slideUpFade 220ms var(--ease-out) backwards; }
+.animate-fade-in { animation: fadeIn 180ms var(--ease-out) backwards; }
+.view-enter { animation: viewIn 320ms var(--ease-out-expo) backwards; }
+.fill-grow { transform-origin: left center; animation: growX 700ms var(--ease-out-expo) backwards; }
+
+/* Lists arrive in a short cascade (40ms apart), capped so long lists never wait. */
+.stagger > * { animation: slideUpFade 300ms var(--ease-out-expo) backwards; }
+.stagger > *:nth-child(2) { animation-delay: 40ms; }
+.stagger > *:nth-child(3) { animation-delay: 80ms; }
+.stagger > *:nth-child(4) { animation-delay: 120ms; }
+.stagger > *:nth-child(5) { animation-delay: 160ms; }
+.stagger > *:nth-child(6) { animation-delay: 200ms; }
+.stagger > *:nth-child(7) { animation-delay: 240ms; }
+.stagger > *:nth-child(n+8) { animation-delay: 270ms; }
+
+/* Modal: centred, scales up from 0.96. Phones get a sheet that rises from the bottom edge. */
+.dialog-in { animation: fadeInScale 260ms var(--ease-out-expo) backwards; }
+@media (max-width: 639px) {
+  .dialog-in { animation: sheetUp 300ms cubic-bezier(0.32, 0.72, 0, 1) backwards; }
 }
 
-.animate-slide-up {
-  animation: slideUpFade 200ms var(--ease-out) forwards;
-}
-
-.animate-fade-in {
-  animation: fadeIn 180ms var(--ease-out) forwards;
+/* Sliding selection: the active pill travels between options instead of jumping. */
+.slide-indicator {
+  transition: transform 300ms var(--ease-out-expo), width 300ms var(--ease-out-expo), opacity 150ms ease;
+  will-change: transform;
 }
 
 /* Custom Scrollbars */
@@ -210,13 +272,16 @@ button:disabled, [role="button"]:disabled {
 }
 
 /* Reduced Motion Compliance (Hard Rule) */
+/* Reduced motion: fewer and gentler, not zero. Things still fade; nothing travels, scales or drifts. */
 @media (prefers-reduced-motion: reduce) {
-  *, ::before, ::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
+  .ambient { animation: none; }
+  .view-enter, .stagger > *, .dialog-in, .animate-enter, .animate-slide-up, .fill-grow {
+    animation: fadeIn 160ms ease backwards !important;
   }
+  button:active:not(:disabled), [role="button"]:active:not(:disabled), .interactive-press:active,
+  .hover-lift:hover, .nudge:hover svg:last-child { transform: none !important; }
+  .slide-indicator { transition: opacity 150ms ease; }
+  html { scroll-behavior: auto; }
 }
 
 /* Print Optimization for CV Generation */

@@ -189,7 +189,7 @@ export function AuthScreen() {
           <p className="text-muted">Your university's own AI.</p>
         </div>
 
-        <form onSubmit={submit} className="space-y-4 rounded-[10px] bg-surface p-5 ring-1 ring-line" aria-labelledby="auth-title" noValidate>
+        <form onSubmit={submit} className="space-y-4 rounded-[22px] bg-surface p-5 ring-1 ring-line" aria-labelledby="auth-title" noValidate>
           <h2 id="auth-title" className="text-lg font-semibold">{title}</h2>
 
           {step === 'form' && mode === 'signin' && (

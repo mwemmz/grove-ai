@@ -68,7 +68,7 @@ const NO_DIAGRAM = /objectives?|outcomes?|introduction|overview|conclusion|summa
 /** Slide furniture that carries no study value. */
 const META = /^(unit|chapter|slide|page|lesson|week)\s*[:#.\-]?\s*\d+(\.\d+)*$/i;
 const CLOSING = /^(thank\s*you.*|thanks.*|questions?(\s+(and|&)\s+(discussions?|answers?))?|q\s*&\s*a|any questions\??)[\s!.?]*$/i;
-export const clip = (s: string, n: number) => (s.length > n ? s.slice(0, n - 1).replace(/[\s,;:]+$/, '') + '…' : s);
+export const clip = (s: string, n: number) => (s.length > n ? s.slice(0, n - 1).replace(/\s+\S*$/, '').replace(/[\s,;:]+$/, '') + '…' : s);
 
 /** A heading line for a block with no usable title: the first few words of its first line. */
 function titleFrom(line: string): string {

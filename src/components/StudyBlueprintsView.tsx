@@ -140,10 +140,10 @@ export const StudyBlueprintsView: React.FC<StudyBlueprintsViewProps> = ({
             <button
               key={tier}
               onClick={() => setSelectedTier(tier)}
-              className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition-colors ${
+              className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
                 selectedTier === tier
-                  ? 'bg-amber-600 text-white'
-                  : 'bg-slate-950 text-slate-400 border border-slate-800 hover:text-slate-200'
+                  ? 'bg-accent text-ink'
+                  : 'text-muted ring-1 ring-edge hover:text-text'
               }`}
             >
               {tier === 'all' ? 'All Tiers' : `Tier ${tier}`}

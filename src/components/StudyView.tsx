@@ -54,7 +54,7 @@ function resolvePreset(preset: StudyPreset | null, notes: Note[]) {
 }
 
 const evidenceTone: Record<StudyMethod['evidence'], string> = {
-  Strong: 'text-accent',
+  Strong: 'text-accent-text',
   Good: 'text-text',
   Mixed: 'text-warn',
 };
@@ -523,7 +523,7 @@ export const StudyView: React.FC<StudyViewProps> = ({ notes, courses, flashcards
                         setMethodId(m.id);
                         setLength(lengthFor(m));
                       }}
-                      className={`rounded-md px-4 py-3 text-left transition-colors ${active ? 'bg-raised ring-2 ring-accent/70' : 'bg-bg ring-1 ring-line hover:bg-raised'}`}
+                      className={`rounded-2xl px-4 py-3 text-left transition-colors ${active ? 'bg-surface ring-2 ring-accent' : 'bg-bg ring-1 ring-line hover:bg-raised'}`}
                     >
                       <span className="flex items-baseline justify-between gap-2">
                         <span className="font-medium text-text">{m.name}</span>

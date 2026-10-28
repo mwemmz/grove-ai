@@ -71,12 +71,51 @@ export function visualPalette(t: Theme) {
   };
 }
 
+const lum = (h: string) => {
+  const [r, g, b] = hex(h).map((v) => {
+    const c = v / 255;
+    return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+};
+export const contrast = (a: string, b: string) => {
+  const x = lum(a), y = lum(b);
+  return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
+};
+/** Moves `c` toward `toward` in small steps until it stands out from `against` by at least `min`. */
+function atLeast(c: string, against: string, toward: string, min: number): string {
+  let out = c;
+  for (let t = 0.04; contrast(out, against) < min && t <= 1; t += 0.04) out = mix(c, toward, t);
+  return out;
+}
+
+/**
+ * Every theme gets the same visibility floor, whatever its hand-picked values:
+ * raised fills read against the panel, lines are visible, form-field edges are clearly visible,
+ * and muted text and the accent used as text stay readable.
+ */
+export function legible(t: Theme): Theme {
+  const ink = t.mode === 'dark' ? '#ffffff' : '#000000';
+  const raised = atLeast(t.raised, t.surface, t.text, 1.32);
+  const muted = [t.bg, t.surface, raised].reduce((m, bg) => atLeast(m, bg, t.text, 4.6), t.muted);
+  const accentText = [t.surface, raised].reduce((a, bg) => atLeast(a, bg, ink, 4.6), t.accent);
+  return {
+    ...t,
+    raised,
+    line: atLeast(t.line, t.surface, t.text, 1.7),
+    muted,
+    accent: contrast(t.accent, t.bg) >= 3 ? t.accent : accentText,
+    edge: atLeast(t.line, t.surface, t.text, 2.7),
+    accentText,
+  } as Theme & { edge: string; accentText: string };
+}
+
 export function themeById(id: string): Theme {
   return THEMES.find((t) => t.id === id) ?? THEMES[0];
 }
 
 export function applyTheme(id: string, persist = true): void {
-  const t = themeById(id);
+  const t = legible(themeById(id)) as Theme & { edge: string; accentText: string };
   const dark = t.mode === 'dark';
   const s = document.documentElement.style;
   const set = (k: string, v: string) => s.setProperty(k, v);
@@ -95,16 +134,18 @@ export function applyTheme(id: string, persist = true): void {
   set('--color-on-accent', t.onAccent);
   set('--color-warn', t.warn);
   set('--color-glow', t.glow ?? t.accent);
+  set('--color-edge', t.edge);
+  set('--color-accent-text', t.accentText);
 
   // Legacy slate-* classes: 950 is the deepest surface, 100 the strongest text.
   const ramp = dark
     ? { 950: t.side, 900: t.surface, 800: t.raised, 700: t.line, 600: mix(t.line, t.muted, 0.4), 500: mix(t.line, t.muted, 0.75), 400: t.muted, 300: mix(t.muted, t.text, 0.5), 200: mix(t.muted, t.text, 0.8), 100: t.text }
-    : { 950: t.bg, 900: t.surface, 800: t.raised, 700: t.line, 600: mix(t.line, t.muted, 0.5), 500: mix(t.muted, t.bg, 0.15), 400: t.muted, 300: mix(t.muted, t.text, 0.45), 200: mix(t.muted, t.text, 0.75), 100: t.text };
+    : { 950: t.bg, 900: t.surface, 800: t.raised, 700: t.line, 600: mix(t.muted, t.text, 0.25), 500: t.muted, 400: t.muted, 300: mix(t.muted, t.text, 0.45), 200: mix(t.muted, t.text, 0.75), 100: t.text };
   Object.entries(ramp).forEach(([k, v]) => set(`--color-slate-${k}`, v));
 
   // emerald-* and teal-* are the accent ramp (the app was written against them)
   const acc = dark
-    ? { 300: mix(t.accent, '#ffffff', 0.35), 400: t.accent, 500: t.accent, 600: mix(t.accent, t.bg, 0.12), 800: mix(t.accent, t.bg, 0.72), 950: mix(t.accent, t.bg, 0.88) }
+    ? { 300: mix(t.accent, '#ffffff', 0.35), 400: t.accent, 500: t.accent, 600: t.accent, 800: mix(t.accent, t.bg, 0.72), 950: mix(t.accent, t.bg, 0.88) }
     : { 300: mix(t.accent, '#000000', 0.25), 400: mix(t.accent, '#000000', 0.08), 500: t.accent, 600: mix(t.accent, '#000000', 0.15), 800: mix(t.accent, t.bg, 0.82), 950: mix(t.accent, t.bg, 0.9) };
   Object.entries(acc).forEach(([k, v]) => {
     set(`--color-emerald-${k}`, v);

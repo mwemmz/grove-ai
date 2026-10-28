@@ -28,6 +28,8 @@
   --color-warn: #e0a94a;
   --color-on-accent: #08140f;
   --color-glow: #2f8f73;
+  --color-edge: #4d6458;
+  --color-accent-text: #5fc2a2;
 
   /* Views still using slate-* pick up the same greens */
   --color-slate-950: #0b110e;
@@ -122,6 +124,17 @@
   letter-spacing: -0.02em;
 }
 
+/* Form fields always show their edge, whatever classes a screen gave them (theme-computed, at least ~2.7:1). */
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]), select, textarea {
+  --tw-ring-color: var(--color-edge);
+  border-color: var(--color-edge);
+}
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]):focus, select:focus, textarea:focus {
+  --tw-ring-color: var(--color-accent-text);
+  border-color: var(--color-accent-text);
+}
+::placeholder { color: var(--color-muted); opacity: 0.85; }
+
 /* Tap targets respond instantly (no double-tap zoom delay) */
 button, [role="button"], a, label[for] {
   touch-action: manipulation;
@@ -138,7 +151,7 @@ button:active:not(:disabled), [role="button"]:active:not(:disabled), .interactiv
 
 button:disabled, [role="button"]:disabled {
   cursor: not-allowed;
-  opacity: 0.45;
+  opacity: 0.55;
   transform: none !important;
 }
 

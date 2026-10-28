@@ -70,9 +70,9 @@ export function TodayView({ notes: allNotes, courses, flashcards, lastNoteId, on
           <span aria-hidden className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-ink/10" />
           <span aria-hidden className="pointer-events-none absolute -right-4 top-10 h-28 w-28 rounded-full bg-ink/10" />
           <span className="relative min-w-0 flex-1">
-            <span className="block text-sm font-medium opacity-70">Pick up where you left off</span>
+            <span className="block text-sm font-medium opacity-90">Pick up where you left off</span>
             <span className="mt-6 block font-display text-2xl leading-tight sm:text-3xl">{resume.title}</span>
-            {courseName(resume) && <span className="mt-1 block truncate text-sm opacity-70">{courseName(resume)}</span>}
+            {courseName(resume) && <span className="mt-1 block truncate text-sm opacity-90">{courseName(resume)}</span>}
           </span>
           <span className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-ink text-accent">
             <ArrowRight aria-hidden className="h-5 w-5" />
@@ -85,7 +85,7 @@ export function TodayView({ notes: allNotes, courses, flashcards, lastNoteId, on
         >
           <span className="min-w-0 flex-1">
             <span className="block font-display text-2xl">Add your first notes</span>
-            <span className="mt-1 block text-sm opacity-75">Upload slides or a PDF and Grove turns them into notes you can study.</span>
+            <span className="mt-1 block text-sm opacity-85">Upload slides or a PDF and Grove turns them into notes you can study.</span>
           </span>
           <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-ink text-accent">
             <ArrowRight aria-hidden className="h-5 w-5" />

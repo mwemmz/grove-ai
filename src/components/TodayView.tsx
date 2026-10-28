@@ -1,4 +1,5 @@
 /* The first screen: one tap to study. Everything else is a menu item away. */
+import { isPastPaper } from '../lib/noteOrder';
 import { ArrowRight, BookOpen, Layers, NotebookText, Timer } from 'lucide-react';
 import type { Course, Flashcard, Note } from '../types';
 import type { AppTab } from './Header';
@@ -16,9 +17,11 @@ interface Props {
 const tile =
   'group flex min-h-[96px] flex-col justify-between rounded-[10px] bg-surface p-4 text-left ring-1 ring-line transition-colors hover:bg-raised focus-visible:ring-2 focus-visible:ring-accent';
 
-export function TodayView({ notes, courses, flashcards, lastNoteId, onOpenNote, onGo }: Props) {
+export function TodayView({ notes: allNotes, courses, flashcards, lastNoteId, onOpenNote, onGo }: Props) {
+  // Past papers have their own tab; "your notes" and "pick up where you left off" are about the notes.
+  const notes = allNotes.filter((n) => !isPastPaper(n));
   const latest = [...notes].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0];
-  const resume = notes.find((n) => n.id === lastNoteId) ?? latest;
+  const resume = allNotes.find((n) => n.id === lastNoteId) ?? latest;
   const courseName = (n: Note) => courses.find((c) => c.id === n.courseId)?.name;
   const due = flashcards.filter((f) => f.dueDate <= new Date().toISOString()).length;
 

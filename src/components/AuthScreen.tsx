@@ -179,7 +179,9 @@ export function AuthScreen() {
   const ready = !!signIn && !!signUp;
 
   return (
-    <div className="flex min-h-dvh items-center justify-center bg-bg px-4 py-10 font-sans text-text">
+    // The page itself never scrolls (see index.css), so this screen scrolls inside itself: the form can be taller than a phone.
+    <div className="h-dvh overflow-y-auto bg-bg font-sans text-text">
+    <div className="flex min-h-full items-center justify-center px-4 py-10">
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
           <TreePine className="mx-auto mb-4 h-9 w-9 text-accent" aria-hidden />
@@ -254,6 +256,7 @@ export function AuthScreen() {
           </div>
         </form>
       </div>
+    </div>
     </div>
   );
 }

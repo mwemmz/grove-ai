@@ -3,6 +3,7 @@ import { isPastPaper } from '../lib/noteOrder';
 import { ArrowRight, ArrowUpRight, BookOpen, Layers, NotebookText, ScrollText, Timer } from 'lucide-react';
 import type { Course, Flashcard, Note } from '../types';
 import type { AppTab } from './Header';
+import { GradCap } from './GradCap';
 
 interface Props {
   notes: Note[];
@@ -12,6 +13,8 @@ interface Props {
   onOpenNote: (id: string) => void;
   onGo: (tab: AppTab) => void;
   name?: string;
+  /** Year of study, 1 to 4: the cap comes closer as graduation does. */
+  year?: number;
 }
 
 const greeting = () => {
@@ -44,7 +47,7 @@ function Tile({ icon: Icon, title, detail, onClick, tall = false, className = ''
   );
 }
 
-export function TodayView({ notes: allNotes, courses, flashcards, lastNoteId, onOpenNote, onGo, name }: Props) {
+export function TodayView({ notes: allNotes, courses, flashcards, lastNoteId, onOpenNote, onGo, name, year = 1 }: Props) {
   // Past papers have their own tab; "your notes" and "pick up where you left off" are about the notes.
   const notes = allNotes.filter((n) => !isPastPaper(n));
   const latest = [...notes].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0];
@@ -55,9 +58,21 @@ export function TodayView({ notes: allNotes, courses, flashcards, lastNoteId, on
 
   return (
     <div className="stagger space-y-4">
-      <div className="pt-2">
-        <p className="text-sm text-muted">{greeting()}{first ? `, ${first}` : ''}</p>
-        <h1 className="mt-1 font-display text-3xl tracking-tight text-text sm:text-4xl">What do you want to do?</h1>
+      <div className="relative pt-2 sm:min-h-[120px]">
+        {/* The finish line: faint and far in first year, close and clear by final year. */}
+        <div
+          className="absolute -right-2 -top-4 -z-0 w-[140px] sm:right-0 sm:-top-6 sm:w-[240px]"
+          style={{ opacity: [0.35, 0.5, 0.7, 0.9][Math.min(Math.max(year, 1), 4) - 1], transform: `scale(${[0.72, 0.82, 0.92, 1][Math.min(Math.max(year, 1), 4) - 1]})`, transformOrigin: 'top right' }}
+        >
+          <GradCap />
+        </div>
+        <div className="relative max-w-[70%] sm:max-w-none">
+          <p className="text-sm text-muted">
+            {greeting()}{first ? `, ${first}` : ''}
+            <span className="ml-2 rounded-full bg-raised px-2 py-0.5 font-mono text-xs text-text ring-1 ring-line">Year {Math.min(Math.max(year, 1), 4)} of 4</span>
+          </p>
+          <h1 className="mt-1 font-display text-3xl tracking-tight text-text sm:text-5xl">What do you want to do?</h1>
+        </div>
       </div>
 
       {/* The one loud card on the screen: the accent colour, full bleed, the next step in one tap. */}

@@ -5,6 +5,7 @@ import React, { useState } from 'react';
 import { useSignIn, useSignUp } from '@clerk/react';
 import { TreePine } from 'lucide-react';
 import { field, labelCls, primaryBtn } from './ui';
+import { GradCap } from './GradCap';
 
 type Mode = 'signin' | 'signup' | 'reset' | 'code';
 type Step = 'form' | 'code' | 'newPassword';
@@ -180,16 +181,27 @@ export function AuthScreen() {
 
   return (
     // The page itself never scrolls (see index.css), so this screen scrolls inside itself: the form can be taller than a phone.
-    <div className="h-dvh overflow-y-auto bg-bg font-sans text-text">
-    <div className="flex min-h-full items-center justify-center px-4 py-10">
-      <div className="w-full max-w-sm">
-        <div className="mb-8 text-center">
-          <TreePine className="mx-auto mb-4 h-9 w-9 text-accent" aria-hidden />
-          <h1 className="mb-1 font-display text-4xl tracking-tight">Grove</h1>
-          <p className="text-muted">Your university's own AI.</p>
+    <div className="relative isolate h-dvh overflow-y-auto bg-bg font-sans text-text">
+    <div aria-hidden className="ambient" style={{ zIndex: -1 }} />
+    <div className="mx-auto grid min-h-full max-w-6xl items-center gap-6 px-4 py-10 lg:grid-cols-[1.15fr_1fr] lg:gap-12 lg:px-10">
+      {/* The hero: the word, and the cap in front of it, like a product on a studio set. */}
+      <div className="relative mx-auto w-full max-w-sm text-center lg:max-w-none lg:text-left">
+        <p aria-hidden className="pointer-events-none select-none font-display text-[22vw] leading-[0.85] tracking-[-0.05em] text-text/[0.14] sm:text-[16vw] lg:text-[11rem]">
+          Grove
+        </p>
+        <GradCap className="mx-auto -mt-[16vw] w-[64%] sm:-mt-[11vw] lg:-mt-36 lg:ml-[18%] lg:w-[62%]" />
+        <div className="relative mt-2 lg:mt-6">
+          <h1 className="flex items-center justify-center gap-2 font-display text-3xl tracking-tight lg:justify-start lg:text-4xl">
+            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-accent text-ink"><TreePine className="h-5 w-5" aria-hidden /></span>
+            Grove
+          </h1>
+          <p className="mt-2 text-muted lg:text-lg">Your university's own AI, from first lecture to graduation.</p>
         </div>
+      </div>
 
-        <form onSubmit={submit} className="space-y-4 rounded-[22px] bg-surface p-5 ring-1 ring-line" aria-labelledby="auth-title" noValidate>
+      <div className="mx-auto w-full max-w-sm">
+
+        <form onSubmit={submit} className="glass space-y-4 rounded-[28px] p-6 ring-1 ring-line" aria-labelledby="auth-title" noValidate>
           <h2 id="auth-title" className="text-lg font-semibold">{title}</h2>
 
           {step === 'form' && mode === 'signin' && (

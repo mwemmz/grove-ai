@@ -360,6 +360,7 @@ function GroveApp() {
               onOpenNote={openNoteById}
               onGo={goTo}
               name={profile.studentName}
+              year={profile.currentYear}
             />
           )}
 

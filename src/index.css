@@ -203,6 +203,14 @@ button:disabled, [role="button"]:disabled {
   to { transform: translate3d(-3%, 2%, 0) scale(1.06); }
 }
 
+/* ---------- The graduation cap: a slow float, its shadow breathing with it, and a tassel that sways ---------- */
+@keyframes capFloat { from { transform: translateY(4px) rotate(0.6deg); } to { transform: translateY(-8px) rotate(-1.4deg); } }
+@keyframes capShadow { from { transform: translateX(-50%) scaleX(1); opacity: 1; } to { transform: translateX(-50%) scaleX(0.86); opacity: 0.7; } }
+@keyframes capTassel { from { transform: rotate(-3deg); } to { transform: rotate(4deg); } }
+.cap-float { animation: capFloat 5.5s var(--ease-in-out) infinite alternate; }
+.cap-shadow-anim { animation: capShadow 5.5s var(--ease-in-out) infinite alternate; }
+.cap-tassel { animation: capTassel 3.2s var(--ease-in-out) infinite alternate; }
+
 /* ---------- Motion ---------- */
 /* Entrances: scale(0.96) + opacity, never from nothing */
 @keyframes fadeInScale {
@@ -287,7 +295,7 @@ button:disabled, [role="button"]:disabled {
 /* Reduced Motion Compliance (Hard Rule) */
 /* Reduced motion: fewer and gentler, not zero. Things still fade; nothing travels, scales or drifts. */
 @media (prefers-reduced-motion: reduce) {
-  .ambient { animation: none; }
+  .ambient, .cap-float, .cap-shadow-anim, .cap-tassel { animation: none; }
   .view-enter, .stagger > *, .dialog-in, .animate-enter, .animate-slide-up, .fill-grow {
     animation: fadeIn 160ms ease backwards !important;
   }

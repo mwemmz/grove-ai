@@ -36,8 +36,9 @@ import {
 } from './types';
 import { storage } from './services/storage';
 import type { TopicId } from './data/visualTopics';
-import { canSeeCourse, setStudentId } from './services/access';
-import { syncPacks } from './services/packs';
+import { canSeeCourse, setAdmin, setStudentId } from './services/access';
+import { isPastPaper } from './lib/noteOrder';
+import { getMe, syncPacks } from './services/packs';
 import { setTokenProvider } from './lib/api';
 
 function LoadingScreen({ label }: { label: string }) {
@@ -70,6 +71,16 @@ function GroveApp() {
   const accountName = user?.fullName || user?.username || '';
   // Decides programme-only material (e.g. BIT353 for IDs starting with BIT) for everything rendered below.
   setStudentId(user?.username);
+  // Admins see every course; whether this account is one comes from the server.
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [meLoaded, setMeLoaded] = useState(false);
+  setAdmin(isAdmin);
+  useEffect(() => {
+    getMe()
+      .then((me) => setIsAdmin(!!me.admin))
+      .catch(() => { /* offline: treated as a student */ })
+      .finally(() => setMeLoaded(true));
+  }, []);
   const [activeTab, setActiveTab] = useState<AppTab>('today');
   const [isDataReady, setIsDataReady] = useState(false);
 
@@ -135,7 +146,7 @@ function GroveApp() {
   const [packNotice, setPackNotice] = useState<string | null>(null);
   const packsChecked = useRef(false);
   useEffect(() => {
-    if (!isDataReady || packsChecked.current || !storage.isHydrated()) return;
+    if (!isDataReady || !meLoaded || packsChecked.current || !storage.isHydrated()) return;
     packsChecked.current = true;
     void syncPacks(storage.getNotes(), storage.getCourses()).then((r) => {
       if (!r) return;
@@ -146,7 +157,7 @@ function GroveApp() {
       if (r.added.length) setPackNotice(`Added from your university: ${r.added.map((a) => `${a.count} ${a.code} notes`).join(', ')}.`);
       else if (r.updated.length) setPackNotice(`Your university improved ${r.updated.map((a) => `${a.count} ${a.code} notes`).join(', ')}.`);
     });
-  }, [isDataReady]);
+  }, [isDataReady, meLoaded]);
 
   // Sync to storage on state changes (each save also PUTs to the API)
   useEffect(() => {
@@ -220,7 +231,7 @@ function GroveApp() {
   const handleOpenNoteDetail = (note: Note) => {
     setSelectedNoteForDetail(note);
     try { localStorage.setItem('grove_last_note', note.id); } catch { /* private mode: fine */ }
-    setActiveTab('notes');
+    setActiveTab(isPastPaper(note) ? 'papers' : 'notes');
   };
 
   const openVisual = (id: TopicId) => {
@@ -366,8 +377,10 @@ function GroveApp() {
             </>
           )}
 
-          {activeTab === 'notes' && (
+          {(activeTab === 'notes' || activeTab === 'papers') && (
             <DegreeMemoryView
+              key={activeTab}
+              mode={activeTab === 'papers' ? 'papers' : 'notes'}
               notes={notes}
               setNotes={setNotes}
               courses={shownCourses}

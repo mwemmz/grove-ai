@@ -137,7 +137,7 @@ export async function handlePacks(req: HandlerReq, res: HandlerRes, user: DbUser
           audience: r.audience,
           notes: r.pack.notes.length,
           updatedAt: r.updated_at,
-          forMe: allowed(r.audience, id),
+          forMe: admin || allowed(r.audience, id),
         }))
     );
     return;
@@ -146,7 +146,7 @@ export async function handlePacks(req: HandlerReq, res: HandlerRes, user: DbUser
   if (code && method === 'GET') {
     const row = ((await db.execute(sql`select code, audience, pack, updated_at from course_packs where code = ${code}`)).rows as unknown as Row[])[0];
     if (!row) throw new ApiError(404, 'No such pack');
-    if (!allowed(row.audience, id)) throw new ApiError(403, `These notes are only for students whose ID starts with ${row.audience}`);
+    if (!admin && !allowed(row.audience, id)) throw new ApiError(403, `These notes are only for students whose ID starts with ${row.audience}`);
     json(res, row.pack);
     return;
   }

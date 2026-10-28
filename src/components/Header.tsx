@@ -9,6 +9,7 @@ import {
   Layers,
   Library,
   NotebookText,
+  ScrollText,
   Sprout,
   Timer,
   Users,
@@ -16,7 +17,7 @@ import {
 } from 'lucide-react';
 import { Note } from '../types';
 
-export type AppTab = 'today' | 'remember' | 'notes' | 'library' | 'visuals' | 'study' | 'plan' | 'profile' | 'portfolio' | 'quiz' | 'blueprints' | 'tutoring';
+export type AppTab = 'today' | 'remember' | 'notes' | 'papers' | 'library' | 'visuals' | 'study' | 'plan' | 'profile' | 'portfolio' | 'quiz' | 'blueprints' | 'tutoring';
 
 export interface NavItem {
   id: AppTab;
@@ -28,6 +29,7 @@ export interface NavItem {
 export const PRIMARY_NAV: NavItem[] = [
   { id: 'today', label: 'Today', icon: House },
   { id: 'notes', label: 'Notes', icon: NotebookText },
+  { id: 'papers', label: 'Past papers', icon: ScrollText },
   { id: 'remember', label: 'Ask', icon: BookOpen },
   { id: 'study', label: 'Study', icon: Timer },
   { id: 'plan', label: 'Plan', icon: CalendarDays },

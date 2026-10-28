@@ -1,3 +1,4 @@
+import { isPastPaper, compareNotes } from '../lib/noteOrder';
 import React, { useRef, useState } from 'react';
 import { FileUp } from 'lucide-react';
 import { Note, Course, AcademicYear } from '../types';
@@ -10,6 +11,8 @@ import { mergePack, parseNotesPack } from '../services/notesPack';
 import { COURSE_AUDIENCE, canSee, getStudentId } from '../services/access';
 
 interface DegreeMemoryViewProps {
+  /** 'papers' lists only past papers; 'notes' lists everything else. */
+  mode?: 'notes' | 'papers';
   notes: Note[];
   setNotes: React.Dispatch<React.SetStateAction<Note[]>>;
   courses: Course[];
@@ -36,6 +39,7 @@ function autoTags(text: string): string[] {
 }
 
 export const DegreeMemoryView: React.FC<DegreeMemoryViewProps> = ({
+  mode = 'notes',
   notes,
   setNotes,
   courses,
@@ -60,7 +64,9 @@ export const DegreeMemoryView: React.FC<DegreeMemoryViewProps> = ({
   const [uploadMsg, setUploadMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   const q = query.trim().toLowerCase();
+  const papers = mode === 'papers';
   const filtered = notes.filter((n) => {
+    if (isPastPaper(n) !== papers) return false;
     if (!q) return true;
     return (
       n.title.toLowerCase().includes(q) ||
@@ -177,7 +183,7 @@ export const DegreeMemoryView: React.FC<DegreeMemoryViewProps> = ({
 
   const detail = selectedNoteForDetail;
 
-  const sorted = [...filtered].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const sorted = [...filtered].sort(compareNotes);
   const groups = Array.from(new Set(sorted.map((n) => n.courseId))).map((id) => ({
     id,
     course: courseOf(id),
@@ -195,12 +201,12 @@ export const DegreeMemoryView: React.FC<DegreeMemoryViewProps> = ({
           aria-label="Search your notes"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search notes: ETL, circular flow, joins…"
+          placeholder={papers ? 'Search past papers: 2023, ETL, OLAP…' : 'Search notes: ETL, circular flow, joins…'}
           className={`${field} flex-1`}
         />
-        <button type="button" onClick={() => setAdding((v) => !v)} className={primaryBtn} aria-expanded={adding}>
+        {!papers && <button type="button" onClick={() => setAdding((v) => !v)} className={primaryBtn} aria-expanded={adding}>
           {adding ? 'Close' : 'Add notes'}
-        </button>
+        </button>}
       </div>
       {!adding && uploadMsg && <p role="status" className={`text-sm ${uploadMsg.ok ? 'text-accent' : 'text-warn'}`}>{uploadMsg.text}</p>}
       {!adding && saved && <p role="status" className="text-sm text-accent">Saved.</p>}
@@ -297,7 +303,7 @@ export const DegreeMemoryView: React.FC<DegreeMemoryViewProps> = ({
                   <span className="block font-semibold text-text">{g.course ? g.course.name : 'Other notes'}</span>
                   {g.course && <span className="font-mono text-xs text-muted">{g.course.code} · Year {g.course.year}</span>}
                 </span>
-                <span className="shrink-0 font-mono text-xs text-accent">{g.items.length} {g.items.length === 1 ? 'note' : 'notes'} {open ? '▾' : '▸'}</span>
+                <span className="shrink-0 font-mono text-xs text-accent">{g.items.length} {papers ? (g.items.length === 1 ? 'paper' : 'papers') : g.items.length === 1 ? 'note' : 'notes'} {open ? '▾' : '▸'}</span>
               </button>
               {open && (
                 <ul className="divide-y divide-line border-t border-line">
@@ -315,7 +321,7 @@ export const DegreeMemoryView: React.FC<DegreeMemoryViewProps> = ({
         })}
         {filtered.length === 0 && (
           <p className="py-4 text-muted">
-            {notes.length === 0 ? 'No notes yet. Choose Add notes to start.' : 'No notes match that search.'}
+            {q ? (papers ? 'No past papers match that search.' : 'No notes match that search.') : papers ? 'No past papers yet. Your university adds them to your course.' : 'No notes yet. Choose Add notes to start.'}
           </p>
         )}
       </section>

@@ -63,17 +63,35 @@ export function mergePack(pack: NotesPack, notes: Note[], courses: Course[]): { 
   let course = courses.find((c) => c.code.toUpperCase() === pack.course.code.toUpperCase());
   const newCourse = !course;
   if (!course) course = { id: `c-${pack.course.code.toLowerCase()}-${Date.now().toString(36)}`, ...pack.course };
-  const have = new Set(notes.filter((n) => n.courseId === course!.id).map((n) => n.title));
   const now = new Date().toISOString();
   // A pack the university has corrected replaces the older copy of the same note (same id, so flashcards stay linked).
   const byTitle = new Map(pack.notes.map((n) => [n.title, n]));
+  const byLower = new Map(pack.notes.map((n) => [n.title.toLowerCase(), n]));
+  const isPackNote = (n: Note) => n.courseId === course!.id && /-p\d+$/.test(n.id);
+  const exact = new Set(notes.filter((n) => n.courseId === course!.id).map((n) => n.title));
+  const claimed = new Set<string>();
   let updated = 0;
-  const refreshed = notes.map((n) => {
-    const p = n.courseId === course!.id ? byTitle.get(n.title) : undefined;
-    if (!p || p.content === n.content) return n;
+  const refreshed: Note[] = [];
+  for (const n of notes) {
+    if (n.courseId !== course!.id) { refreshed.push(n); continue; }
+    let p = byTitle.get(n.title);
+    // An earlier copy of the pack used a different capitalisation: keep the note (and its flashcards), take the new title.
+    if (!p && isPackNote(n)) {
+      const q = byLower.get(n.title.toLowerCase());
+      if (q && !exact.has(q.title) && !claimed.has(q.title)) p = q;
+    }
+    if (!p) {
+      // A pack note the university has since removed or renamed: drop it. Notes the student added themselves stay.
+      if (isPackNote(n)) { updated++; continue; }
+      refreshed.push(n);
+      continue;
+    }
+    claimed.add(p.title);
+    if (p.content === n.content && p.title === n.title) { refreshed.push(n); continue; }
     updated++;
-    return { ...n, content: p.content, summary: p.summary || p.content.replace(/\s+/g, ' ').slice(0, 140), tags: p.tags ?? n.tags, keyTakeaways: p.keyTakeaways ?? n.keyTakeaways, updatedAt: now };
-  });
+    refreshed.push({ ...n, title: p.title, content: p.content, summary: p.summary || p.content.replace(/\s+/g, ' ').slice(0, 140), tags: p.tags ?? n.tags, keyTakeaways: p.keyTakeaways ?? n.keyTakeaways, updatedAt: now });
+  }
+  const have = new Set(refreshed.filter((n) => n.courseId === course!.id).map((n) => n.title));
   const fresh = pack.notes
     .filter((n) => !have.has(n.title))
     .map((n, i): Note => ({

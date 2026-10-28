@@ -35,7 +35,7 @@ export async function syncPacks(notes: Note[], courses: Course[]): Promise<{ not
   const newCourses: Course[] = [];
   const added: { code: string; count: number }[] = [];
   const updated: { code: string; count: number }[] = [];
-  const revKey = (code: string) => `grove_pack_rev_${code}`;
+  const revKey = (code: string) => `grove_pack_rev2_${code}`;
   const seenRev = (code: string) => { try { return localStorage.getItem(revKey(code)); } catch { return null; } };
   for (const p of list.filter((x) => x.forMe)) {
     const course = [...courses, ...newCourses].find((c) => c.code.toUpperCase() === p.code);

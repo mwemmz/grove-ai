@@ -10,6 +10,8 @@ import type { TopicId } from '../data/visualTopics';
 import { diagramsFor, glossary, noteMap, parseSections, recallFor, type Group, type Section } from '../lib/noteStructure';
 import { NoteDiagram, NoteMap } from './NoteDiagrams';
 import { Inline } from './ui';
+import { CopilotButton, useAskOnSelect } from './Copilot';
+import { copilot } from '../services/copilot';
 
 const VisualCard = lazyWithReload(() => import('./VisualCard'));
 
@@ -130,6 +132,17 @@ export function NoteReader({
   const scroller = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(sections[0]?.id ?? '');
   const [progress, setProgress] = useState(0);
+  const askPill = useAskOnSelect(scroller);
+
+  // Tell the assistant what is on screen: this note, and the section being read.
+  useEffect(() => {
+    const before = copilot.get().ctx;
+    return () => copilot.setContext(before);
+  }, []);
+  useEffect(() => {
+    const sec = nav.find((s) => `sec-${s.id}` === active)?.title;
+    copilot.setContext({ place: note.title, note, section: sec });
+  }, [note, active, nav]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
@@ -167,6 +180,7 @@ export function NoteReader({
   return createPortal(
     <div role="dialog" aria-modal="true" aria-label={note.title} className="view-enter fixed inset-0 z-50 isolate flex flex-col bg-bg">
       <div aria-hidden className="ambient" style={{ zIndex: -1 }} />
+      {askPill}
       <header className="glass-strong relative flex items-center gap-3 border-b border-line/70 px-3 py-2 pt-[max(0.5rem,env(safe-area-inset-top))] sm:px-5">
         <button onClick={onClose} className="flex min-h-10 items-center gap-1.5 rounded-md px-2 text-sm text-muted hover:bg-raised hover:text-text">
           <ArrowLeft className="h-4 w-4" /> Notes
@@ -177,6 +191,7 @@ export function NoteReader({
             Year {note.year} · {courseName || 'Course'} · {sections.length} sections
           </p>
         </div>
+        <CopilotButton />
         <div aria-hidden className="absolute inset-x-0 bottom-0 h-0.5 bg-line">
           <div className="h-full bg-accent transition-[width] duration-150" style={{ width: `${Math.round(progress * 100)}%` }} />
         </div>

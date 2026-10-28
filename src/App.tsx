@@ -40,6 +40,8 @@ import { canSeeCourse, setAdmin, setStudentId } from './services/access';
 import { isPastPaper } from './lib/noteOrder';
 import { getMe, syncPacks } from './services/packs';
 import { setTokenProvider } from './lib/api';
+import { Copilot } from './components/Copilot';
+import { copilot } from './services/copilot';
 
 function LoadingScreen({ label }: { label: string }) {
   return (
@@ -82,6 +84,11 @@ function GroveApp() {
       .finally(() => setMeLoaded(true));
   }, []);
   const [activeTab, setActiveTab] = useState<AppTab>('today');
+  // The assistant always knows which screen it was opened from.
+  useEffect(() => {
+    copilot.setContext({ place: TAB_LABEL[activeTab] });
+  }, [activeTab]);
+
   const [isDataReady, setIsDataReady] = useState(false);
 
   const [notes, setNotes] = useState<Note[]>([]);
@@ -471,6 +478,8 @@ function GroveApp() {
           )}
         </div>
       </Shell>
+
+      <Copilot notes={notes} profile={profile} setProfile={setProfile} onOpenNote={openNoteById} />
 
       <SettingsModal
         isOpen={isSettingsOpen}

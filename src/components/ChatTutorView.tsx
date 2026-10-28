@@ -44,7 +44,7 @@ const ADAPT_ACTIONS: { id: 'too-long' | 'analogy' | 'code' | 'lost' | 'quiz'; la
 ];
 
 /** Renders the answer: headings, numbered or bulleted lists, quotes, and fenced code (blank lines inside code are kept). */
-function MessageBody({ text }: { text: string }) {
+export function MessageBody({ text }: { text: string }) {
   const parts = text.split(/(```[\s\S]*?```)/g).filter((p) => p.trim());
   const out: React.ReactNode[] = [];
   parts.forEach((part, pi) => {

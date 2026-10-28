@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Menu, PanelRight } from 'lucide-react';
+import { CopilotButton } from './Copilot';
 
 const LG = '(min-width: 1024px)';
 const XL = '(min-width: 1280px)';
@@ -122,6 +123,7 @@ export function Shell({ title, sidebar, panel, children, bottom }: ShellProps) {
             <Menu className="h-5 w-5" />
           </button>
           <p key={title} className="animate-fade-in min-w-0 flex-1 truncate font-display text-xl text-text">{title}</p>
+          <CopilotButton />
           <button
             onClick={() => setRightPref(!right)}
             aria-label={right ? 'Close progress panel' : 'Open progress panel'}

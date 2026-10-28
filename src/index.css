@@ -198,6 +198,29 @@ button:disabled, [role="button"]:disabled {
     radial-gradient(30% 30% at 70% 8%, color-mix(in srgb, var(--color-glow) 16%, transparent), transparent 70%);
   animation: drift 38s var(--ease-in-out) infinite alternate;
 }
+/* Studio lighting on top of the ambient pools: a key light from above, a floor that catches it, and darker corners.
+   Stays still (only the colour pools drift) and never takes clicks. */
+.ambient::before, .ambient::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.ambient::before {
+  background:
+    radial-gradient(34% 26% at 52% 22%, color-mix(in srgb, #ffffff 9%, transparent), transparent 70%),
+    radial-gradient(60% 18% at 50% 92%, color-mix(in srgb, var(--color-glow) 20%, transparent), transparent 72%);
+}
+.ambient::after {
+  background: radial-gradient(120% 95% at 50% 40%, transparent 52%, color-mix(in srgb, var(--color-bg) 85%, #000000) 100%);
+  opacity: 0.55;
+}
+:root[data-mode="light"] .ambient::after { opacity: 0.18; }
+:root[data-mode="light"] .ambient::before {
+  background:
+    radial-gradient(34% 26% at 52% 22%, color-mix(in srgb, #ffffff 70%, transparent), transparent 70%),
+    radial-gradient(60% 18% at 50% 92%, color-mix(in srgb, var(--color-glow) 22%, transparent), transparent 72%);
+}
 @keyframes drift {
   from { transform: translate3d(0, 0, 0) scale(1); }
   to { transform: translate3d(-3%, 2%, 0) scale(1.06); }

@@ -165,6 +165,7 @@ export function applyTheme(id: string, persist = true): void {
   });
 
   document.documentElement.dataset.theme = t.id;
+  document.documentElement.dataset.mode = t.mode;
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', t.bg);
   window.dispatchEvent(new CustomEvent('grove-theme-changed', { detail: t.id }));
   if (persist) {

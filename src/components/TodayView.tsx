@@ -4,6 +4,7 @@ import { ArrowRight, ArrowUpRight, BookOpen, Layers, NotebookText, ScrollText, T
 import type { Course, Flashcard, Note } from '../types';
 import type { AppTab } from './Header';
 import { GradCap } from './GradCap';
+import { CourseCover } from './CourseCover';
 
 interface Props {
   notes: Note[];
@@ -53,6 +54,7 @@ export function TodayView({ notes: allNotes, courses, flashcards, lastNoteId, on
   const latest = [...notes].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0];
   const resume = allNotes.find((n) => n.id === lastNoteId) ?? latest;
   const courseName = (n: Note) => courses.find((c) => c.id === n.courseId)?.name;
+  const resumeCode = resume ? courses.find((c) => c.id === resume.courseId)?.code : undefined;
   const due = flashcards.filter((f) => f.dueDate <= new Date().toISOString()).length;
   const first = name?.trim().split(/\s+/)[0];
 
@@ -83,8 +85,12 @@ export function TodayView({ notes: allNotes, courses, flashcards, lastNoteId, on
           aria-label={`Continue reading ${resume.title}`}
         >
           <span aria-hidden className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-ink/10" />
-          <span aria-hidden className="pointer-events-none absolute -right-4 top-10 h-28 w-28 rounded-full bg-ink/10" />
-          <span className="relative min-w-0 flex-1">
+          {resumeCode && (
+            <span aria-hidden className="absolute right-20 top-1/2 hidden -translate-y-1/2 md:block">
+              <CourseCover code={resumeCode} className="h-24 w-36 rotate-[-4deg] rounded-[20px] shadow-xl ring-4 ring-ink/10 transition-transform duration-300 group-hover:rotate-0" />
+            </span>
+          )}
+          <span className="relative min-w-0 flex-1 md:pr-44">
             <span className="block text-sm font-medium opacity-90">Pick up where you left off</span>
             <span className="mt-6 block font-display text-2xl leading-tight sm:text-3xl">{resume.title}</span>
             {courseName(resume) && <span className="mt-1 block truncate text-sm opacity-90">{courseName(resume)}</span>}

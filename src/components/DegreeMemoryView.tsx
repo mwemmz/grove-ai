@@ -1,6 +1,8 @@
 import { isPastPaper, compareNotes } from '../lib/noteOrder';
 import React, { useRef, useState } from 'react';
 import { ArrowRight, ChevronRight, FileUp } from 'lucide-react';
+import { CourseCover } from './CourseCover';
+import { EmptyState } from './EmptyState';
 import { Note, Course, AcademicYear } from '../types';
 import { storage } from '../services/storage';
 import { ACCEPT, extractText } from '../services/fileText';
@@ -299,7 +301,8 @@ export const DegreeMemoryView: React.FC<DegreeMemoryViewProps> = ({
                 onClick={() => setOpenCourse(open && !q ? '' : g.id)}
                 className="flex w-full items-center justify-between gap-3 rounded-[18px] px-3 py-3 text-left hover:bg-raised/50"
               >
-                <span className="min-w-0">
+                {g.course && <span className="hidden shrink-0 sm:block"><CourseCover code={g.course.code} className="h-14 w-20 rounded-2xl ring-1 ring-line" /></span>}
+                <span className="min-w-0 flex-1">
                   <span className="block font-display text-lg leading-snug text-text">{g.course ? g.course.name : 'Other notes'}</span>
                   {g.course && <span className="mt-1 inline-flex items-center gap-2 font-mono text-xs text-muted"><span className="rounded-full bg-raised px-2 py-0.5 text-text">{g.course.code}</span>Year {g.course.year}</span>}
                 </span>
@@ -336,11 +339,16 @@ export const DegreeMemoryView: React.FC<DegreeMemoryViewProps> = ({
             </div>
           );
         })}
-        {filtered.length === 0 && (
-          <p className="py-4 text-muted">
-            {q ? (papers ? 'No past papers match that search.' : 'No notes match that search.') : papers ? 'No past papers yet. Your university adds them to your course.' : 'No notes yet. Choose Add notes to start.'}
-          </p>
-        )}
+        {filtered.length === 0 &&
+          (q ? (
+            <p className="py-4 text-muted">{papers ? 'No past papers match that search.' : 'No notes match that search.'}</p>
+          ) : (
+            <EmptyState
+              title={papers ? 'No past papers yet' : 'No notes yet'}
+              text={papers ? 'Your university adds past papers to your course. They will appear here.' : 'Upload your slides or a PDF and Grove turns them into notes you can study.'}
+              action={papers ? undefined : { label: 'Add notes', onClick: () => setAdding(true) }}
+            />
+          ))}
       </section>
 
       {detail && (

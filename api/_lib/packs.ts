@@ -123,7 +123,9 @@ export async function handlePacks(req: HandlerReq, res: HandlerRes, user: DbUser
   const method = req.method ?? 'GET';
 
   if (segments[1] === 'me') {
-    json(res, { studentId: id.studentId || null, admin });
+    const staffList = (process.env.GROVE_STAFF ?? '').split(',').map((x) => x.trim().toLowerCase()).filter(Boolean);
+    const staff = admin || staffList.includes(id.studentId.toLowerCase()) || id.emails.some((e) => staffList.includes(e));
+    json(res, { studentId: id.studentId || null, admin, staff });
     return;
   }
 

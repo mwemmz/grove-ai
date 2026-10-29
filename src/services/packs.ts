@@ -13,7 +13,7 @@ export interface PackSummary {
   forMe: boolean;
 }
 
-export const getMe = () => apiGet<{ studentId: string | null; admin: boolean }>('/me');
+export const getMe = () => apiGet<{ studentId: string | null; admin: boolean; staff?: boolean }>('/me');
 export const listPacks = () => apiGet<PackSummary[]>('/packs');
 export const publishPack = (code: string, pack: unknown) => apiPut<{ ok: true; notes: number; audience: string | null }>(`/packs?code=${encodeURIComponent(code)}`, pack);
 export const publishFigures = (code: string, figures: Record<string, string>) => apiPut<{ ok: true; figures: number }>(`/packs?code=${encodeURIComponent(code)}&figures=1`, { figures });

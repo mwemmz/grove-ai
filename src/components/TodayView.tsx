@@ -1,11 +1,15 @@
 /* The first screen: one tap to study. Everything else is a menu item away. */
 import { isPastPaper } from '../lib/noteOrder';
-import { ArrowRight, ArrowUpRight, BookOpen, Layers, NotebookText, ScrollText, Timer } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { ArrowRight, ArrowUpRight, BookOpen, Layers, NotebookText, ScrollText, Target, Timer } from 'lucide-react';
 import type { Course, Flashcard, Note } from '../types';
 import type { AppTab } from './Header';
 import { GradCap } from './GradCap';
 import { CourseCover } from './CourseCover';
 import { MemoryStrength } from './MemoryStrength';
+import { WeeklyCheck } from './WeeklyCheck';
+import { ShareAsk } from './ShareInsights';
+import { buildCheck, savedResult } from '../services/weeklyCheck';
 
 interface Props {
   notes: Note[];
@@ -17,6 +21,8 @@ interface Props {
   name?: string;
   /** Year of study, 1 to 4: the cap comes closer as graduation does. */
   year?: number;
+  /** Adds cards to Recall (from a weekly check's missed questions). */
+  onAddCards?: (cards: Flashcard[]) => void;
 }
 
 const greeting = () => {
@@ -49,7 +55,7 @@ function Tile({ icon: Icon, title, detail, onClick, tall = false, className = ''
   );
 }
 
-export function TodayView({ notes: allNotes, courses, flashcards, lastNoteId, onOpenNote, onGo, name, year = 1 }: Props) {
+export function TodayView({ notes: allNotes, courses, flashcards, lastNoteId, onOpenNote, onGo, name, year = 1, onAddCards }: Props) {
   // Past papers have their own tab; "your notes" and "pick up where you left off" are about the notes.
   const notes = allNotes.filter((n) => !isPastPaper(n));
   const latest = [...notes].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0];
@@ -58,6 +64,12 @@ export function TodayView({ notes: allNotes, courses, flashcards, lastNoteId, on
   const resumeCode = resume ? courses.find((c) => c.id === resume.courseId)?.code : undefined;
   const due = flashcards.filter((f) => f.dueDate <= new Date().toISOString()).length;
   const first = name?.trim().split(/\s+/)[0];
+  // This week's 5-question check, for each course with enough notes to build a fair one.
+  const [checking, setChecking] = useState<Course | null>(null);
+  const [, setDone] = useState(0);
+  const checkable = useMemo(() => courses.filter((c) => buildCheck(c, allNotes).length === 5), [courses, allNotes]);
+  const pending = checkable.filter((c) => !savedResult(c.code));
+  const doneThisWeek = checkable.map((c) => ({ c, r: savedResult(c.code) })).filter((x) => x.r);
 
   return (
     <div className="stagger space-y-4">
@@ -114,6 +126,45 @@ export function TodayView({ notes: allNotes, courses, flashcards, lastNoteId, on
           </span>
         </button>
       )}
+
+      {checkable.length > 0 && (
+        <section className="glass rounded-[24px] p-4 ring-1 ring-line/80 sm:p-5" aria-label="This week's check">
+          <div className="flex items-start gap-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-raised text-accent ring-1 ring-line">
+              <Target aria-hidden className="h-5 w-5" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="font-display text-lg text-text">This week's check</p>
+              <p className="text-sm text-muted">
+                {pending.length ? 'Five quick questions per course, and you say how sure you are. It shows what is weaker than you think before a test does.' : 'All done this week. A new set comes on Monday.'}
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {pending.map((c) => (
+                  <button key={c.id} type="button" onClick={() => setChecking(c)} className="inline-flex min-h-9 items-center gap-2 rounded-full bg-accent px-4 text-sm font-medium text-ink hover:brightness-105">
+                    {c.code} <ArrowRight aria-hidden className="h-4 w-4" />
+                  </button>
+                ))}
+                {doneThisWeek.map(({ c, r }) => (
+                  <span key={c.id} className="inline-flex min-h-9 items-center rounded-full bg-raised px-4 text-sm text-text ring-1 ring-line">
+                    {c.code} · {r!.right}/{r!.total}{r!.overconfident.length ? ` · ${r!.overconfident.length} to fix` : ''}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+      {checking && (
+        <WeeklyCheck
+          course={checking}
+          notes={allNotes}
+          onClose={() => (setChecking(null), setDone((n) => n + 1))}
+          onOpenNote={onOpenNote}
+          onAddCards={(cards) => onAddCards?.(cards)}
+        />
+      )}
+
+      <ShareAsk />
 
       <MemoryStrength flashcards={flashcards} notes={allNotes} onOpenNote={onOpenNote} onReview={() => onGo('quiz')} />
 

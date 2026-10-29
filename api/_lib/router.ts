@@ -27,6 +27,7 @@ import {
 import { exportBackup, importBackup, resetBackup } from './backup.js';
 import { handlePacks } from './packs.js';
 import { readAuthEvents, writeAuthEvent } from './authlog.js';
+import { readInsights, writeSignals } from './insights.js';
 import type {
   ChatMessage,
   Course,
@@ -107,6 +108,15 @@ export async function handleRequest(req: HandlerReq, res: HandlerRes): Promise<v
   }
 
   const resource = segments[1];
+  if (resource === 'signals') {
+    if (req.method !== 'POST') throw new ApiError(405, 'POST only');
+    await writeSignals(req, res, await requireUser(req));
+    return;
+  }
+  if (resource === 'insights') {
+    await readInsights(req, res, await requireUser(req));
+    return;
+  }
   if (resource === 'auth-log') {
     if (req.method === 'POST') await writeAuthEvent(req, res);
     else await readAuthEvents(req, res, await requireUser(req));

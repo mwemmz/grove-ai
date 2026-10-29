@@ -1,7 +1,7 @@
 import React, { useLayoutEffect, useRef, useState } from 'react';
 import { ChevronDown, Palette, Plus, Settings, TreePine, X } from 'lucide-react';
 import { ThemePicker } from './ThemePicker';
-import { AppTab, MORE_NAV, NavItem, PRIMARY_NAV } from './Header';
+import { AppTab, MORE_NAV, NavItem, PRIMARY_NAV, STAFF_NAV } from './Header';
 
 export interface Recent {
   id: string;
@@ -21,6 +21,8 @@ interface SidebarProps {
   /** Closes the drawer on small screens after something is chosen. */
   afterChoose: () => void;
   onClose: () => void;
+  /** Lecturers and admins also get the class insights screen. */
+  staff?: boolean;
 }
 
 const sectionLabel = 'px-4 pb-1 font-mono text-xs uppercase tracking-[0.08em] text-muted';
@@ -37,6 +39,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onSettings,
   afterChoose,
   onClose,
+  staff = false,
 }) => {
   const [themesOpen, setThemesOpen] = useState(false);
   const activeInMore = MORE_NAV.some((n) => n.id === tab);
@@ -123,7 +126,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             style={{ height: pill.h, transform: `translateY(${pill.y}px)` }}
           />
         )}
-        <ul className="space-y-0.5">{PRIMARY_NAV.map(row)}</ul>
+        <ul className="space-y-0.5">{(staff ? [...PRIMARY_NAV, STAFF_NAV] : PRIMARY_NAV).map(row)}</ul>
         <button
           onClick={() => setMoreOpen((o) => !o)}
           aria-expanded={showMore}

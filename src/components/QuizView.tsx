@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { RotateCw, Award, Plus, X } from 'lucide-react';
+import { signal } from '../services/signals';
 import confetti from 'canvas-confetti';
 import { Flashcard, Note } from '../types';
 import { storage } from '../services/storage';
@@ -67,6 +68,12 @@ export const QuizView: React.FC<QuizViewProps> = ({
     if (!currentCard) return;
     // FSRS works out the next review from this card's own memory history.
     const updatedCard: Flashcard = review(currentCard, quality);
+    if (quality === 'again') {
+      // Anonymous class insight (only with consent, only for university notes): which part of the note this card tests.
+      const f = currentCard.front;
+      const section = /\(([^()]+)\)\.?$/.exec(f)?.[1] ?? /^([^:“”]{3,80}):/.exec(f)?.[1] ?? /“([^”]+)”/.exec(f)?.[1];
+      signal(notes.find((n) => n.id === currentCard.noteId), section, 'recall_missed');
+    }
 
     const updatedAll = flashcards.map(c => c.id === currentCard.id ? updatedCard : c);
     setFlashcards(updatedAll);

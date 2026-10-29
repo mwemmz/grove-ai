@@ -98,6 +98,10 @@ export interface ChatMessage {
   sender: 'user' | 'assistant' | 'system';
   text: string;
   timestamp: string;
+  /** What the answer was mainly about (a note and a section), and a question to check understanding after it. */
+  topicNoteId?: string;
+  topicSection?: string;
+  check?: { q: string; a: string[] };
   sources?: SourceRef[];
   citedNotes?: {
     noteId: string;

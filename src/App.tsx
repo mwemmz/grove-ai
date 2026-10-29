@@ -10,6 +10,8 @@ import { Sidebar } from './components/Sidebar';
 import { ProgressPanel } from './components/ProgressPanel';
 import { ChatTutorView, NEW_VIEW } from './components/ChatTutorView';
 import { TodayView } from './components/TodayView';
+import { InsightsView } from './components/InsightsView';
+import { setSignalCourses } from './services/signals';
 import { DegreeMemoryView } from './components/DegreeMemoryView';
 import { StudyBlueprintsView } from './components/StudyBlueprintsView';
 import { PeerTutoringView } from './components/PeerTutoringView';
@@ -77,10 +79,14 @@ function GroveApp() {
   // Admins see every course; whether this account is one comes from the server.
   const [isAdmin, setIsAdmin] = useState(false);
   const [meLoaded, setMeLoaded] = useState(false);
+  const [isStaff, setIsStaff] = useState(false);
   setAdmin(isAdmin);
   useEffect(() => {
     getMe()
-      .then((me) => setIsAdmin(!!me.admin))
+      .then((me) => {
+        setIsAdmin(!!me.admin);
+        setIsStaff(!!me.staff);
+      })
       .catch(() => { /* offline: treated as a student */ })
       .finally(() => setMeLoaded(true));
   }, []);
@@ -108,6 +114,7 @@ function GroveApp() {
 
   const [courses, setCourses] = useState<Course[]>([]);
   const shownCourses = courses.filter((c) => canSeeCourse(c.code));
+  useEffect(() => setSignalCourses(courses), [courses]);
   const [profile, setProfile] = useState<LearningProfile>(() => storage.getProfile());
   const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
   const [skills, setSkills] = useState<PortfolioSkill[]>([]);
@@ -325,6 +332,7 @@ function GroveApp() {
         bottom={(openMenu) => <BottomNav tab={activeTab} onTab={goTo} onMenu={openMenu} />}
         sidebar={(api) => (
           <Sidebar
+            staff={isStaff}
             tab={activeTab}
             onTab={goTo}
             recents={recents}
@@ -376,8 +384,10 @@ function GroveApp() {
               onGo={goTo}
               name={profile.studentName}
               year={profile.currentYear}
+              onAddCards={(cards) => setFlashcards((all) => [...all, ...cards.filter((c) => !all.some((a) => a.noteId === c.noteId && a.front === c.front))])}
             />
           )}
+          {activeTab === 'insights' && isStaff && <InsightsView />}
 
           {activeTab === 'remember' && (
             <>

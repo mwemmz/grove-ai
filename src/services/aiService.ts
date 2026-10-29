@@ -2,6 +2,7 @@ import { Note, LearningProfile, AcademicYear, MemoryLogEntry, StudentTier, Sourc
 import { storage } from './storage';
 import { searchSources, toRef, INSTITUTIONAL_RE, type Hit } from './knowledge';
 import { searchNotes, searchSections, answerFromNotes, groundingFor } from './noteSearch';
+import { recallFor } from '../lib/noteStructure';
 import { hybridSections } from './semantic';
 import { providerLabel, buildSystemPrompt, buildUserPrompt, generateRouted, candidatesFor } from './llmService';
 
@@ -29,7 +30,13 @@ export interface AIResponsePayload {
     tip: string;
   }[];
   appliedProfileAttributes: string[];
+  /** The note and section this answer is mainly about. */
+  topic?: { note: Note; section: string };
+  /** A quick question to check understanding afterwards, from that section of the notes. */
+  check?: { q: string; a: string[] };
 }
+
+let lastHits: Awaited<ReturnType<typeof hybridSections>> = [];
 
 
 export const aiService = {
@@ -51,7 +58,25 @@ export const aiService = {
   /**
    * Primary query function: adapts to student profile and synthesizes answer
    */
+  /** Answers a question and attaches what it was about and a check-yourself question. */
   async askGrove(
+    question: string,
+    allNotes: Note[],
+    profile: LearningProfile,
+    opts: { live?: boolean; task?: 'ask' | 'quiz'; previous?: { question: string; answer: string } } = {}
+  ): Promise<AIResponsePayload> {
+    lastHits = [];
+    const payload = await this.answer(question, allNotes, profile, opts);
+    const top = lastHits[0];
+    if (top && payload.citedNotes.some((c) => c.noteId === top.note.id)) {
+      payload.topic = { note: top.note, section: top.section.title };
+      const r = recallFor(top.section);
+      if (r && opts.task !== 'quiz') payload.check = r;
+    }
+    return payload;
+  },
+
+  async answer(
     question: string,
     allNotes: Note[],
     profile: LearningProfile,
@@ -59,9 +84,12 @@ export const aiService = {
   ): Promise<AIResponsePayload> {
     const live = opts.live !== false; // demo seeding passes live:false so it never spends the student's key
     const qLower = question.toLowerCase();
-    const noteHits = await hybridSections(question, allNotes, 6);
+    // A student's attempt rides along with the question for the AI to mark; searching uses the question alone.
+    const searchQ = question.split('\n\nMy attempt:')[0];
+    const noteHits = await hybridSections(searchQ, allNotes, 6);
+    lastHits = noteHits;
     // Notes in the order their best section ranked (meaning search can find a note the keywords missed).
-    const keywordRelevant = this.findRelevantNotes(question, allNotes);
+    const keywordRelevant = this.findRelevantNotes(searchQ, allNotes);
     const fromHits = [...new Map(noteHits.map((h) => [h.note.id, { note: h.note, score: h.score }])).values()];
     const relevant = fromHits.length ? fromHits : keywordRelevant;
     const topNotes = relevant.slice(0, 3).map(r => r.note);
@@ -69,7 +97,7 @@ export const aiService = {
 
     // The university library comes first: past final-year projects, course outlines and policies.
     const institutional = INSTITUTIONAL_RE.test(question);
-    const rawHits = searchSources(question, { n: 4 });
+    const rawHits = searchSources(searchQ, { n: 4 });
     // A question about a rule is answered by a rule. A past project that merely shares a word is not an answer.
     const strongProject = rawHits.some((h) => h.source.kind === 'project' && h.score >= 12);
     // A question the student's own notes can answer is not handed to a library record that only shares a word like "data".
@@ -252,7 +280,9 @@ export const aiService = {
     citedNotes: AIResponsePayload['citedNotes'],
     appliedAttributes: string[]
   ): AIResponsePayload {
-    const local = answerFromNotes(question, allNotes, { concise: profile.answerLength === 'concise', hits });
+    const attempt = question.includes('\n\nMy attempt:');
+    const local = answerFromNotes(question.split('\n\nMy attempt:')[0], allNotes, { concise: profile.answerLength === 'concise', hits });
+    if (local && attempt) local.text = `Without an AI engine Grove can't mark your working, but here is what your notes say. Compare it with your attempt, step by step.\n\n${local.text}`;
     if (!local) {
       return {
         text: `Your notes mention this, but no single section answers it directly. Open the notes listed below, or connect an AI engine in Settings for a written explanation from them.`,

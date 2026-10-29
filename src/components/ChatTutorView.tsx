@@ -2,6 +2,9 @@ import { lazyWithReload } from '../lib/lazyReload';
 import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { Note, LearningProfile, ChatMessage } from '../types';
 import { aiService } from '../services/aiService';
+import { signal } from '../services/signals';
+import { hintFor, isProblem, setTryFirst, tryFirstOn } from '../services/learning';
+import { CheckYourself, TryFirst } from './Learning';
 import { storage } from '../services/storage';
 import { KIND_LABEL } from '../services/knowledge';
 import { picturesFor } from '../data/pictureMatch';
@@ -127,15 +130,24 @@ export const ChatTutorView: React.FC<ChatTutorViewProps> = ({
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  /** A problem-style question waiting for the student's own attempt before Grove answers it. */
+  const [attempting, setAttempting] = useState<string | null>(null);
 
   const flash = (message: string) => {
     setToast(message);
     setTimeout(() => setToast(null), 3000);
   };
 
-  const handleSend = async (textToSend?: string, task: 'ask' | 'quiz' = 'ask') => {
+  const handleSend = async (textToSend?: string, task: 'ask' | 'quiz' = 'ask', direct = false) => {
     const query = (textToSend ?? input).trim();
     if (!query || isLoading) return;
+    // A problem to solve: ask for the student's attempt first (they can skip).
+    if (!direct && task === 'ask' && tryFirstOn() && isProblem(query)) {
+      setAttempting(query);
+      setInput('');
+      return;
+    }
+    setAttempting(null);
 
     const now = () => new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     setMessages((prev) => [...prev, { id: `user-${Date.now()}`, sender: 'user', text: query, timestamp: now() }]);
@@ -166,8 +178,12 @@ export const ChatTutorView: React.FC<ChatTutorViewProps> = ({
           yearConnections: payload.yearConnections,
           seniorTips: payload.seniorTips,
           appliedProfileAttributes: payload.appliedProfileAttributes,
+          topicNoteId: payload.topic?.note.id,
+          topicSection: payload.topic?.section,
+          check: payload.check,
         },
       ]);
+      if (payload.topic) signal(payload.topic.note, payload.topic.section, 'asked');
     } catch (err) {
       console.error(err);
       flash('Something went wrong. Try asking again.');
@@ -184,6 +200,7 @@ export const ChatTutorView: React.FC<ChatTutorViewProps> = ({
     );
     setProfile(updatedProfile);
     flash(feedbackMessage);
+    if (action === 'lost' && answer?.topicNoteId) signal(notes.find((n) => n.id === answer.topicNoteId), answer.topicSection, 'lost');
     if (action === 'quiz') handleSend(question ? `Quiz me with one short question on: ${question.text}` : 'Generate an active-recall conceptual quiz question based on this topic.', 'quiz');
   };
 
@@ -253,7 +270,28 @@ export const ChatTutorView: React.FC<ChatTutorViewProps> = ({
         </div>
       </form>
 
-      {!answer && !isLoading && (
+      {attempting && !isLoading && (
+        <div className="space-y-2">
+          <TryFirst
+            question={attempting}
+            hint={hintFor(attempting, notes)}
+            onAttempt={(a) => handleSend(`${attempting}\n\nMy attempt:\n${a}\n\nTell me what I got right, what to fix, and then show the full working.`, 'ask', true)}
+            onSkip={() => handleSend(attempting, 'ask', true)}
+          />
+          <button
+            type="button"
+            onClick={() => {
+              setTryFirst(false);
+              handleSend(attempting, 'ask', true);
+            }}
+            className="px-1 text-xs text-muted underline-offset-2 hover:text-text hover:underline"
+          >
+            Always show answers straight away
+          </button>
+        </div>
+      )}
+
+      {!answer && !isLoading && !attempting && (
         <div className="flex flex-wrap gap-2" aria-label="Suggestions">
           {(notes.length ? [`Explain “${notes[0].title}” in simple terms`, `What are the key points of “${notes[0].title}”?`] : FALLBACK_PROMPTS).map((prompt) => (
             <button
@@ -267,10 +305,17 @@ export const ChatTutorView: React.FC<ChatTutorViewProps> = ({
         </div>
       )}
 
-      {answer && !isLoading && (
+      {answer && !isLoading && !attempting && (
         <div className="space-y-4 border-t border-line pt-4 animate-slide-up">
-          {question && <p className="text-sm text-muted">You asked: {question.text}</p>}
+          {question && <p className="text-sm text-muted">You asked: {question.text.split('\n\nMy attempt:')[0]}</p>}
           <MessageBody text={answer.text} />
+          {answer.check && (
+            <CheckYourself
+              key={answer.id}
+              check={answer.check}
+              onResult={(ok) => !ok && answer.topicNoteId && signal(notes.find((n) => n.id === answer.topicNoteId), answer.topicSection, 'lost')}
+            />
+          )}
 
           {picture && (
             <Suspense fallback={<p className="text-sm text-muted" role="status">Loading the picture…</p>}>

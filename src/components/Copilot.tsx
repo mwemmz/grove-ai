@@ -8,6 +8,9 @@ import { copilot, useCopilot } from '../services/copilot';
 import { isPastPaper } from '../lib/noteOrder';
 import type { LearningProfile, Note } from '../types';
 import { MessageBody } from './ChatTutorView';
+import { CheckYourself, TryFirst } from './Learning';
+import { hintFor, isProblem, tryFirstOn } from '../services/learning';
+import { signal } from '../services/signals';
 import { Portal } from './ui';
 
 interface Msg {
@@ -15,6 +18,9 @@ interface Msg {
   role: 'you' | 'grove';
   text: string;
   cites?: { noteId: string; title: string }[];
+  check?: { q: string; a: string[] };
+  topicNoteId?: string;
+  topicSection?: string;
 }
 
 const KEY = 'grove_copilot_v1';
@@ -87,11 +93,19 @@ export function Copilot({
     };
   }, [open]);
 
-  const send = async (raw: string, task: 'ask' | 'quiz' = 'ask') => {
+  const [attempting, setAttempting] = useState<string | null>(null);
+  const send = async (raw: string, task: 'ask' | 'quiz' = 'ask', direct = false) => {
     const q = raw.trim();
     if (!q || busy) return;
+    if (!direct && task === 'ask' && !selection && tryFirstOn() && isProblem(q)) {
+      setAttempting(q);
+      setInput('');
+      return;
+    }
+    setAttempting(null);
     const passage = selection;
-    setMsgs((m) => [...m, { id: `u${Date.now()}`, role: 'you', text: passage ? `${q}\n> ${passage.slice(0, 240)}${passage.length > 240 ? '…' : ''}` : q }]);
+    const shownQ = q.includes('\n\nMy attempt:') ? q.replace(/\n\nTell me what I got right[\s\S]*$/, '').replace('\n\nMy attempt:\n', '\n> My attempt: ') : q;
+    setMsgs((m) => [...m, { id: `u${Date.now()}`, role: 'you', text: passage ? `${shownQ}\n> ${passage.slice(0, 240)}${passage.length > 240 ? '…' : ''}` : shownQ }]);
     setInput('');
     setBusy(true);
     copilot.clearSelection();
@@ -108,7 +122,19 @@ export function Copilot({
         storage.saveProfile(u);
         return u;
       });
-      setMsgs((m) => [...m, { id: `g${Date.now()}`, role: 'grove', text: payload.text, cites: payload.citedNotes.map((c) => ({ noteId: c.noteId, title: c.title })) }]);
+      setMsgs((m) => [
+        ...m,
+        {
+          id: `g${Date.now()}`,
+          role: 'grove',
+          text: payload.text,
+          cites: payload.citedNotes.map((c) => ({ noteId: c.noteId, title: c.title })),
+          check: payload.check,
+          topicNoteId: payload.topic?.note.id,
+          topicSection: payload.topic?.section,
+        },
+      ]);
+      if (payload.topic) signal(payload.topic.note, payload.topic.section, 'asked');
     } catch {
       setMsgs((m) => [...m, { id: `g${Date.now()}`, role: 'grove', text: 'Something went wrong there. Try asking again.' }]);
     } finally {
@@ -211,6 +237,13 @@ export function Copilot({
                 <div className="text-[14px] [&_p]:leading-6 [&>div]:space-y-2.5 [&>div]:text-[14px] [&>div]:leading-6">
                   <MessageBody text={m.text} />
                 </div>
+                {m.check && (
+                  <CheckYourself
+                    compact
+                    check={m.check}
+                    onResult={(ok) => !ok && m.topicNoteId && signal(notes.find((n) => n.id === m.topicNoteId), m.topicSection, 'lost')}
+                  />
+                )}
                 {m.cites && m.cites.length > 0 && (
                   <div className="flex flex-wrap gap-1.5">
                     {m.cites.slice(0, 3).map((c) => (
@@ -230,6 +263,15 @@ export function Copilot({
                 )}
               </div>
             ),
+          )}
+          {attempting && !busy && (
+            <TryFirst
+              compact
+              question={attempting}
+              hint={hintFor(attempting, ctx.note ? [ctx.note] : notes)}
+              onAttempt={(a) => void send(`${attempting}\n\nMy attempt:\n${a}\n\nTell me what I got right, what to fix, and then show the full working.`, 'ask', true)}
+              onSkip={() => void send(attempting, 'ask', true)}
+            />
           )}
           {busy && (
             <div className="flex items-center gap-1.5 py-2" role="status" aria-label="Grove is answering">

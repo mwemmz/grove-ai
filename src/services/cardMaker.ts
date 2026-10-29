@@ -92,3 +92,8 @@ export function makeCardsFromNotes(notes: Note[], existing: Flashcard[], cap = 1
   }
   return { cards, noteCount: touched.size };
 }
+
+/** Which part of a note a card tests, read back from its question ("Explain “X” (Section).", "Section: name the 4 points."). */
+export function sectionOfFront(front: string): string | undefined {
+  return /\(([^()]+)\)\.?$/.exec(front)?.[1] ?? /^([^:“”]{3,80}):/.exec(front)?.[1] ?? /“([^”]+)”/.exec(front)?.[1];
+}

@@ -36,13 +36,12 @@ async function fetchVerified(file) {
   const res = await fetch(where);
   if (!res.ok) throw new Error(`${file}: HTTP ${res.status}`);
   const buf = Buffer.from(await res.arrayBuffer());
-  if (lfs) {
-    if (sha256(buf) !== lfs) throw new Error(`${file}: sha256 does not match the hash published by Hugging Face`);
-  } else if (etag) {
-    if (gitBlob(buf) !== etag) throw new Error(`${file}: content does not match the git blob id published by Hugging Face`);
-  } else {
-    throw new Error(`${file}: Hugging Face published no hash to check against`);
-  }
+  // Hugging Face publishes either a sha256 (64 hex digits, large files) or a git blob id (40 hex digits, small files),
+  // in X-Linked-Etag or ETag depending on how the file is stored. Check whichever is there, by its kind.
+  const published = [lfs, etag].filter((h) => /^[0-9a-f]{40}$|^[0-9a-f]{64}$/.test(h));
+  if (!published.length) throw new Error(`${file}: Hugging Face published no hash to check against`);
+  const ok = published.some((h) => (h.length === 64 ? sha256(buf) === h : gitBlob(buf) === h));
+  if (!ok) throw new Error(`${file}: content does not match the hash published by Hugging Face (${published.join(', ')})`);
   return { buf, commit };
 }
 

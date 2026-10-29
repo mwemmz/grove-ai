@@ -18,7 +18,8 @@ const copy = (from, to) => {
 //    Pin a revision with MINILM_REVISION=<commit> for fully reproducible builds.
 //    If the download fails the build still succeeds: Grove then uses keyword search only, as before.
 const REPO = 'Xenova/all-MiniLM-L6-v2';
-const REV = process.env.MINILM_REVISION || 'main';
+// Pinned to the commit last verified; set MINILM_REVISION to move it.
+const REV = process.env.MINILM_REVISION || '751bff37182d3f1213fa05d7196b954e230abad9';
 const FILES = ['config.json', 'tokenizer.json', 'tokenizer_config.json', 'onnx/model_quantized.onnx'];
 const CACHE = join('node_modules', '.cache', 'grove-minilm', REV);
 

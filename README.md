@@ -1,10 +1,10 @@
 # Grove
 
-**Grove is a university's own AI that helps students where lecturers can't reach them.**
+**Grove helps students where lecturers can't reach them, using their own university's courses.**
 
 *Why:* students who stay quiet go unseen until they fail or speak up, and the AI they turn to doesn't know their university.
 
-Grove is a university's own AI. It is given to students in first year and built on that institution's courses, policies, notes and past final-year projects. It answers from that library, cites its sources, and says "not in the library yet" instead of guessing.
+Grove is a university's own study companion. It is given to students in first year and built on that institution's courses, policies, notes and past final-year projects. It answers from that library, cites its sources, and says "not in the library yet" instead of guessing.
 
 ## The problem
 
@@ -51,7 +51,7 @@ Full references are in the project's one-page document.
 
 The library ships with **fictional sample records** (marked "Demo record") so the app can be tried without any university's data. Nothing in them is a real student, supervisor or policy. A real deployment would load the institution's own records, with permission from the authors of the work and the university.
 
-Not built yet: the staff view of where students struggle (opt-in, anonymous totals only), accounts per institution, and a shared server-side AI key. The "closest past project" matching is keyword search, not a trained model.
+Not built yet: accounts per institution, and a shared server-side AI key. The "closest past project" matching is keyword search, not a trained model.
 
 ## How a question is answered
 

@@ -227,7 +227,7 @@ export function AuthScreen() {
             <span className="flex h-9 w-9 items-center justify-center rounded-full bg-accent text-ink"><TreePine className="h-5 w-5" aria-hidden /></span>
             Grove
           </h1>
-          <p className="mt-2 text-text/85 lg:text-lg">Your university's own AI, from first lecture to graduation.</p>
+          <p className="mt-2 text-text/85 lg:text-lg">Your university's own study companion, from first lecture to graduation.</p>
         </div>
       </div>
 

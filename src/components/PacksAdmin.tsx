@@ -1,6 +1,6 @@
 /* For Grove admins only: publish a notes pack so the server delivers it to the students it is meant for. */
 import { useEffect, useRef, useState } from 'react';
-import { getMe, listPacks, publishPack, removePack, type PackSummary } from '../services/packs';
+import { getMe, listPacks, publishFigures, publishPack, removePack, type PackSummary } from '../services/packs';
 import { labelCls, quietBtn } from './ui';
 
 export function PacksAdmin() {
@@ -27,11 +27,26 @@ export function PacksAdmin() {
     setBusy(true);
     setMsg(null);
     try {
-      const raw = JSON.parse(await file.text()) as { grove?: string; course?: { code?: string } };
+      const raw = JSON.parse(await file.text()) as { grove?: string; course?: { code?: string }; figures?: Record<string, string> };
       const code = raw.course?.code?.toUpperCase();
       if (raw.grove !== 'notes-pack' || !code) throw new Error('That file is not a Grove notes pack.');
-      const r = await publishPack(code, raw);
-      setMsg({ ok: true, text: `Published ${r.notes} ${code} notes${r.audience ? `, for student IDs starting with ${r.audience}` : ', for everyone'}.` });
+      // The notes go up first; the pictures follow in batches small enough for the server to accept.
+      const { figures, ...pack } = raw;
+      const r = await publishPack(code, pack);
+      const ids = Object.keys(figures ?? {});
+      let sent = 0;
+      for (let k = 0; k < ids.length; ) {
+        const batch: Record<string, string> = {};
+        let size = 0;
+        while (k < ids.length && (size === 0 || size + figures![ids[k]].length < 2_500_000)) {
+          batch[ids[k]] = figures![ids[k]];
+          size += figures![ids[k]].length;
+          k++;
+        }
+        setMsg({ ok: true, text: `Published the notes. Uploading pictures ${sent + 1}–${sent + Object.keys(batch).length} of ${ids.length}…` });
+        sent += (await publishFigures(code, batch)).figures;
+      }
+      setMsg({ ok: true, text: `Published ${r.notes} ${code} notes${ids.length ? ` and ${sent} pictures` : ''}${r.audience ? `, for student IDs starting with ${r.audience}` : ', for everyone'}.` });
       await refresh();
     } catch (err) {
       setMsg({ ok: false, text: err instanceof Error ? err.message : 'Could not publish the pack.' });

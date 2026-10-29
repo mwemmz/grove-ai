@@ -10,6 +10,7 @@ import type { TopicId } from '../data/visualTopics';
 import { diagramsFor, glossary, noteMap, parseSections, recallFor, type Group, type Section } from '../lib/noteStructure';
 import { NoteDiagram, NoteMap } from './NoteDiagrams';
 import { Inline } from './ui';
+import { Figure } from './Figure';
 import { CopilotButton, useAskOnSelect } from './Copilot';
 import { copilot } from '../services/copilot';
 
@@ -17,6 +18,7 @@ const VisualCard = lazyWithReload(() => import('./VisualCard'));
 
 function GroupView({ g }: { g: Group }) {
   const label = g.label && <h4 className="mb-1.5 font-mono text-[11px] uppercase tracking-[0.08em] text-accent">{g.label}</h4>;
+  if (g.kind === 'figure') return <Figure refId={g.text ?? ''} caption={g.label} />;
   if (g.kind === 'para') return <p className="whitespace-pre-wrap"><Inline text={g.text ?? ''} /></p>;
   if (g.kind === 'code')
     return <pre className="overflow-x-auto rounded-lg bg-bg p-4 font-mono text-[13px] leading-6"><code>{g.text}</code></pre>;
@@ -258,7 +260,8 @@ export function NoteReader({
                   {s.title}
                 </h3>
                 {(() => {
-                  const ds = diagramsFor(s);
+                  // A real slide figure beats a drawn summary of the same list: skip the drawn one when the section has a picture.
+                  const ds = s.groups.some((g) => g.kind === 'figure') ? [] : diagramsFor(s);
                   const shown = new Set(ds.flatMap((d) => d.covers));
                   return (
                     <>

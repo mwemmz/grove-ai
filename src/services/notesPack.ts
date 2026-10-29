@@ -1,6 +1,7 @@
 /* A notes pack is one JSON file carrying a course and its notes, so a whole semester of slides can be added at once.
    Format: { grove: 'notes-pack', version: 1, course: {...}, notes: [{ title, content, tags?, summary?, keyTakeaways? }] } */
 import type { AcademicYear, Course, Note } from '../types';
+import { withoutFigures } from './figures';
 
 export interface PackNote {
   title: string;
@@ -89,7 +90,7 @@ export function mergePack(pack: NotesPack, notes: Note[], courses: Course[]): { 
     claimed.add(p.title);
     if (p.content === n.content && p.title === n.title) { refreshed.push(n); continue; }
     updated++;
-    refreshed.push({ ...n, title: p.title, content: p.content, summary: p.summary || p.content.replace(/\s+/g, ' ').slice(0, 140), tags: p.tags ?? n.tags, keyTakeaways: p.keyTakeaways ?? n.keyTakeaways, updatedAt: now });
+    refreshed.push({ ...n, title: p.title, content: p.content, summary: p.summary || withoutFigures(p.content).replace(/\s+/g, ' ').slice(0, 140), tags: p.tags ?? n.tags, keyTakeaways: p.keyTakeaways ?? n.keyTakeaways, updatedAt: now });
   }
   const have = new Set(refreshed.filter((n) => n.courseId === course!.id).map((n) => n.title));
   const fresh = pack.notes
@@ -100,7 +101,7 @@ export function mergePack(pack: NotesPack, notes: Note[], courses: Course[]): { 
       year: course!.year,
       title: n.title,
       content: n.content,
-      summary: n.summary || n.content.replace(/\s+/g, ' ').slice(0, 140),
+      summary: n.summary || withoutFigures(n.content).replace(/\s+/g, ' ').slice(0, 140),
       tags: n.tags ?? [],
       keyTakeaways: n.keyTakeaways ?? [],
       createdAt: now,

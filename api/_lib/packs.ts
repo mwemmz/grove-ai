@@ -17,7 +17,15 @@ function ensureTable() {
       pack jsonb not null,
       updated_at timestamptz not null default now(),
       updated_by text
-    )`);
+    )`).then(() =>
+    // A pack's pictures (slide diagrams, figures), stored apart from the notes so the notes stay small to download.
+    db.execute(sql`
+      create table if not exists pack_figures (
+        code text not null,
+        id text not null,
+        data text not null,
+        primary key (code, id)
+      )`));
   return ready;
 }
 
@@ -143,6 +151,23 @@ export async function handlePacks(req: HandlerReq, res: HandlerRes, user: DbUser
     return;
   }
 
+  const qv = (k: string) => {
+    const v = req.query?.[k];
+    return (Array.isArray(v) ? v[0] : v) ?? new URL(req.url ?? '/', 'http://x').searchParams.get(k) ?? undefined;
+  };
+  const figure = qv('figure');
+
+  if (code && method === 'GET' && figure) {
+    const row = ((await db.execute(sql`select audience from course_packs where code = ${code}`)).rows as unknown as { audience: string | null }[])[0];
+    if (!row) throw new ApiError(404, 'No such pack');
+    if (!admin && !allowed(row.audience, id)) throw new ApiError(403, `These notes are only for students whose ID starts with ${row.audience}`);
+    const fig = ((await db.execute(sql`select data from pack_figures where code = ${code} and id = ${figure}`)).rows as unknown as { data: string }[])[0];
+    if (!fig) throw new ApiError(404, 'No such picture');
+    res.setHeader('Cache-Control', 'private, max-age=604800');
+    json(res, { data: fig.data });
+    return;
+  }
+
   if (code && method === 'GET') {
     const row = ((await db.execute(sql`select code, audience, pack, updated_at from course_packs where code = ${code}`)).rows as unknown as Row[])[0];
     if (!row) throw new ApiError(404, 'No such pack');
@@ -152,6 +177,24 @@ export async function handlePacks(req: HandlerReq, res: HandlerRes, user: DbUser
   }
 
   if (!admin) throw new ApiError(403, 'Only Grove admins can publish or remove notes packs');
+
+  // PUT ?code=X&figures=1 with { figures: { id: "data:image/webp;base64,..." } } adds or replaces pictures (sent in batches).
+  if (code && method === 'PUT' && qv('figures')) {
+    const body = requireObjectBody(req.body);
+    const figs = (body.figures ?? {}) as Record<string, unknown>;
+    let n = 0;
+    for (const [fid, data] of Object.entries(figs)) {
+      if (!/^[\w.-]{1,80}$/.test(fid)) throw new ApiError(400, `Bad picture id: ${fid}`);
+      if (typeof data !== 'string' || !/^data:image\/(webp|png|jpeg);base64,[A-Za-z0-9+/=]+$/.test(data)) throw new ApiError(400, `Picture ${fid} must be a WebP, PNG or JPEG data URL`);
+      if (data.length > 1_500_000) throw new ApiError(400, `Picture ${fid} is too large (keep each under about 1 MB)`);
+      await db.execute(sql`
+        insert into pack_figures (code, id, data) values (${code}, ${fid}, ${data})
+        on conflict (code, id) do update set data = excluded.data`);
+      n++;
+    }
+    json(res, { ok: true, figures: n });
+    return;
+  }
 
   if (code && method === 'PUT') {
     const pack = validate(requireObjectBody(req.body));
@@ -166,6 +209,7 @@ export async function handlePacks(req: HandlerReq, res: HandlerRes, user: DbUser
 
   if (code && method === 'DELETE') {
     await db.execute(sql`delete from course_packs where code = ${code}`);
+    await db.execute(sql`delete from pack_figures where code = ${code}`);
     json(res, { ok: true });
     return;
   }

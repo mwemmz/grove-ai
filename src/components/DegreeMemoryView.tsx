@@ -6,6 +6,7 @@ import { EmptyState } from './EmptyState';
 import { Note, Course, AcademicYear } from '../types';
 import { storage } from '../services/storage';
 import { ACCEPT, extractText } from '../services/fileText';
+import { storePackFigures } from '../services/figures';
 import { field, labelCls, primaryBtn, panel } from './ui';
 import { NoteReader } from './NoteReader';
 import type { TopicId } from '../data/visualTopics';
@@ -108,8 +109,14 @@ export const DegreeMemoryView: React.FC<DegreeMemoryViewProps> = ({
     const problems: string[] = [];
     // A Grove notes pack (.json) brings a whole course at once: add it and its notes directly.
     for (const f of files.filter((x) => x.name.toLowerCase().endsWith('.json'))) {
-      const pack = parseNotesPack(await f.text().catch(() => ''));
+      const rawText = await f.text().catch(() => '');
+      const pack = parseNotesPack(rawText);
       if (!pack) continue;
+      try {
+        await storePackFigures(pack.course.code, (JSON.parse(rawText) as { figures?: Record<string, string> }).figures);
+      } catch {
+        /* pictures are a bonus */
+      }
       files.splice(files.indexOf(f), 1);
       const need = pack.audience ?? COURSE_AUDIENCE[pack.course.code.toUpperCase()];
       if (!canSee(need)) {

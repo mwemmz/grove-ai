@@ -9,7 +9,7 @@ export interface Item {
 }
 
 export interface Group {
-  kind: 'list' | 'defs' | 'steps' | 'para' | 'example' | 'code' | 'table';
+  kind: 'list' | 'defs' | 'steps' | 'para' | 'example' | 'code' | 'table' | 'figure';
   label?: string;
   items: Item[];
   text?: string;
@@ -100,7 +100,7 @@ export function parseSections(content: string, fallbackTitle = 'Overview'): Sect
   blocks.forEach((b, i) => {
     let { title } = b;
     let body = b.body;
-    const firstIdx = body.findIndex((l) => l.trim());
+    const firstIdx = body.findIndex((l) => l.trim() && !/^!\[[^\]]*\]\(figure:/.test(l.trim()));
     // Old imports gave a long first line, or the word "Slide", as the heading. Use the real first words instead.
     if (!title || GENERIC.test(title) || !/[A-Za-z]/.test(title)) {
       if (firstIdx >= 0) {
@@ -115,7 +115,8 @@ export function parseSections(content: string, fallbackTitle = 'Overview'): Sect
     const stepNo = /^(\d{1,2})\s*[.)]\s*(?=[A-Za-z])/.exec(title.trim());
     title = tidyTitle(title) || title;
     body = body.filter((l) => !META.test(l.trim()));
-    const raw = [`### ${title}`, ...body].join('\n');
+    // `raw` feeds search and the AI: a picture counts there by its caption only.
+    const raw = [`### ${title}`, ...body].join('\n').replace(/!\[([^\]]*)\]\(figure:[^)\s]+\)/g, '$1');
     out.push({ id: '', title, groups: parseGroups(body), raw, ...(stepNo ? { step: Number(stepNo[1]) } : {}) });
   });
 
@@ -209,6 +210,14 @@ function parseGroups(rawBody: string[]): Group[] {
     const t = raw.trim();
     if (!t) {
       flushRun();
+      i++;
+      continue;
+    }
+    // A picture: ![caption](figure:...) on its own line. `text` holds the reference, `label` the caption.
+    const fig = /^!\[([^\]]*)\]\((figure:[^)\s]+)\)\s*$/.exec(t);
+    if (fig) {
+      flushRun();
+      groups.push({ kind: 'figure', label: fig[1] || undefined, items: [], text: fig[2] });
       i++;
       continue;
     }

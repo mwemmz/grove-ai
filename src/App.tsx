@@ -71,6 +71,14 @@ function AuthGate() {
   return <GroveApp />;
 }
 
+function readPlace(): { tab: AppTab; note: string | null } {
+  const m = /^#\/([a-z]+)(?:\/(.+))?$/.exec(window.location.hash);
+  const tab = m && m[1] in TAB_LABEL ? (m[1] as AppTab) : 'today';
+  let note: string | null = null;
+  try { note = m?.[2] && (tab === 'notes' || tab === 'papers') ? decodeURIComponent(m[2]) : null; } catch { /* bad address */ }
+  return { tab, note };
+}
+
 function GroveApp() {
   const { user } = useUser();
   const accountName = user?.fullName || user?.username || '';
@@ -90,7 +98,8 @@ function GroveApp() {
       .catch(() => { /* offline: treated as a student */ })
       .finally(() => setMeLoaded(true));
   }, []);
-  const [activeTab, setActiveTab] = useState<AppTab>('today');
+  // Where the student was is kept in the address (#/notes/<id>), so a refresh puts them back on the same screen and note.
+  const [activeTab, setActiveTab] = useState<AppTab>(() => readPlace().tab);
   // The assistant always knows which screen it was opened from.
   useEffect(() => {
     copilot.setContext({ place: TAB_LABEL[activeTab] });
@@ -127,6 +136,28 @@ function GroveApp() {
   const [tutorRequests, setTutorRequests] = useState<TutorRequest[]>([]);
 
   const [selectedNoteForDetail, setSelectedNoteForDetail] = useState<Note | null>(null);
+  const pendingNote = useRef<string | null>(readPlace().note);
+  useEffect(() => {
+    // Notes from the server (and university packs) can arrive a moment after the screen does.
+    const id = pendingNote.current;
+    if (!id) return;
+    const n = notes.find((x) => x.id === id);
+    if (n) {
+      pendingNote.current = null;
+      setSelectedNoteForDetail(n);
+    }
+  }, [notes]);
+  useEffect(() => {
+    const reading = selectedNoteForDetail && (activeTab === 'notes' || activeTab === 'papers') ? `/${encodeURIComponent(selectedNoteForDetail.id)}` : '';
+    const hash = activeTab === 'today' && !reading ? '' : `#/${activeTab}${reading}`;
+    // While a note from the address is still loading, keep it in the address; any other choice replaces it.
+    if (reading || (activeTab !== 'notes' && activeTab !== 'papers')) pendingNote.current = null;
+    if (pendingNote.current) return;
+    if (window.location.hash !== hash) history.replaceState(null, '', hash || window.location.pathname + window.location.search);
+  }, [activeTab, selectedNoteForDetail]);
+  useEffect(() => {
+    if (meLoaded && !isStaff && activeTab === 'insights') setActiveTab('today');
+  }, [meLoaded, isStaff, activeTab]);
   const [visualFocus, setVisualFocus] = useState<TopicId | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [studyPreset, setStudyPreset] = useState<StudyPreset | null>(null);

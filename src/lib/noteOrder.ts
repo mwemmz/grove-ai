@@ -3,7 +3,7 @@ import type { Note } from '../types';
 export const isPastPaper = (n: Pick<Note, 'title'>) => /^past paper/i.test(n.title);
 
 const unitNo = (t: string) => {
-  const m = /^unit\s*(\d+(?:\.\d+)?)/i.exec(t);
+  const m = /^(?:unit|lecture|chapter|topic|week|module|lesson)\s*(\d+(?:\.\d+)?)/i.exec(t);
   return m ? Number(m[1]) : null;
 };
 const packIndex = (id: string) => {

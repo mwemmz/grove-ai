@@ -195,6 +195,9 @@ export const DegreeMemoryView: React.FC<DegreeMemoryViewProps> = ({
   };
 
   const detail = selectedNoteForDetail;
+  // The course's notes in teaching order, so the reader can offer the next one.
+  const siblings = detail ? notes.filter((n) => n.courseId === detail.courseId && isPastPaper(n) === isPastPaper(detail)).sort(compareNotes) : [];
+  const at = detail ? siblings.findIndex((n) => n.id === detail.id) : -1;
 
   const sorted = [...filtered].sort(compareNotes);
   const groups = Array.from(new Set(sorted.map((n) => n.courseId))).map((id) => ({
@@ -368,6 +371,12 @@ export const DegreeMemoryView: React.FC<DegreeMemoryViewProps> = ({
           courseName={courseOf(detail.courseId)?.name}
           onClose={() => setSelectedNoteForDetail(null)}
           onOpenVisual={onOpenVisual}
+          prev={at > 0 ? siblings[at - 1] : undefined}
+          next={at >= 0 && at < siblings.length - 1 ? siblings[at + 1] : undefined}
+          onGo={(n) => {
+            setSelectedNoteForDetail(n);
+            try { localStorage.setItem('grove_last_note', n.id); } catch { /* private mode: fine */ }
+          }}
         />
       )}
     </div>

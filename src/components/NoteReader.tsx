@@ -2,7 +2,7 @@
    animated pictures beside the matching idea, and recall prompts. */
 import { createPortal } from 'react-dom';
 import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { lazyWithReload } from '../lib/lazyReload';
 import type { Note } from '../types';
 import { placePictures } from '../data/pictureMatch';
@@ -115,11 +115,18 @@ export function NoteReader({
   courseName,
   onClose,
   onOpenVisual,
+  prev,
+  next,
+  onGo,
 }: {
   note: Note;
   courseName?: string;
   onClose: () => void;
   onOpenVisual?: (id: TopicId) => void;
+  /** The notes before and after this one in the course, so a student can carry on without going back. */
+  prev?: Note;
+  next?: Note;
+  onGo?: (note: Note) => void;
 }) {
   const sections = useMemo(() => parseSections(note.content, note.title), [note.content, note.title]);
   const spots = useMemo(() => placePictures(sections.map((s) => s.raw)), [sections]);
@@ -135,6 +142,12 @@ export function NoteReader({
   const [active, setActive] = useState(sections[0]?.id ?? '');
   const [progress, setProgress] = useState(0);
   const askPill = useAskOnSelect(scroller);
+  useEffect(() => {
+    scroller.current?.scrollTo({ top: 0 });
+    setActive(sections[0]?.id ?? '');
+    setProgress(0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [note.id]);
 
   // Tell the assistant what is on screen: this note, and the section being read.
   useEffect(() => {
@@ -322,6 +335,31 @@ export function NoteReader({
               )}
             </section>
             {note.tags.length > 0 && <p className="text-sm text-muted">{note.tags.map((t) => `#${t}`).join('  ')}</p>}
+
+            {(next || prev) && onGo && (
+              <nav aria-label="More notes in this course" className="space-y-2 border-t border-line pt-6">
+                {next && (
+                  <button
+                    onClick={() => onGo(next)}
+                    className="hover-lift group flex w-full items-center justify-between gap-4 rounded-[24px] bg-accent p-5 text-left text-ink shadow-[0_18px_44px_-28px_var(--color-glow)]"
+                  >
+                    <span className="min-w-0">
+                      <span className="block text-sm font-medium opacity-85">Next note</span>
+                      <span className="mt-1 block font-display text-xl leading-snug">{next.title}</span>
+                    </span>
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-ink text-accent transition-transform group-hover:translate-x-0.5">
+                      <ArrowRight aria-hidden className="h-5 w-5" />
+                    </span>
+                  </button>
+                )}
+                {!next && <p className="text-sm text-muted">That's the last note in this course.</p>}
+                {prev && (
+                  <button onClick={() => onGo(prev)} className="flex min-h-10 items-center gap-2 rounded-full px-3 text-sm text-muted hover:bg-raised hover:text-text">
+                    <ArrowLeft aria-hidden className="h-4 w-4" /> <span className="truncate">Previous: {prev.title}</span>
+                  </button>
+                )}
+              </nav>
+            )}
           </article>
         </div>
       </div>

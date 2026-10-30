@@ -25,6 +25,7 @@ import {
 } from '../data/mockData';
 import { DEMO_IDS, DEMO_UNIVERSITY } from '../data/demoIds';
 import { apiGet, apiPost, apiPut } from '../lib/api';
+import { get as idbGet, set as idbSet, del as idbDel } from 'idb-keyval';
 
 /**
  * Client-side data facade. Reads are synchronous against an in-memory
@@ -82,6 +83,81 @@ const cache: DataCache = {
 let hydrated = false;
 let hydrating: Promise<void> | null = null;
 
+/* ---------- a copy on this device, so Grove opens and works without a connection ---------- */
+
+/** Whose data this is (the signed-in account); the device copy is kept per account. */
+let owner: string | null = null;
+/** Where the data on screen came from: the server, the copy on this device, or nowhere yet (sample data). */
+let source: 'server' | 'device' | 'none' = 'none';
+const listeners = new Set<() => void>();
+const notify = () => listeners.forEach((f) => f());
+
+const SNAP = (id: string) => `grove-snap:${id}`;
+const DIRTY = (id: string) => `grove_dirty_${id}`;
+const LAST_USER = 'grove_last_user';
+const ROUTES: Record<string, { route: string; field: keyof DataCache }> = {
+  courses: { route: '/courses', field: 'courses' },
+  notes: { route: '/notes', field: 'notes' },
+  profile: { route: '/profile', field: 'profile' },
+  flashcards: { route: '/flashcards', field: 'flashcards' },
+  skills: { route: '/skills', field: 'skills' },
+  projects: { route: '/projects', field: 'projects' },
+  chat: { route: '/chat', field: 'chat' },
+  'senior-comments': { route: '/senior-comments', field: 'seniorComments' },
+  seniorComments: { route: '/senior-comments', field: 'seniorComments' },
+  blueprints: { route: '/blueprints', field: 'blueprints' },
+  tutors: { route: '/tutors', field: 'tutors' },
+  'tutor-requests': { route: '/tutor-requests', field: 'tutorRequests' },
+  tutorRequests: { route: '/tutor-requests', field: 'tutorRequests' },
+};
+const readDirty = (): string[] => {
+  if (!owner) return [];
+  try {
+    return JSON.parse(localStorage.getItem(DIRTY(owner)) ?? '[]');
+  } catch {
+    return [];
+  }
+};
+const writeDirty = (keys: string[]) => {
+  if (!owner) return;
+  try {
+    if (keys.length) localStorage.setItem(DIRTY(owner), JSON.stringify([...new Set(keys)]));
+    else localStorage.removeItem(DIRTY(owner));
+  } catch {
+    /* storage full or private mode */
+  }
+  notify();
+};
+let snapTimer: ReturnType<typeof setTimeout> | null = null;
+function saveSnapshot(): void {
+  // Only real data is kept: never the sample data shown before anything has loaded.
+  if (!owner || source === 'none') return;
+  if (snapTimer) clearTimeout(snapTimer);
+  const id = owner;
+  snapTimer = setTimeout(() => void idbSet(SNAP(id), { ...cache, at: Date.now() }).catch(() => {}), 600);
+}
+
+/** Sends changes made while offline. Each collection is saved whole, so the latest copy on this device wins. */
+async function flushDirty(): Promise<void> {
+  if (source === 'none') return;
+  let left = readDirty();
+  for (const key of [...left]) {
+    const r = ROUTES[key];
+    if (!r) {
+      left = left.filter((k) => k !== key);
+      continue;
+    }
+    try {
+      await apiPut(r.route, cache[r.field]);
+      left = left.filter((k) => k !== key);
+    } catch {
+      break; // still offline
+    }
+  }
+  writeDirty(left);
+}
+if (typeof window !== 'undefined') window.addEventListener('online', () => void flushDirty());
+
 // Background sync with a short debounce so rapid successive writes
 // (e.g. toggling several settings) coalesce into one PUT.
 const SYNC_DEBOUNCE_MS = 150;
@@ -94,7 +170,15 @@ function scheduleSync(key: string, run: () => Promise<unknown>): void {
     key,
     setTimeout(() => {
       pendingSyncs.delete(key);
-      run().catch((err) => console.error(`Sync failed for ${key}:`, err));
+      // Before anything real has loaded, the cache holds sample data: never send that over the student's own.
+      if (source === 'none') return;
+      saveSnapshot();
+      const send = navigator.onLine ? run() : Promise.reject(new Error('offline'));
+      send.catch((err) => {
+        // Kept on this device and sent when the connection is back.
+        writeDirty([...readDirty(), key]);
+        if (navigator.onLine) console.error(`Sync failed for ${key}:`, err);
+      });
     }, SYNC_DEBOUNCE_MS),
   );
 }
@@ -144,8 +228,32 @@ async function loadAllFromServer(): Promise<void> {
   cache.blueprints = blueprints;
   cache.tutors = tutors;
   cache.tutorRequests = tutorRequests;
+  source = 'server';
+  // Changes made offline last time that never reached the server: the device copy of those collections wins.
+  const dirty = readDirty();
+  if (dirty.length && owner) {
+    const snap = (await idbGet(SNAP(owner)).catch(() => undefined)) as Partial<DataCache> | undefined;
+    if (snap) for (const k of dirty) {
+      const f = ROUTES[k]?.field;
+      if (f && snap[f] !== undefined) (cache as unknown as Record<string, unknown>)[f] = snap[f];
+    }
+  }
   purgeSamples();
+  saveSnapshot();
+  void flushDirty();
 }
+
+/** No connection: use the copy saved on this device the last time this account was online. */
+async function loadFromDevice(): Promise<boolean> {
+  if (!owner) return false;
+  const snap = (await idbGet(SNAP(owner)).catch(() => undefined)) as (DataCache & { at: number }) | undefined;
+  if (!snap) return false;
+  for (const k of Object.keys(cache) as (keyof DataCache)[]) if (snap[k] !== undefined) (cache as unknown as Record<string, unknown>)[k] = snap[k];
+  source = 'device';
+  savedAt = snap.at;
+  return true;
+}
+let savedAt = 0;
 
 /** Accounts made before Grove started empty still hold the old sample records. Clear them once, and save the result. */
 function purgeSamples(): void {
@@ -193,11 +301,13 @@ export const storage = {
       .then(() => {
         hydrated = true;
       })
-      .catch((err) => {
-        console.error('Failed to load data from server, using local demo data:', err);
+      .catch(async (err) => {
+        if (await loadFromDevice()) return;
+        console.error('Failed to load data from server and nothing is saved on this device:', err);
       })
       .finally(() => {
         hydrating = null;
+        notify();
       });
 
     return hydrating;
@@ -206,6 +316,47 @@ export const storage = {
   isHydrated(): boolean {
     return hydrated;
   },
+
+  /** The signed-in account, so its device copy is kept apart from anyone else who uses this browser. */
+  setOwner(id: string | null, who?: { username?: string | null; name?: string | null }): void {
+    owner = id;
+    if (id && who) {
+      try {
+        localStorage.setItem(LAST_USER, JSON.stringify({ id, username: who.username ?? '', name: who.name ?? '' }));
+      } catch {
+        /* private mode */
+      }
+    }
+  },
+  /** Who last used Grove on this device: lets it open offline, when the sign-in service can't be reached. */
+  lastUser(): { id: string; username: string; name: string } | null {
+    try {
+      return JSON.parse(localStorage.getItem(LAST_USER) ?? 'null');
+    } catch {
+      return null;
+    }
+  },
+  /** Signing out removes this account's copy from the device. */
+  async forgetDevice(): Promise<void> {
+    await flushDirty().catch(() => {});
+    const id = owner ?? storage.lastUser()?.id;
+    if (id) await idbDel(SNAP(id)).catch(() => {});
+    try {
+      localStorage.removeItem(LAST_USER);
+      if (id) localStorage.removeItem(DIRTY(id));
+    } catch {
+      /* ignore */
+    }
+  },
+  /** For the offline banner: where data came from, when the device copy was saved, and how many changes wait to be sent. */
+  status(): { source: 'server' | 'device' | 'none'; savedAt: number; waiting: number } {
+    return { source, savedAt, waiting: readDirty().length };
+  },
+  subscribe(f: () => void): () => void {
+    listeners.add(f);
+    return () => listeners.delete(f);
+  },
+  flush: () => flushDirty(),
 
   // --- Courses ---
   getCourses(): Course[] {

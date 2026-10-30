@@ -1,5 +1,6 @@
 /* Who is signed in, where, and the controls to end sessions. Sessions are Clerk's; this only lists and revokes them. */
 import { useEffect, useState } from 'react';
+import { storage } from '../services/storage';
 import { useClerk, useSession, useUser } from '@clerk/react';
 import { field, labelCls, quietBtn } from './ui';
 
@@ -135,7 +136,7 @@ export function AccountPanel() {
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <button type="button" onClick={() => void signOut()} className={`${quietBtn} !min-h-9 !px-3 text-sm`}>
+        <button type="button" onClick={() => void storage.forgetDevice().then(() => signOut())} className={`${quietBtn} !min-h-9 !px-3 text-sm`}>
           Sign out
         </button>
         {sessions && sessions.length > 1 && (
@@ -143,6 +144,7 @@ export function AccountPanel() {
             type="button"
             onClick={async () => {
               for (const s of sessions.filter((x) => x.id !== session?.id)) await s.revoke().catch(() => undefined);
+              await storage.forgetDevice();
               void signOut();
             }}
             className={`${quietBtn} !min-h-9 !px-3 text-sm`}

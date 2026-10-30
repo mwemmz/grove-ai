@@ -11,6 +11,7 @@ import { ProgressPanel } from './components/ProgressPanel';
 import { ChatTutorView, NEW_VIEW } from './components/ChatTutorView';
 import { TodayView } from './components/TodayView';
 import { InsightsView } from './components/InsightsView';
+import { NetworkBanner } from './components/NetworkBanner';
 import { setSignalCourses } from './services/signals';
 import { DegreeMemoryView } from './components/DegreeMemoryView';
 import { StudyBlueprintsView } from './components/StudyBlueprintsView';
@@ -45,6 +46,7 @@ import { setTokenProvider } from './lib/api';
 import { Copilot } from './components/Copilot';
 import { copilot } from './services/copilot';
 import { indexNotes, warmUp } from './services/semantic';
+import { prefetchFigures } from './services/figures';
 
 function LoadingScreen({ label }: { label: string }) {
   return (
@@ -56,14 +58,34 @@ function LoadingScreen({ label }: { label: string }) {
 }
 
 function AuthGate() {
-  const { isLoaded, isSignedIn, getToken } = useAuth();
+  const { isLoaded, isSignedIn, getToken, userId } = useAuth();
+  const { user } = useUser();
+  // With no connection the sign-in service can't load. If this device has been used by a signed-in student before,
+  // open Grove with what is saved here instead of waiting forever.
+  const [offline, setOffline] = useState(() => typeof navigator !== 'undefined' && !navigator.onLine);
+  useEffect(() => {
+    if (isLoaded) return;
+    const t = setTimeout(() => setOffline(true), navigator.onLine ? 8000 : 0);
+    const off = () => setOffline(true);
+    window.addEventListener('offline', off);
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener('offline', off);
+    };
+  }, [isLoaded]);
 
   // Wire the token before the app renders: its data-loading effect runs before any effect here would,
   // so setting this in an effect sent the first requests with no token (401) after a reload.
   if (isLoaded) setTokenProvider(getToken);
+  if (isLoaded && isSignedIn && userId) storage.setOwner(userId, user ? { username: user.username, name: user.fullName } : undefined);
 
   if (!isLoaded) {
-    return <LoadingScreen label="Starting Grove..." />;
+    const last = storage.lastUser();
+    if (offline && last) {
+      storage.setOwner(last.id);
+      return <GroveApp offlineUser={last} />;
+    }
+    return <LoadingScreen label={offline ? 'No connection. Grove needs to be online the first time you sign in.' : 'Starting Grove...'} />;
   }
   if (!isSignedIn) {
     return <AuthScreen />;
@@ -79,21 +101,23 @@ function readPlace(): { tab: AppTab; note: string | null } {
   return { tab, note };
 }
 
-function GroveApp() {
+function GroveApp({ offlineUser }: { offlineUser?: { id: string; username: string; name: string } }) {
   const { user } = useUser();
-  const accountName = user?.fullName || user?.username || '';
+  const accountName = user?.fullName || user?.username || offlineUser?.name || offlineUser?.username || '';
   // Decides programme-only material (e.g. BIT353 for IDs starting with BIT) for everything rendered below.
-  setStudentId(user?.username);
-  // Admins see every course; whether this account is one comes from the server.
-  const [isAdmin, setIsAdmin] = useState(false);
+  setStudentId(user?.username ?? offlineUser?.username);
+  // Admins see every course; whether this account is one comes from the server (remembered for offline use).
+  const remembered = (() => { try { return JSON.parse(localStorage.getItem('grove_me') ?? '{}') as { admin?: boolean; staff?: boolean }; } catch { return {}; } })();
+  const [isAdmin, setIsAdmin] = useState(!!remembered.admin);
   const [meLoaded, setMeLoaded] = useState(false);
-  const [isStaff, setIsStaff] = useState(false);
+  const [isStaff, setIsStaff] = useState(!!remembered.staff);
   setAdmin(isAdmin);
   useEffect(() => {
     getMe()
       .then((me) => {
         setIsAdmin(!!me.admin);
         setIsStaff(!!me.staff);
+        try { localStorage.setItem('grove_me', JSON.stringify({ admin: !!me.admin, staff: !!me.staff })); } catch { /* private mode */ }
       })
       .catch(() => { /* offline: treated as a student */ })
       .finally(() => setMeLoaded(true));
@@ -119,6 +143,9 @@ function GroveApp() {
   useEffect(() => {
     notesRef.current = notes;
     indexNotes(notes);
+    // Keep the university's diagrams on the device too, so notes are complete offline.
+    const t = setTimeout(() => void prefetchFigures(notes.map((n) => n.content)), 5000);
+    return () => clearTimeout(t);
   }, [notes]);
 
   const [courses, setCourses] = useState<Course[]>([]);
@@ -399,6 +426,7 @@ function GroveApp() {
         )}
       >
         <div className="space-y-5">
+          <NetworkBanner />
           {packNotice && (
             <div role="status" className="flex items-start justify-between gap-3 rounded-[22px] bg-surface px-4 py-3 text-sm text-text ring-1 ring-accent/50">
               <span>{packNotice} Find them under Notes.</span>

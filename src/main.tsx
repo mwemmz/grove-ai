@@ -8,8 +8,10 @@ import '@fontsource/jetbrains-mono/500.css';
 import './index.css';
 import App from './App.tsx';
 import { applyTheme, getStoredTheme } from './themes';
+import { startPwa } from './services/pwa';
 
 applyTheme(getStoredTheme(), false);
+startPwa();
 
 const publishableKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 

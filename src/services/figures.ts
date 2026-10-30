@@ -79,3 +79,23 @@ export async function storePackFigures(code: string, figures: Record<string, str
   }
   return n;
 }
+
+/** Saves every university picture these notes use onto the device, one at a time while the browser is idle,
+    so the diagrams are there offline too. Skipped on "data saver". */
+let prefetching = false;
+export async function prefetchFigures(contents: string[]): Promise<void> {
+  const conn = (navigator as unknown as { connection?: { saveData?: boolean } }).connection;
+  if (prefetching || !navigator.onLine || conn?.saveData) return;
+  prefetching = true;
+  try {
+    const refs = new Set<string>();
+    for (const c of contents) for (const m of c.matchAll(/\]\((figure:[A-Z0-9]+\/[^)\s]+)\)/g)) refs.add(m[1]);
+    for (const ref of refs) {
+      if (!navigator.onLine) break;
+      const have = await get<string>(key(ref)).catch(() => undefined);
+      if (!have) await loadFigure(ref);
+    }
+  } finally {
+    prefetching = false;
+  }
+}

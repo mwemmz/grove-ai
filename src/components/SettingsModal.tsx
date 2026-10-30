@@ -23,6 +23,7 @@ import { PacksAdmin } from './PacksAdmin';
 import { AuthTrail } from './AuthTrail';
 import { MeaningToggle } from './MeaningToggle';
 import { ShareToggle } from './ShareInsights';
+import { InstallApp } from './InstallApp';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -447,6 +448,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
           <MeaningToggle />
           <ShareToggle />
+          <InstallApp />
           <AccountPanel />
           <PacksAdmin />
           <AuthTrail />

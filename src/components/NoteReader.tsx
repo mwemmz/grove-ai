@@ -2,7 +2,7 @@
    animated pictures beside the matching idea, and recall prompts. */
 import { createPortal } from 'react-dom';
 import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, ArrowRight, Headphones } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Headphones, PanelLeftClose, PanelLeftOpen, Minus, Plus, Maximize2 } from 'lucide-react';
 import { ListenBar } from './ListenBar';
 import { startListening, stop as stopListening, useListen } from '../services/readAloud';
 import { lazyWithReload } from '../lib/lazyReload';
@@ -112,6 +112,21 @@ function Recall({ section }: { section: Section }) {
   );
 }
 
+const lsGet = (k: string, d: string) => {
+  try {
+    return localStorage.getItem(k) ?? d;
+  } catch {
+    return d;
+  }
+};
+const lsSet = (k: string, v: string) => {
+  try {
+    localStorage.setItem(k, v);
+  } catch {
+    /* private mode */
+  }
+};
+
 export function NoteReader({
   note,
   courseName,
@@ -202,6 +217,25 @@ export function NoteReader({
     };
   }, [nav]);
 
+  // Reading comfort: the outline can fold away and the text can be enlarged, up to the width of the screen.
+  const [side, setSide] = useState(() => lsGet('grove_reader_side', '1') !== '0');
+  const [zoom, setZoom] = useState(() => Math.min(2.4, Math.max(0.9, Number(lsGet('grove_reader_zoom', '1')) || 1)));
+  const setZ = (z: number) => {
+    const v = Math.round(Math.min(2.4, Math.max(0.9, z)) * 100) / 100;
+    setZoom(v);
+    lsSet('grove_reader_zoom', String(v));
+  };
+  const toggleSide = () => {
+    setSide((v) => {
+      lsSet('grove_reader_side', v ? '0' : '1');
+      return !v;
+    });
+  };
+  const fit = () => {
+    const w = scroller.current?.clientWidth ?? 0;
+    if (w) setZ((w - 64) / 768);
+  };
+
   const jump = (id: string) => {
     document.getElementById(`sec-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     setActive(`sec-${id}`);
@@ -214,6 +248,9 @@ export function NoteReader({
       <header className="glass-strong relative flex items-center gap-3 border-b border-line/70 px-3 py-2 pt-[max(0.5rem,env(safe-area-inset-top))] sm:px-5">
         <button onClick={onClose} className="flex min-h-10 items-center gap-1.5 rounded-md px-2 text-sm text-muted hover:bg-raised hover:text-text">
           <ArrowLeft className="h-4 w-4" /> Notes
+        </button>
+        <button onClick={toggleSide} aria-label={side ? 'Hide the outline' : 'Show the outline'} aria-pressed={!side} title={side ? 'Hide outline' : 'Show outline'} className="hidden h-10 w-10 place-items-center rounded-md text-muted hover:bg-raised hover:text-text lg:grid">
+          {side ? <PanelLeftClose className="h-5 w-5" /> : <PanelLeftOpen className="h-5 w-5" />}
         </button>
         <div className="min-w-0 flex-1">
           <h2 className="truncate font-display text-base text-text sm:text-lg">{note.title}</h2>
@@ -231,6 +268,12 @@ export function NoteReader({
         >
           <Headphones aria-hidden className="h-4 w-4" /> <span className="hidden sm:inline">Listen</span>
         </button>
+        <div className="hidden items-center gap-1 rounded-full bg-surface/60 p-1 ring-1 ring-line md:flex" role="group" aria-label="Text size">
+          <button onClick={() => setZ(zoom - 0.15)} aria-label="Smaller text" className="grid h-8 w-8 place-items-center rounded-full text-muted hover:text-text"><Minus className="h-4 w-4" /></button>
+          <span className="w-10 text-center font-mono text-xs text-muted">{Math.round(zoom * 100)}%</span>
+          <button onClick={() => setZ(zoom + 0.15)} aria-label="Larger text" className="grid h-8 w-8 place-items-center rounded-full text-muted hover:text-text"><Plus className="h-4 w-4" /></button>
+          <button onClick={fit} aria-label="Fit text to the screen" title="Fit to screen" className="grid h-8 w-8 place-items-center rounded-full text-muted hover:text-text"><Maximize2 className="h-4 w-4" /></button>
+        </div>
         <CopilotButton />
         <div aria-hidden className="absolute inset-x-0 bottom-0 h-0.5 bg-line">
           <div className="h-full bg-accent transition-[width] duration-150" style={{ width: `${Math.round(progress * 100)}%` }} />
@@ -252,7 +295,7 @@ export function NoteReader({
 
       <div className="relative flex min-h-0 flex-1">
         <ListenBar />
-        <nav aria-label="Outline" className="hidden w-64 shrink-0 overflow-y-auto border-r border-line px-3 py-5 lg:block">
+        <nav aria-label="Outline" className={`hidden w-64 shrink-0 overflow-y-auto border-r border-line px-3 py-5 ${side ? 'lg:block' : ''}`}>
           <p className="mb-2 px-2 font-mono text-[11px] uppercase tracking-[0.08em] text-muted">In this note</p>
           <ol className="space-y-0.5">
             {nav.map((s, i) => (
@@ -270,7 +313,7 @@ export function NoteReader({
         </nav>
 
         <div ref={scroller} className={`min-w-0 flex-1 overflow-y-auto overscroll-contain scroll-smooth px-4 pt-6 sm:px-8 ${listen.active ? 'pb-32' : 'pb-[max(3rem,env(safe-area-inset-bottom))]'}`}>
-          <article className="mx-auto max-w-3xl space-y-10 text-[15px] leading-7 text-text">
+          <article style={{ zoom }} className="mx-auto max-w-3xl space-y-10 text-[15px] leading-7 text-text">
             {(map.items.length >= 3 || terms.length >= 3) && (
               <section className="space-y-4">
                 <NoteMap root={map.root} items={map.items} />

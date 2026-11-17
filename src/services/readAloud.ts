@@ -33,10 +33,12 @@ const ls = {
 export const voiceSettings = () => ({
   mode: (ls.get('grove_voice_mode', 'device') === 'natural' ? 'natural' : 'device') as VoiceMode,
   voice: ls.get('grove_voice', 'af_heart'),
+  deviceVoice: ls.get('grove_device_voice', ''),
   rate: Number(ls.get('grove_voice_rate', '1')) || 1,
   naturalReady: ls.get('grove_voice_ready', '') === '1',
 });
-export function setVoiceSettings(p: Partial<{ mode: VoiceMode; voice: string; rate: number }>) {
+export function setVoiceSettings(p: Partial<{ mode: VoiceMode; voice: string; rate: number; deviceVoice: string }>) {
+  if (p.deviceVoice !== undefined) ls.set('grove_device_voice', p.deviceVoice);
   if (p.mode) ls.set('grove_voice_mode', p.mode);
   if (p.voice) ls.set('grove_voice', p.voice);
   if (p.rate) ls.set('grove_voice_rate', String(p.rate));
@@ -134,19 +136,34 @@ let gen = 0;
 /* ---------- the phone's own voice ---------- */
 
 let utter: SpeechSynthesisUtterance | null = null;
-function pickVoice(): SpeechSynthesisVoice | undefined {
-  const all = speechSynthesis.getVoices().filter((v) => /^en/i.test(v.lang));
-  return all.find((v) => v.localService && /en[-_]GB/i.test(v.lang)) ?? all.find((v) => v.localService) ?? all[0];
+/** How human a phone or browser voice tends to sound. Online "Natural" and "Neural" voices beat the old built-in ones. */
+const voiceScore = (v: SpeechSynthesisVoice) =>
+  (/natural|neural/i.test(v.name) ? 20 : 0) + (/online/i.test(v.name) ? 6 : 0) + (/premium|enhanced|siri/i.test(v.name) ? 10 : 0) + (/google/i.test(v.name) ? 8 : 0) + (/en[-_](GB|ZA|US)/i.test(v.lang) ? 2 : 0) - (v.localService ? 0 : 0);
+export function deviceVoices(): SpeechSynthesisVoice[] {
+  try {
+    return speechSynthesis.getVoices().filter((v) => /^en/i.test(v.lang)).sort((a, b) => voiceScore(b) - voiceScore(a) || a.name.localeCompare(b.name));
+  } catch {
+    return [];
+  }
 }
-function speakDevice(text: string, rate: number): Promise<void> {
+function pickVoice(local = false): SpeechSynthesisVoice | undefined {
+  const all = deviceVoices();
+  const chosen = voiceSettings().deviceVoice;
+  const mine = all.find((v) => v.name === chosen);
+  if (mine && (!local || mine.localService)) return mine;
+  const pool = local ? all.filter((v) => v.localService) : all;
+  return pool[0] ?? all[0];
+}
+function speakDevice(text: string, rate: number, local = false): Promise<void> {
   return new Promise((resolve) => {
     utter = new SpeechSynthesisUtterance(text);
-    const v = pickVoice();
+    const v = pickVoice(local);
     if (v) utter.voice = v;
     utter.lang = v?.lang ?? 'en-GB';
     utter.rate = rate;
     utter.onend = () => resolve();
-    utter.onerror = () => resolve();
+    // An online voice that can't be reached (no data): say it again with one built into the device.
+    utter.onerror = (e) => (v && !v.localService && !local && e.error !== 'canceled' && e.error !== 'interrupted' ? void speakDevice(text, rate, true).then(resolve) : resolve());
     speechSynthesis.speak(utter);
   });
 }
@@ -446,4 +463,14 @@ export function tutorNext() {
 export function switchMode() {
   if (!lastNote) return;
   startListening(lastNote.title, lastNote.sections, state.section, !state.tutor);
+}
+
+/** Pick a voice while listening; if something is playing it carries on in the new voice. */
+export function setVoice(p: Partial<{ mode: VoiceMode; voice: string; deviceVoice: string }>) {
+  setVoiceSettings(p);
+  if (state.playing) {
+    halt();
+    emit({ playing: true, usingFallback: false });
+    void loop(gen);
+  }
 }

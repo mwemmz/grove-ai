@@ -43,9 +43,9 @@ export async function explainSection(opts: { noteTitle: string; title: string; t
     opts.text.slice(0, 3500),
     '',
     opts.first ? 'This is the start of the lesson: open with one short friendly sentence to welcome them, then teach.' : `Link in one short phrase to the previous section (${opts.prevTitle ?? 'the last one'}), then teach.`,
-    'Teach this section in about 110 to 170 words, in short spoken sentences. Then finish with exactly one line starting with "QUESTION:" that asks one short question to check they understood (one they can answer in a sentence).',
+    'Teach this section in about 110 to 170 words, in short, chatty spoken sentences, like a friend explaining it. Then drive it home: say "So the point is" followed by the two to four key takeaways in one flowing spoken sentence or two (for example "So the point is, first this, second that, and third this"). Then finish with exactly one line starting with "QUESTION:" that asks one short question to check they understood (one they can answer in a sentence).',
   ].join('\n');
-  const out = await generateRouted('ask', system(), user, 700);
+  const out = await generateRouted('ask', system(), user, 800);
   const raw = out?.text ?? '';
   const [say, q] = raw.split(/\n?\s*QUESTION:\s*/i);
   return { say: clean(say), question: clean(q ?? '') };

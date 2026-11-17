@@ -1,8 +1,8 @@
 /* The listening controls at the bottom of a note. In tutor mode they also hold the conversation:
    the student can answer by voice or typing, ask something, or ask for it again, simpler, or with an example. */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Mic, Pause, Play, Send, SkipBack, SkipForward, X } from 'lucide-react';
-import { setRate, skip, stop, switchMode, toggle, tutorNext, tutorSay, useListen, voiceSettings } from '../services/readAloud';
+import { NATURAL_VOICES, deviceVoices, setRate, setVoice, skip, stop, switchMode, toggle, tutorNext, tutorSay, useListen, voiceSettings } from '../services/readAloud';
 import { canHear, hearOnce, stopHearing, tutorAvailable } from '../services/tutor';
 
 const RATES = [0.8, 1, 1.2, 1.5];
@@ -12,8 +12,22 @@ export function ListenBar() {
   const s = useListen();
   const [text, setText] = useState('');
   const [hearing, setHearing] = useState(false);
+  const [, bump] = useState(0);
+  useEffect(() => {
+    // Browsers load their voice list a moment after the page opens.
+    const f = () => bump((n) => n + 1);
+    try {
+      speechSynthesis.addEventListener('voiceschanged', f);
+      return () => speechSynthesis.removeEventListener('voiceschanged', f);
+    } catch {
+      return undefined;
+    }
+  }, []);
   if (!s.active) return null;
-  const rate = voiceSettings().rate;
+  const vs = voiceSettings();
+  const rate = vs.rate;
+  const phone = deviceVoices();
+  const current = vs.mode === 'natural' ? `n:${vs.voice}` : `d:${vs.deviceVoice || phone[0]?.name || ''}`;
   const asking = s.waiting || s.busy;
 
   const send = (kind: 'answer' | 'ask') => {
@@ -54,6 +68,26 @@ export function ListenBar() {
             {s.status ?? `${s.tutor ? 'Tutor · ' : ''}Section ${s.section + 1} of ${s.total}${s.usingFallback ? " · phone's voice (natural voice not available)" : ''}`}
           </p>
         </div>
+        <select
+          aria-label="Voice"
+          value={current}
+          onChange={(e) => {
+            const [k, ...r] = e.target.value.split(':');
+            const v = r.join(':');
+            if (k === 'n') setVoice({ mode: 'natural', voice: v });
+            else setVoice({ mode: 'device', deviceVoice: v });
+          }}
+          className="h-9 w-28 shrink-0 rounded-full bg-raised px-2 text-xs text-text ring-1 ring-line focus:outline-none sm:w-36"
+        >
+          <optgroup label="Natural (downloads once)">
+            {NATURAL_VOICES.map((v) => <option key={v.id} value={`n:${v.id}`}>{v.label.replace(/ \(.*\)/, '')}</option>)}
+          </optgroup>
+          {phone.length > 0 && (
+            <optgroup label="This device">
+              {phone.map((v) => <option key={v.name} value={`d:${v.name}`}>{v.name.replace(/^Microsoft /, '').replace(/ - .*$/, '')}</option>)}
+            </optgroup>
+          )}
+        </select>
         <select aria-label="Reading speed" value={rate} onChange={(e) => setRate(Number(e.target.value))} className="h-9 shrink-0 rounded-full bg-raised px-2 text-xs text-text ring-1 ring-line focus:outline-none">
           {RATES.map((r) => <option key={r} value={r}>{r}×</option>)}
         </select>

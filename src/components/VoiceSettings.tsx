@@ -1,6 +1,6 @@
 /* Settings: which voice reads notes aloud. */
 import { useState, useSyncExternalStore } from 'react';
-import { NATURAL_VOICES, prepareNatural, setVoiceSettings, startListening, useListen, voiceSettings } from '../services/readAloud';
+import { NATURAL_VOICES, deviceVoices, prepareNatural, setVoiceSettings, startListening, useListen, voiceSettings } from '../services/readAloud';
 import { labelCls, quietBtn } from './ui';
 
 const read = () => JSON.stringify(voiceSettings());
@@ -48,6 +48,11 @@ export function VoiceSettings() {
           </label>
         ))}
       </div>
+      {cur.mode === 'device' && deviceVoices().length > 0 && (
+        <select aria-label="Phone voice" value={cur.deviceVoice || deviceVoices()[0]?.name} onChange={(e) => set({ deviceVoice: e.target.value })} className="h-11 rounded-full bg-bg/80 px-4 text-sm text-text ring-1 ring-edge">
+          {deviceVoices().map((v) => <option key={v.name} value={v.name}>{v.name}</option>)}
+        </select>
+      )}
       {cur.mode === 'natural' && (
         <div className="flex flex-wrap items-center gap-2">
           <select aria-label="Natural voice" value={cur.voice} onChange={(e) => set({ voice: e.target.value })} className="h-11 rounded-full bg-bg/80 px-4 text-sm text-text ring-1 ring-edge">

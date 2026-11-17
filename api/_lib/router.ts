@@ -28,6 +28,7 @@ import { exportBackup, importBackup, resetBackup } from './backup.js';
 import { handlePacks } from './packs.js';
 import { readAuthEvents, writeAuthEvent } from './authlog.js';
 import { readInsights, writeSignals } from './insights.js';
+import { writeAnswer } from './answer.js';
 import type {
   ChatMessage,
   Course,
@@ -108,6 +109,10 @@ export async function handleRequest(req: HandlerReq, res: HandlerRes): Promise<v
   }
 
   const resource = segments[1];
+  if (resource === 'answer') {
+    await writeAnswer(req, res, await requireUser(req));
+    return;
+  }
   if (resource === 'signals') {
     if (req.method !== 'POST') throw new ApiError(405, 'POST only');
     await writeSignals(req, res, await requireUser(req));

@@ -22,8 +22,8 @@ const STYLES: { id: ExplanationStyle; label: string; desc: string }[] = [
 
 const LENGTHS: { id: AnswerLength; label: string }[] = [
   { id: 'concise', label: 'Short' },
-  { id: 'balanced', label: 'Balanced' },
-  { id: 'deep-dive', label: 'Detailed' },
+  { id: 'balanced', label: 'Standard' },
+  { id: 'deep-dive', label: 'Exam-ready' },
 ];
 
 const VISIBLE_TOPICS = 4;

@@ -1,14 +1,15 @@
 import { isPastPaper, compareNotes } from '../lib/noteOrder';
 import React, { useRef, useState } from 'react';
-import { ArrowRight, ChevronRight, FileUp } from 'lucide-react';
+import { ArrowRight, ChevronRight, FileUp, Mic } from 'lucide-react';
 import { CourseCover } from './CourseCover';
 import { EmptyState } from './EmptyState';
 import { Note, Course, AcademicYear } from '../types';
 import { storage } from '../services/storage';
 import { ACCEPT, extractText } from '../services/fileText';
 import { storePackFigures } from '../services/figures';
-import { field, labelCls, primaryBtn, panel } from './ui';
+import { field, labelCls, primaryBtn, panel, quietBtn } from './ui';
 import { NoteReader } from './NoteReader';
+import { LectureRecorder } from './LectureRecorder';
 import type { TopicId } from '../data/visualTopics';
 import { mergePack, parseNotesPack } from '../services/notesPack';
 import { COURSE_AUDIENCE, canSee, getStudentId } from '../services/access';
@@ -55,6 +56,7 @@ export const DegreeMemoryView: React.FC<DegreeMemoryViewProps> = ({
   const [saved, setSaved] = useState(false);
   const [adding, setAdding] = useState(false);
   const [openCourse, setOpenCourse] = useState<string | null>(null);
+  const [lecture, setLecture] = useState(false);
 
   const [newTitle, setNewTitle] = useState('');
   const [newCourseId, setNewCourseId] = useState(courses[0]?.id || '');
@@ -81,12 +83,12 @@ export const DegreeMemoryView: React.FC<DegreeMemoryViewProps> = ({
 
   const courseOf = (id: string) => courses.find((c) => c.id === id);
 
-  const makeNote = (title: string, content: string, i = 0): Note => {
-    const course = courseOf(newCourseId);
+  const makeNote = (title: string, content: string, i = 0, cid = newCourseId): Note => {
+    const course = courseOf(cid);
     const now = new Date().toISOString();
     return {
       id: `note-${Date.now()}-${i}`,
-      courseId: newCourseId,
+      courseId: cid,
       year: course ? course.year : newYear,
       title: title.trim(),
       content: content.trim(),
@@ -220,6 +222,11 @@ export const DegreeMemoryView: React.FC<DegreeMemoryViewProps> = ({
           placeholder={papers ? 'Search past papers: 2023, ETL, OLAP…' : 'Search notes: ETL, circular flow, joins…'}
           className={`${field} flex-1`}
         />
+        {!papers && (
+          <button type="button" onClick={() => setLecture(true)} className={`${quietBtn} !px-3 sm:!px-5`} aria-label="Record a lecture">
+            <Mic aria-hidden className="h-4 w-4" /> <span className="hidden sm:inline">Record lecture</span>
+          </button>
+        )}
         {!papers && <button type="button" onClick={() => setAdding((v) => !v)} className={primaryBtn} aria-expanded={adding}>
           {adding ? 'Close' : 'Add notes'}
         </button>}
@@ -364,6 +371,23 @@ export const DegreeMemoryView: React.FC<DegreeMemoryViewProps> = ({
             />
           ))}
       </section>
+
+      {lecture && (
+        <LectureRecorder
+          courses={courses}
+          defaultCourseId={openCourse ?? newCourseId}
+          onClose={() => setLecture(false)}
+          onSave={(title, content, cid) => {
+            const n = { ...makeNote(title, content, 0, cid), tags: [...autoTags(`${title} ${content}`), 'lecture recording'] };
+            const updated = [n, ...notes];
+            setNotes(updated);
+            storage.saveNotes(updated);
+            setSaved(true);
+            setTimeout(() => setSaved(false), 2500);
+            return n.id;
+          }}
+        />
+      )}
 
       {detail && (
         <NoteReader

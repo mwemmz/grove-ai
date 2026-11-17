@@ -11,7 +11,8 @@ import { picturesFor } from '../data/pictureMatch';
 import type { TopicId } from '../data/visualTopics';
 
 const VisualCard = lazyWithReload(() => import('./VisualCard'));
-import { Disclosure, Toast, Inline, field, labelCls, primaryBtn, panel, chip } from './ui';
+import { Disclosure, Toast, Inline, field, labelCls, primaryBtn, panel, chip, Segmented } from './ui';
+import type { AnswerLength } from '../types';
 
 /** Shown in `viewId` when the student pressed "New question": an empty composer, history untouched. */
 export const NEW_VIEW = '__new__';
@@ -262,6 +263,16 @@ export const ChatTutorView: React.FC<ChatTutorViewProps> = ({
           <button type="submit" disabled={!input.trim() || isLoading} className={primaryBtn}>
             {isLoading ? 'Looking through the library…' : 'Ask Grove'}
           </button>
+          <Segmented<AnswerLength>
+            label="Answer length"
+            value={profile.answerLength}
+            options={[
+              { id: 'concise', label: 'Short' },
+              { id: 'balanced', label: 'Standard' },
+              { id: 'deep-dive', label: 'Exam-ready' },
+            ]}
+            onChange={(v) => setProfile((p) => ({ ...p, answerLength: v }))}
+          />
           {messages.length > 0 && !isLoading && (
             <button type="button" onClick={clearChat} className="min-h-10 px-1 text-sm text-muted hover:text-text">
               Clear

@@ -24,6 +24,7 @@ import { AuthTrail } from './AuthTrail';
 import { MeaningToggle } from './MeaningToggle';
 import { ShareToggle } from './ShareInsights';
 import { InstallApp } from './InstallApp';
+import { VoiceSettings } from './VoiceSettings';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -449,6 +450,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           <MeaningToggle />
           <ShareToggle />
           <InstallApp />
+          <VoiceSettings />
           <AccountPanel />
           <PacksAdmin />
           <AuthTrail />

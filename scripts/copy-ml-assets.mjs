@@ -72,7 +72,13 @@ try {
 
 // 2. The ONNX runtime's WebAssembly is bundled by Vite with the worker (see src/workers/embed.worker.ts).
 
-// 3. OCR
+// 3. The runtime used by transformers.js (lecture transcription and the natural read-aloud voice), served from /ml/tjs
+//    so it works offline once cached. Their models are downloaded by the browser from Hugging Face when first used.
+for (const f of ['ort-wasm-simd-threaded.jsep.wasm', 'ort-wasm-simd-threaded.jsep.mjs']) {
+  if (existsSync(nm(`@huggingface/transformers/dist/${f}`))) copy(nm(`@huggingface/transformers/dist/${f}`), out(`tjs/${f}`));
+}
+
+// 4. OCR
 copy(nm('tesseract.js/dist/worker.min.js'), out('ocr/worker.min.js'));
 for (const f of ['tesseract-core-lstm.wasm.js', 'tesseract-core-simd-lstm.wasm.js', 'tesseract-core-relaxedsimd-lstm.wasm.js', 'tesseract-core-lstm.wasm', 'tesseract-core-simd-lstm.wasm', 'tesseract-core-relaxedsimd-lstm.wasm']) {
   if (existsSync(nm(`tesseract.js-core/${f}`))) copy(nm(`tesseract.js-core/${f}`), out(`ocr/core/${f}`));

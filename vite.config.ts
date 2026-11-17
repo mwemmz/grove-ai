@@ -32,14 +32,15 @@ export default defineConfig({
       workbox: {
         // The app shell and every screen's code. The search model (~45 MB) and its runtime are cached when first used instead.
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
-        globIgnores: ['ml/**', 'visuals/**', '**/pdf.worker*', '**/ort-*'],
+        globIgnores: ['ml/**', 'visuals/**', '**/pdf.worker*', '**/ort-*', '**/asr.worker*', '**/tts.worker*'],
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
         navigateFallback: '/index.html',
         navigateFallbackDenylist: [/^\/api\//],
         cleanupOutdatedCaches: true,
         runtimeCaching: [
           {
-            urlPattern: ({ url, sameOrigin }) => sameOrigin && (url.pathname.startsWith('/ml/') || /\/assets\/(ort-|pdf\.worker)/.test(url.pathname)),
+            // Speech models' runtime and workers: large, and only needed by students who use those features.
+            urlPattern: ({ url, sameOrigin }) => sameOrigin && (url.pathname.startsWith('/ml/') || /\/assets\/(ort-|pdf\.worker|asr\.worker|tts\.worker)/.test(url.pathname)),
             handler: 'CacheFirst',
             options: { cacheName: 'grove-ml', expiration: { maxEntries: 40 } },
           },

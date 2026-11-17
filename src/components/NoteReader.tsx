@@ -2,7 +2,9 @@
    animated pictures beside the matching idea, and recall prompts. */
 import { createPortal } from 'react-dom';
 import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Headphones } from 'lucide-react';
+import { ListenBar } from './ListenBar';
+import { startListening, stop as stopListening, useListen } from '../services/readAloud';
 import { lazyWithReload } from '../lib/lazyReload';
 import type { Note } from '../types';
 import { placePictures } from '../data/pictureMatch';
@@ -142,6 +144,19 @@ export function NoteReader({
   const [active, setActive] = useState(sections[0]?.id ?? '');
   const [progress, setProgress] = useState(0);
   const askPill = useAskOnSelect(scroller);
+  const listen = useListen();
+  // Leaving the note stops the reading.
+  useEffect(() => () => stopListening(), []);
+  useEffect(() => {
+    stopListening();
+  }, [note.id]);
+  // Follow the reading: keep the section being read in view.
+  useEffect(() => {
+    if (!listen.active) return;
+    const s = sections[listen.section];
+    if (s) document.getElementById(`sec-${s.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [listen.active, listen.section]);
   useEffect(() => {
     scroller.current?.scrollTo({ top: 0 });
     setActive(sections[0]?.id ?? '');
@@ -206,6 +221,16 @@ export function NoteReader({
             Year {note.year} · {courseName || 'Course'} · {sections.length} sections
           </p>
         </div>
+        <button
+          onClick={() => {
+            const at = Math.max(0, sections.findIndex((s) => `sec-${s.id}` === active));
+            startListening(note.title, sections, at);
+          }}
+          aria-label="Listen to this note"
+          className="flex h-10 items-center gap-2 rounded-full bg-surface/60 px-3 text-sm text-muted ring-1 ring-line hover:text-text sm:px-4"
+        >
+          <Headphones aria-hidden className="h-4 w-4" /> <span className="hidden sm:inline">Listen</span>
+        </button>
         <CopilotButton />
         <div aria-hidden className="absolute inset-x-0 bottom-0 h-0.5 bg-line">
           <div className="h-full bg-accent transition-[width] duration-150" style={{ width: `${Math.round(progress * 100)}%` }} />
@@ -225,7 +250,8 @@ export function NoteReader({
         ))}
       </nav>
 
-      <div className="flex min-h-0 flex-1">
+      <div className="relative flex min-h-0 flex-1">
+        <ListenBar />
         <nav aria-label="Outline" className="hidden w-64 shrink-0 overflow-y-auto border-r border-line px-3 py-5 lg:block">
           <p className="mb-2 px-2 font-mono text-[11px] uppercase tracking-[0.08em] text-muted">In this note</p>
           <ol className="space-y-0.5">
@@ -243,7 +269,7 @@ export function NoteReader({
           </ol>
         </nav>
 
-        <div ref={scroller} className="min-w-0 flex-1 overflow-y-auto overscroll-contain scroll-smooth px-4 pb-[max(3rem,env(safe-area-inset-bottom))] pt-6 sm:px-8">
+        <div ref={scroller} className={`min-w-0 flex-1 overflow-y-auto overscroll-contain scroll-smooth px-4 pt-6 sm:px-8 ${listen.active ? 'pb-32' : 'pb-[max(3rem,env(safe-area-inset-bottom))]'}`}>
           <article className="mx-auto max-w-3xl space-y-10 text-[15px] leading-7 text-text">
             {(map.items.length >= 3 || terms.length >= 3) && (
               <section className="space-y-4">

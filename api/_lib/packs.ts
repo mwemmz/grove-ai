@@ -5,6 +5,7 @@ import { createClerkClient } from '@clerk/backend';
 import { sql } from 'drizzle-orm';
 import { db, DbUser } from './db.js';
 import { ApiError, HandlerReq, HandlerRes, json, requireObjectBody } from './http.js';
+import { groveAiConfigured } from './answer.js';
 
 /* ---------- table, created on first use so no manual migration is needed ---------- */
 
@@ -125,7 +126,7 @@ export async function handlePacks(req: HandlerReq, res: HandlerRes, user: DbUser
   if (segments[1] === 'me') {
     const staffList = (process.env.GROVE_STAFF ?? '').split(',').map((x) => x.trim().toLowerCase()).filter(Boolean);
     const staff = admin || staffList.includes(id.studentId.toLowerCase()) || id.emails.some((e) => staffList.includes(e));
-    json(res, { studentId: id.studentId || null, admin, staff });
+    json(res, { studentId: id.studentId || null, admin, staff, ai: groveAiConfigured() });
     return;
   }
 

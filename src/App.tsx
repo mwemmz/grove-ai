@@ -47,6 +47,7 @@ import { Copilot } from './components/Copilot';
 import { copilot } from './services/copilot';
 import { indexNotes, warmUp } from './services/semantic';
 import { prefetchFigures } from './services/figures';
+import { setGroveAi } from './services/llmService';
 
 function LoadingScreen({ label }: { label: string }) {
   return (
@@ -117,6 +118,7 @@ function GroveApp({ offlineUser }: { offlineUser?: { id: string; username: strin
       .then((me) => {
         setIsAdmin(!!me.admin);
         setIsStaff(!!me.staff);
+        setGroveAi(!!me.ai);
         try { localStorage.setItem('grove_me', JSON.stringify({ admin: !!me.admin, staff: !!me.staff })); } catch { /* private mode */ }
       })
       .catch(() => { /* offline: treated as a student */ })

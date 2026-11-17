@@ -15,6 +15,9 @@ type VercelRes = {
   end(chunk?: string): void;
 };
 
+// Answers from Grove's own AI can take a while on long, detailed answers.
+export const config = { maxDuration: 60 };
+
 export default async function handler(req: VercelReq, res: VercelRes) {
   const headers: Record<string, string | string[] | undefined> = {};
   for (const [k, v] of Object.entries(req.headers ?? {})) {

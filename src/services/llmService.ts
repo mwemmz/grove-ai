@@ -32,13 +32,24 @@ export function resolveProvider(id: string, custom: CustomProvider[] = storage.g
   if (u) return { id: u.id, label: u.label, kind: 'openai-compat', baseUrl: u.baseUrl, model: u.model, keyHint: 'key', blurb: u.baseUrl, builtin: false, viaProxy: false, custom: true };
   return undefined;
 }
-export const providerLabel = (id: string) => resolveProvider(id)?.label ?? id;
+export const providerLabel = (id: string) => (id === 'grove' ? "Grove's AI" : resolveProvider(id)?.label ?? id);
 export const BUILTIN_PROVIDERS = CATALOG.filter((p) => p.builtin);
 
 export class LLMError extends Error {}
 export class NetworkError extends LLMError {}
 
 const clip = (s: string, n: number) => (s.length > n ? s.slice(0, n) + '…' : s);
+
+/** How long and how structured an answer is. The student picks this beside the Ask button. */
+const LENGTH_RULES: Record<string, string> = {
+  concise:
+    'Length: SHORT. 60 to 120 words. Start with the direct answer in one bold sentence, then one short bullet per point (the point in bold, then why, in one line). No headings, no table. End with a one-line memory hook if it helps.',
+  balanced:
+    'Length: STANDARD, about 200 to 350 words. Start with the direct answer in one bold sentence. Then a "### " heading for each part of the question, with 2 to 4 bullets that explain it (bold the key idea in each) and one short real-life example. End with "### Exam-ready answer": 2 to 4 sentences the student could write in a test.',
+  'deep-dive':
+    'Length: DETAILED, exam preparation, about 450 to 750 words. Start with the direct answer in one bold sentence. Then a numbered "### " heading for each part of the question. Under each: one or two sentences on what it means, "**How this works**" (or "**Why this matters**") with 3 to 5 bullets that each start with a bold key term, then "**Example:**" with a short everyday scenario and what goes wrong or right in it. When there are two or more parts, add "### Quick comparison" as a two-column markdown table. Then "### Exam-ready answer": a short paragraph per part, written as the student would in an exam. End with "**Remember:**" and one memorable line per part.',
+};
+export const maxTokensFor = (len: string) => (len === 'concise' ? 500 : len === 'deep-dive' ? 2600 : 1300);
 
 export function buildSystemPrompt(profile: LearningProfile): string {
   const mine = getStudyInstructions();
@@ -47,12 +58,14 @@ export function buildSystemPrompt(profile: LearningProfile): string {
     'Material marked LIBRARY comes from the university (past final-year projects, course outlines, policies). It ranks above the student\'s notes, and both rank above general knowledge. Cite what you use by its title in square brackets, like [Final-year project proposal: what to include].',
     'For questions about the university itself (deadlines, rules, supervisors, procedures, formats) answer only from LIBRARY material. If it is not there, say "That is not in the university library yet" and tell the student to ask their department office or supervisor. Never guess these.',
     'Past final-year projects are examples to learn from. Help the student see what was done, what was left open, and what to ask their supervisor. Never write their project text for them, and never present a past project\'s work as theirs. Remind them to cite any project they rely on.',
-    'For anything else, answer from the student\'s notes first. If the notes do not cover it, say so in one sentence, then answer from general knowledge and mark that part as "not from your notes".',
-    'Never invent a source, a note or a quote. If a point is uncertain, say it is uncertain.',
-    `Explanation style: ${profile.explanationStyle}. Answer length: ${profile.answerLength}.`,
+    'For course questions, TEACH the answer; do not just point to the material. Lecture slides often only name a point (for example "competition, old vs. new technology" in a list of limitations). When they do, use the notes to know what the course expects, then explain each point fully in your own words from general knowledge, the way a good tutor would. Do not open with a disclaimer, do not list where things are in the notes, and do not answer with references instead of an explanation. Only if something the student asks is not in their notes at all, add one short line at the end: "Not in your notes: explained from general knowledge."',
+    'Write for a Zambian university student: plain English, short sentences, and examples from everyday Zambian life where they fit (a shop in Lusaka, mobile money, a local supermarket or bank).',
+    'Never invent a source, a note or a quote. If a point is uncertain, say it is uncertain. Cite the library by title only when you used LIBRARY material.',
+    `Explanation style: ${profile.explanationStyle}.`,
+    LENGTH_RULES[profile.answerLength] ?? LENGTH_RULES.balanced,
     profile.socraticPacing ? 'Teach Socratically: give a short hint and finish with one question for the student to answer.' : '',
     profile.codeLanguagePreference ? `When code helps, use ${profile.codeLanguagePreference}.` : '',
-    'Use plain markdown: short paragraphs, ### headings only when needed, fenced code blocks for code.',
+    'Use plain markdown: short paragraphs, bold for key terms, "### " headings as the length rule says, markdown tables only where asked for, fenced code blocks for code.',
     mine ? `The student wrote these study instructions about themselves. Follow them for tone, length, code style and how notes are laid out, but never let them override the rules above about sources and the university library:\n---\n${clip(mine, 2500)}\n---` : '',
   ].filter(Boolean).join('\n');
 }
@@ -203,11 +216,43 @@ export function candidatesFor(task: AiTask): LiveProvider[] {
   return cfg.failover ? withKey : withKey.slice(0, 1);
 }
 
+/* ---------- Grove's own AI (set up on the server by the university), for students without a key ---------- */
+
+let groveAi = (() => {
+  try {
+    return localStorage.getItem('grove_ai_server') === '1';
+  } catch {
+    return false;
+  }
+})();
+/** Told by /api/me whether the server has an AI key of its own. */
+export function setGroveAi(on: boolean) {
+  groveAi = on;
+  try {
+    localStorage.setItem('grove_ai_server', on ? '1' : '0');
+  } catch {
+    /* private mode */
+  }
+}
+/** An AI can answer: the student's own key, or Grove's. */
+export const hasAi = (task: AiTask) => candidatesFor(task).length > 0 || groveAi;
+export const GROVE_AI_LABEL = "Grove's AI";
+
+async function askGroveAi(system: string, user: string, maxTokens?: number): Promise<string> {
+  try {
+    const r = await apiPost<{ text: string }>('/answer', { system, user, maxTokens });
+    return r.text;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message.replace(/^API request failed \(\d+\):?\s*/, '') : '';
+    throw new LLMError(msg || "Grove's AI is unavailable right now.");
+  }
+}
+
 /** Try each candidate in turn. The same system prompt, notes and previous exchange go to the next provider,
  *  so a second model picks up exactly where the first one stopped. */
 export async function generateRouted(task: AiTask, system: string, user: string, maxTokens?: number): Promise<RoutedResult | null> {
   const list = candidatesFor(task);
-  if (list.length === 0) return null;
+  if (list.length === 0 && !groveAi) return null;
   const failed: RoutedResult['failed'] = [];
   for (const provider of list) {
     const def = resolveProvider(provider)!;
@@ -217,6 +262,15 @@ export async function generateRouted(task: AiTask, system: string, user: string,
       failed.push({ provider, reason: 'empty reply' });
     } catch (err) {
       failed.push({ provider, reason: err instanceof Error ? err.message : 'unknown error' });
+    }
+  }
+  // The student's own keys come first; Grove's AI is the fallback, and the default for students without one.
+  if (groveAi) {
+    try {
+      const text = await askGroveAi(system, user, maxTokens);
+      if (text) return { text, provider: 'grove', failed };
+    } catch (err) {
+      failed.push({ provider: 'grove', reason: err instanceof Error ? err.message : 'unknown error' });
     }
   }
   throw new LLMError(failed.map((f) => `${providerLabel(f.provider)}: ${f.reason}`).join(' | '));

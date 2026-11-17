@@ -4,7 +4,7 @@ import { searchSources, toRef, INSTITUTIONAL_RE, type Hit } from './knowledge';
 import { searchNotes, searchSections, answerFromNotes, groundingFor } from './noteSearch';
 import { recallFor } from '../lib/noteStructure';
 import { hybridSections } from './semantic';
-import { providerLabel, buildSystemPrompt, buildUserPrompt, generateRouted, candidatesFor } from './llmService';
+import { providerLabel, buildSystemPrompt, buildUserPrompt, generateRouted, hasAi, maxTokensFor } from './llmService';
 
 export interface AIResponsePayload {
   text: string;
@@ -179,13 +179,13 @@ export const aiService = {
     // A real model answers when the student has connected a key; the local answer is the safety net.
     const task = opts.task ?? 'ask';
     // Never spend the student's key guessing at a rule the library doesn't contain.
-    const ready = live && candidatesFor(task).length > 0 && !notInLibrary;
+    const ready = live && hasAi(task) && !notInLibrary;
     if (!ready) {
-      resp.appliedProfileAttributes = ['Answered from your notes, no AI engine used. Add an AI key in Settings for a fuller written answer.', ...resp.appliedProfileAttributes];
+      resp.appliedProfileAttributes = ['Answered from your notes only (no AI). Add an AI key in Settings for a full written explanation.', ...resp.appliedProfileAttributes];
     } else {
       try {
         const grounding = noteHits.length ? groundingFor(noteHits) : relevant.slice(0, 5).map((r) => r.note);
-        const out = await generateRouted(task, buildSystemPrompt(profile), buildUserPrompt(question, grounding, opts.previous, libHits.map((h) => ({ title: h.source.title, meta: h.source.meta, text: h.source.text }))));
+        const out = await generateRouted(task, buildSystemPrompt(profile), buildUserPrompt(question, grounding, opts.previous, libHits.map((h) => ({ title: h.source.title, meta: h.source.meta, text: h.source.text }))), maxTokensFor(profile.answerLength));
         if (out) {
           const label = providerLabel(out.provider);
           const first = out.failed[0];
@@ -292,8 +292,10 @@ export const aiService = {
       };
     }
     const used = new Set(local.used.map((u) => u.note.id));
+    // Slides often only name a point in a list. Say so plainly rather than passing the list off as an explanation.
+    const thin = local.text.replace(/^###.*$|^From \*\*.*$/gm, '').trim().length < 260;
     return {
-      text: local.text,
+      text: thin ? `${local.text}\n\nYour notes only name this; they don't explain it. Turn on an AI answer (Settings → AI engines) for a full explanation with examples.` : local.text,
       citedNotes: citedNotes.filter((c) => used.has(c.noteId)).concat(citedNotes.filter((c) => !used.has(c.noteId))).slice(0, 3),
       yearConnections: [],
       appliedProfileAttributes: appliedAttributes,

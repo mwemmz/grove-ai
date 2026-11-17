@@ -169,9 +169,8 @@ button:disabled, [role="button"]:disabled {
 
 /* ---------- Material: frosted panels over the ambient light ---------- */
 .glass {
-  background: color-mix(in srgb, var(--color-surface) 88%, transparent);
-  -webkit-backdrop-filter: blur(20px) saturate(150%);
-  backdrop-filter: blur(20px) saturate(150%);
+  background: color-mix(in srgb, var(--color-surface) 96%, var(--color-bg));
+  /* No blur here: cards sit in scrolling content, and a live blur behind every card is what makes scrolling stutter. */
   box-shadow:
     inset 0 1px 0 color-mix(in srgb, #ffffff 14%, transparent),
     0 0 0 1px color-mix(in srgb, var(--color-line) 70%, transparent),
@@ -180,8 +179,8 @@ button:disabled, [role="button"]:disabled {
 }
 .glass-strong {
   background: color-mix(in srgb, var(--color-side) 82%, transparent);
-  -webkit-backdrop-filter: blur(24px) saturate(160%);
-  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
 }
 @media (prefers-reduced-transparency: reduce) {
   .glass, .glass-strong { background: var(--color-surface); backdrop-filter: none; -webkit-backdrop-filter: none; }
@@ -197,7 +196,7 @@ button:disabled, [role="button"]:disabled {
     radial-gradient(40% 35% at 18% 12%, color-mix(in srgb, var(--color-glow) 30%, transparent), transparent 70%),
     radial-gradient(38% 40% at 88% 78%, color-mix(in srgb, var(--color-glow) 20%, transparent), transparent 70%),
     radial-gradient(30% 30% at 70% 8%, color-mix(in srgb, var(--color-glow) 16%, transparent), transparent 70%);
-  animation: drift 38s var(--ease-in-out) infinite alternate;
+  transform: translateZ(0);
 }
 /* Studio lighting on top of the ambient pools: a key light from above, a floor that catches it, and darker corners.
    Stays still (only the colour pools drift) and never takes clicks. */
@@ -347,3 +346,6 @@ button:disabled, [role="button"]:disabled {
     overflow: visible !important;
   }
 }
+
+/* Long notes: sections far off screen are not laid out or painted until they come near. */
+.note-sec { content-visibility: auto; contain-intrinsic-size: auto 480px; }

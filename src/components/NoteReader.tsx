@@ -158,7 +158,11 @@ export function NoteReader({
   const nav = useMemo(() => [...sections.map((s) => ({ id: s.id, title: s.title })), { id: 'aids', title: 'Study aids' }], [sections]);
   const scroller = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(sections[0]?.id ?? '');
-  const [progress, setProgress] = useState(0);
+  const bar = useRef<HTMLDivElement>(null);
+  // The progress bar is moved directly: re-rendering the whole note on every scroll event is what made scrolling stutter.
+  const setProgress = (p: number) => {
+    if (bar.current) bar.current.style.transform = `scaleX(${p})`;
+  };
   const askPill = useAskOnSelect(scroller);
   const listen = useListen();
   // Leaving the note stops the reading.
@@ -199,7 +203,7 @@ export function NoteReader({
   useEffect(() => {
     const root = scroller.current;
     if (!root) return;
-    const onScroll = () => setProgress(root.scrollHeight - root.clientHeight > 0 ? root.scrollTop / (root.scrollHeight - root.clientHeight) : 0);
+    const onScroll = () => requestAnimationFrame(() => setProgress(root.scrollHeight - root.clientHeight > 0 ? root.scrollTop / (root.scrollHeight - root.clientHeight) : 0));
     root.addEventListener('scroll', onScroll, { passive: true });
     const io = new IntersectionObserver(
       (entries) => {
@@ -278,7 +282,7 @@ export function NoteReader({
         </div>
         <CopilotButton />
         <div aria-hidden className="absolute inset-x-0 bottom-0 h-0.5 bg-line">
-          <div className="h-full bg-accent transition-[width] duration-150" style={{ width: `${Math.round(progress * 100)}%` }} />
+          <div ref={bar} className="h-full origin-left bg-accent will-change-transform" style={{ transform: 'scaleX(0)' }} />
         </div>
       </header>
 
@@ -338,7 +342,7 @@ export function NoteReader({
             )}
 
             {sections.map((s, idx) => (
-              <section key={s.id} id={`sec-${s.id}`} className="scroll-mt-4 space-y-4">
+              <section key={s.id} id={`sec-${s.id}`} className="note-sec scroll-mt-4 space-y-4">
                 <h3 className="flex items-baseline gap-3 border-b border-line pb-2 font-display text-xl text-text sm:text-2xl">
                   <span className="font-mono text-sm text-accent">{String(idx + 1).padStart(2, '0')}</span>
                   {s.title}

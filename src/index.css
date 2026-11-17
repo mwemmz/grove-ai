@@ -194,8 +194,8 @@ button:disabled, [role="button"]:disabled {
   pointer-events: none;
   z-index: 0;
   background:
-    radial-gradient(40% 35% at 18% 12%, color-mix(in srgb, var(--color-glow) 42%, transparent), transparent 70%),
-    radial-gradient(38% 40% at 88% 78%, color-mix(in srgb, var(--color-glow) 30%, transparent), transparent 70%),
+    radial-gradient(40% 35% at 18% 12%, color-mix(in srgb, var(--color-glow) 30%, transparent), transparent 70%),
+    radial-gradient(38% 40% at 88% 78%, color-mix(in srgb, var(--color-glow) 20%, transparent), transparent 70%),
     radial-gradient(30% 30% at 70% 8%, color-mix(in srgb, var(--color-glow) 16%, transparent), transparent 70%);
   animation: drift 38s var(--ease-in-out) infinite alternate;
 }

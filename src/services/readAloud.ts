@@ -3,6 +3,7 @@
    runs on the device). The student picks in Settings; the phone's voice is the default to save data. */
 import { useSyncExternalStore } from 'react';
 import type { Section } from '../lib/noteStructure';
+import { explainSection, tutorAvailable, tutorReply, type Turn, type TutorKind } from './tutor';
 
 export type VoiceMode = 'device' | 'natural';
 export const NATURAL_VOICES = [
@@ -96,8 +97,18 @@ export interface ListenState {
   /** Shown while the natural voice downloads or prepares. */
   status: string | null;
   usingFallback: boolean;
+  /** Tutor mode: Grove explains each section like a person, then checks in. */
+  tutor: boolean;
+  /** The tutor has finished talking and is waiting for the student. */
+  waiting: boolean;
+  /** The check question the tutor asked, if any. */
+  question: string | null;
+  /** Waiting for the tutor's AI reply. */
+  busy: boolean;
+  /** The line being spoken, shown as a caption. */
+  caption: string;
 }
-let state: ListenState = { active: false, playing: false, noteTitle: '', section: 0, total: 0, sectionTitle: '', status: null, usingFallback: false };
+let state: ListenState = { active: false, playing: false, noteTitle: '', section: 0, total: 0, sectionTitle: '', status: null, usingFallback: false, tutor: false, waiting: false, question: null, busy: false, caption: '' };
 const subs = new Set<() => void>();
 function emit(p: Partial<ListenState> = {}) {
   state = { ...state, ...p };
@@ -112,7 +123,11 @@ export const useListen = () =>
     () => state,
   );
 
-let items: { title: string; parts: string[] }[] = [];
+type Item = { title: string; parts: string[]; text: string; ready: boolean; question?: string; wait?: boolean };
+let items: Item[] = [];
+let history: Turn[] = [];
+let lastNote: { title: string; sections: Section[] } | null = null;
+const prepMap = new Map<number, Promise<void>>();
 let part = 0;
 let gen = 0;
 
@@ -216,13 +231,51 @@ const nextText = (sec: number, p: number): string | null => {
   return items[sec + 1]?.parts[0] ?? null;
 };
 
+/** Asks the AI to teach one section. If it can't, the section is simply read. */
+function prepTutor(sec: number): Promise<void> {
+  const it = items[sec];
+  if (!it) return Promise.resolve();
+  let p = prepMap.get(sec);
+  if (!p) {
+    p = (async () => {
+      try {
+        const r = await explainSection({ noteTitle: state.noteTitle, title: it.title, text: it.text, first: sec === 0, prevTitle: items[sec - 1]?.title });
+        if (r.say.length > 40) {
+          it.parts = sentences(r.say + (r.question ? ' ' + r.question : ''));
+          it.question = r.question || undefined;
+          it.ready = true;
+          return;
+        }
+      } catch {
+        /* fall through to plain reading */
+      }
+      it.parts = sentences(it.text);
+      it.ready = true;
+    })();
+    prepMap.set(sec, p);
+  }
+  return p;
+}
+
 async function loop(my: number) {
   const st = voiceSettings();
   let natural = st.mode === 'natural' && !state.usingFallback;
   while (my === gen && state.playing) {
     const sec = state.section;
+    if (state.tutor && items[sec] && !items[sec].ready) {
+      emit({ status: 'Your tutor is getting ready…' });
+      await prepTutor(sec);
+      if (my !== gen) return;
+      emit({ status: null });
+    }
+    if (state.tutor) void prepTutor(sec + 1);
     const parts = items[sec]?.parts ?? [];
     if (part >= parts.length) {
+      if (state.tutor && (items[sec].question || items[sec].wait)) {
+        // The tutor has said its piece: now it is the student's turn.
+        emit({ waiting: true, playing: false, question: items[sec].question ?? null });
+        return;
+      }
       if (sec + 1 >= items.length) {
         stop();
         return;
@@ -233,6 +286,7 @@ async function loop(my: number) {
       continue;
     }
     const text = parts[part];
+    emit({ caption: text });
     if (natural) {
       try {
         if (!st.naturalReady && !voiceSettings().naturalReady) {
@@ -289,18 +343,27 @@ function halt() {
   }
 }
 
-export function startListening(noteTitle: string, sections: Section[], from = 0) {
+export function startListening(noteTitle: string, sections: Section[], from = 0, tutor = false) {
   halt();
-  items = sections.map((s) => ({ title: s.title, parts: sentences(sectionSpeech(s)) })).filter((x) => x.parts.length);
+  const teach = tutor && tutorAvailable();
+  lastNote = { title: noteTitle, sections };
+  history = [];
+  prepMap.clear();
+  items = sections
+    .map((s) => {
+      const text = sectionSpeech(s);
+      return { title: s.title, text, parts: teach ? [] : sentences(text), ready: !teach };
+    })
+    .filter((x) => x.text.length > 0);
   if (!items.length) return;
   const sec = Math.max(0, Math.min(from, items.length - 1));
   part = 0;
-  emit({ active: true, playing: true, noteTitle, section: sec, total: items.length, sectionTitle: items[sec].title, status: null, usingFallback: false });
+  emit({ active: true, playing: true, noteTitle, section: sec, total: items.length, sectionTitle: items[sec].title, status: null, usingFallback: false, tutor: teach, waiting: false, question: null, busy: false, caption: '' });
   setMedia();
   void loop(gen);
 }
 export function toggle() {
-  if (!state.active) return;
+  if (!state.active || state.waiting || state.busy) return;
   if (state.playing) {
     halt();
     emit({ playing: false, status: null });
@@ -314,13 +377,14 @@ export function skip(d: 1 | -1) {
   const sec = Math.max(0, Math.min(items.length - 1, state.section + d));
   halt();
   part = 0;
-  emit({ section: sec, sectionTitle: items[sec].title, playing: true });
+  if (items[state.section]) items[state.section].wait = false;
+  emit({ section: sec, sectionTitle: items[sec].title, playing: true, waiting: false, busy: false, status: null });
   setMedia();
   void loop(gen);
 }
 export function stop() {
   halt();
-  emit({ active: false, playing: false, status: null });
+  emit({ active: false, playing: false, status: null, waiting: false, busy: false, tutor: false, question: null });
 }
 export function setRate(rate: number) {
   setVoiceSettings({ rate });
@@ -331,3 +395,55 @@ export function setRate(rate: number) {
   }
 }
 export const canSpeak = () => typeof window !== 'undefined' && ('speechSynthesis' in window || voiceSettings().mode === 'natural');
+
+/* ---------- tutor mode: the student's turn ---------- */
+
+/** The student answered, asked, or wants it explained again, simpler, or with an example. */
+export async function tutorSay(kind: TutorKind, student?: string) {
+  if (!state.tutor) return;
+  halt();
+  const my = gen;
+  const sec = state.section;
+  const it = items[sec];
+  emit({ waiting: false, busy: true, playing: false, status: 'Thinking…', caption: '' });
+  let reply = '';
+  try {
+    reply = await tutorReply({ kind, title: it.title, text: it.text, question: it.question ?? '', student, history });
+  } catch {
+    reply = '';
+  }
+  if (my !== gen) return;
+  if (!reply) {
+    emit({ busy: false, waiting: true, status: "Couldn't reach the tutor just now. Try again, or tap Next." });
+    return;
+  }
+  history.push({ tutor: reply, student });
+  it.parts = sentences(reply);
+  it.question = undefined;
+  it.wait = true;
+  part = 0;
+  emit({ busy: false, playing: true, waiting: false, question: null, status: null });
+  void loop(gen);
+}
+
+/** Move on to the next section. */
+export function tutorNext() {
+  if (!state.active) return;
+  const sec = state.section;
+  if (items[sec]) {
+    items[sec].wait = false;
+    items[sec].question = undefined;
+  }
+  if (sec + 1 >= items.length) return stop();
+  halt();
+  part = 0;
+  emit({ section: sec + 1, sectionTitle: items[sec + 1].title, playing: true, waiting: false, question: null, status: null });
+  setMedia();
+  void loop(gen);
+}
+
+/** Flip between the tutor and plain reading, staying on the same section. */
+export function switchMode() {
+  if (!lastNote) return;
+  startListening(lastNote.title, lastNote.sections, state.section, !state.tutor);
+}

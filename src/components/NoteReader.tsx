@@ -5,6 +5,7 @@ import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, Headphones, PanelLeftClose, PanelLeftOpen, Minus, Plus, Maximize2 } from 'lucide-react';
 import { ListenBar } from './ListenBar';
 import { startListening, stop as stopListening, useListen } from '../services/readAloud';
+import { tutorAvailable } from '../services/tutor';
 import { lazyWithReload } from '../lib/lazyReload';
 import type { Note } from '../types';
 import { placePictures } from '../data/pictureMatch';
@@ -261,7 +262,7 @@ export function NoteReader({
         <button
           onClick={() => {
             const at = Math.max(0, sections.findIndex((s) => `sec-${s.id}` === active));
-            startListening(note.title, sections, at);
+            startListening(note.title, sections, at, tutorAvailable());
           }}
           aria-label="Listen to this note"
           className="flex h-10 items-center gap-2 rounded-full bg-surface/60 px-3 text-sm text-muted ring-1 ring-line hover:text-text sm:px-4"
@@ -312,7 +313,7 @@ export function NoteReader({
           </ol>
         </nav>
 
-        <div ref={scroller} className={`min-w-0 flex-1 overflow-y-auto overscroll-contain scroll-smooth px-4 pt-6 sm:px-8 ${listen.active ? 'pb-32' : 'pb-[max(3rem,env(safe-area-inset-bottom))]'}`}>
+        <div ref={scroller} className={`min-w-0 flex-1 overflow-y-auto overscroll-contain scroll-smooth px-4 pt-6 sm:px-8 ${listen.active ? (listen.tutor ? 'pb-72' : 'pb-32') : 'pb-[max(3rem,env(safe-area-inset-bottom))]'}`}>
           <article style={{ zoom }} className="mx-auto max-w-3xl space-y-10 text-[15px] leading-7 text-text">
             {(map.items.length >= 3 || terms.length >= 3) && (
               <section className="space-y-4">

@@ -232,10 +232,10 @@ export function NoteReader({
       return !v;
     });
   };
-  // "Fit" widens the page to the screen and enlarges the reading text to match. Diagrams keep their natural size.
+  // "Fit" enlarges the page to the width of the screen. Zoomed past the screen, the page scrolls sideways instead of shifting.
   const fit = () => {
     const w = scroller.current?.clientWidth ?? 0;
-    if (w) setZ(Math.min(1.6, Math.max(1, (w - 64) / 820)));
+    if (w) setZ(Math.min(2, Math.max(1, (w - 64) / 768)));
   };
 
   const jump = (id: string) => {
@@ -314,8 +314,8 @@ export function NoteReader({
           </ol>
         </nav>
 
-        <div ref={scroller} className={`min-w-0 flex-1 overflow-y-auto overscroll-contain scroll-smooth px-4 pt-6 sm:px-8 ${listen.active ? (listen.tutor ? 'pb-72' : 'pb-32') : 'pb-[max(3rem,env(safe-area-inset-bottom))]'}`}>
-          <article style={{ zoom, maxWidth: zoom > 1.05 ? 'none' : undefined }} className="mx-auto max-w-3xl space-y-10 text-[15px] leading-7 text-text">
+        <div ref={scroller} className={`min-w-0 flex-1 overflow-auto overscroll-contain scroll-smooth px-4 pt-6 sm:px-8 ${listen.active ? (listen.tutor ? 'pb-72' : 'pb-32') : 'pb-[max(3rem,env(safe-area-inset-bottom))]'}`}>
+          <article style={{ zoom, width: zoom > 1.01 ? '48rem' : undefined }} className="mx-auto max-w-3xl space-y-10 text-[15px] leading-7 text-text">
             {(map.items.length >= 3 || terms.length >= 3) && (
               <section className="mx-auto grid justify-items-center gap-4" style={{ zoom: 1 / zoom, maxWidth: 1100 }}>
                 <NoteMap root={map.root} items={map.items} />

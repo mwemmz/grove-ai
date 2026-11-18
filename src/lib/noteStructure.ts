@@ -370,7 +370,13 @@ export function glossary(sections: Section[], max = 16): { term: string; def: st
 export function recallFor(section: Section): Recall | null {
   if (/^school of|examination|instructions|^question\b|^section [a-z]\b|marking|^thank/i.test(section.title)) return null;
   const g = section.groups.find((x) => x.kind === 'list' || x.kind === 'defs' || x.kind === 'steps');
-  if (!g || g.items.length < 2) return null;
+  if (!g || g.items.length < 2) {
+    // Sections written as sentences rather than bullets still get a question, answered from their own key sentences.
+    const prose = section.groups.filter((x) => x.kind === 'para' || x.kind === 'example').map((x) => x.text ?? '').join(' ').replace(/\s+/g, ' ').trim();
+    const sentences = (prose.match(/[^.!?]+[.!?]+/g) ?? []).map((t) => t.trim()).filter((t) => t.length >= 25);
+    if (sentences.length < 2 || /^(introduction|overview|summary|conclusion|agenda|outline|contents)$/i.test(section.title.trim())) return null;
+    return { q: `Cover this up. In your own words, what is "${clip(section.title, 50)}" about, and why does it matter?`, a: sentences.slice(0, 3).map((t) => clip(t, 160)) };
+  }
   const subject = g.label && g.label.length <= 40 ? g.label : section.title;
   const answers = g.items.slice(0, 8).map((i) => (i.term ? `${i.term}: ${clip(i.def ?? '', 100)}` : clip(i.text, 110)));
   const q =

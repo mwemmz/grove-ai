@@ -13,6 +13,9 @@ import type { TopicId } from '../data/visualTopics';
 import { diagramsFor, glossary, noteMap, parseSections, recallFor, type Group, type Section } from '../lib/noteStructure';
 import { NoteDiagram, NoteMap } from './NoteDiagrams';
 import { Inline } from './ui';
+import { MessageBody } from './ChatTutorView';
+import { cachedCard, cardsAvailable, makeCard } from '../services/answerCard';
+import { Sparkles } from 'lucide-react';
 import { Figure } from './Figure';
 import { CopilotButton, useAskOnSelect } from './Copilot';
 import { copilot } from '../services/copilot';
@@ -110,6 +113,48 @@ function Recall({ section }: { section: Section }) {
         {r.a.map((t, i) => <li key={i}>{t}</li>)}
       </ul>
     </details>
+  );
+}
+
+/** The section as an exam-style answer, made on demand and kept on the device. */
+function AnswerCard({ noteId, noteTitle, s }: { noteId: string; noteTitle: string; s: Section }) {
+  const [text, setText] = useState<string | null>(null);
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  useEffect(() => {
+    let live = true;
+    void cachedCard(noteId, s).then((c) => live && c && setText(c));
+    return () => {
+      live = false;
+    };
+  }, [noteId, s]);
+  if (!text && !cardsAvailable()) return null;
+  const go = async () => {
+    if (text) return setOpen((o) => !o);
+    setBusy(true);
+    setErr('');
+    try {
+      setText(await makeCard(noteId, noteTitle, s));
+      setOpen(true);
+    } catch {
+      setErr("Couldn't make the answer just now. Check your connection and try again.");
+    }
+    setBusy(false);
+  };
+  return (
+    <div className="max-w-3xl">
+      <button onClick={() => void go()} disabled={busy} aria-expanded={open} className="inline-flex min-h-10 items-center gap-2 rounded-full bg-raised px-4 text-sm text-text ring-1 ring-line hover:ring-accent-text disabled:opacity-60">
+        <Sparkles aria-hidden className="h-4 w-4 text-accent" />
+        {busy ? 'Writing the answer…' : text ? (open ? 'Hide the full answer' : 'Show the full answer') : 'Explain this fully'}
+      </button>
+      {err && <p className="mt-2 text-sm text-warn">{err}</p>}
+      {open && text && (
+        <div className="mt-3 rounded-2xl bg-surface p-4 ring-1 ring-line">
+          <MessageBody text={text} />
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -365,6 +410,7 @@ export function NoteReader({
                     </div>
                   </Suspense>
                 ))}
+                <AnswerCard noteId={note.id} noteTitle={note.title} s={s} />
                 <Recall section={s} />
               </section>
             ))}

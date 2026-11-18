@@ -21,6 +21,7 @@ import { storage } from '../services/storage';
 import { AccountPanel } from './AccountPanel';
 import { PacksAdmin } from './PacksAdmin';
 import { AuthTrail } from './AuthTrail';
+import { GroveAiAdmin } from './GroveAiAdmin';
 import { MeaningToggle } from './MeaningToggle';
 import { ShareToggle } from './ShareInsights';
 import { InstallApp } from './InstallApp';
@@ -454,6 +455,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           <VoiceSettings />
           <AccountPanel />
           <PacksAdmin />
+          <GroveAiAdmin />
           <AuthTrail />
 
           {/* Danger Zone: Reset to Demo */}

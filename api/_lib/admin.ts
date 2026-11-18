@@ -8,6 +8,7 @@ import { sql } from 'drizzle-orm';
 import { db, DbUser } from './db.js';
 import { ApiError, HandlerReq, HandlerRes, json, requireObjectBody } from './http.js';
 import { identity, isAdmin } from './packs.js';
+import { aiStatus, clearAiConfig, saveAiConfig, testAi } from './answer.js';
 
 let ready: Promise<unknown> | null = null;
 export function ensureAdminTables() {
@@ -88,6 +89,21 @@ export async function handleAdmin(req: HandlerReq, res: HandlerRes, user: DbUser
   const adminName = me.studentId || me.emails[0] || user.id;
   const method = req.method ?? 'GET';
   const query = req.query ?? {};
+
+  // Grove's own AI key, set from the app. The key is only ever written, never read back.
+  if (sub === 'ai') {
+    if (method === 'GET') return json(res, await aiStatus());
+    if (method === 'DELETE') {
+      await clearAiConfig();
+      return json(res, await aiStatus());
+    }
+    if (method === 'POST') {
+      const b = requireObjectBody(req.body);
+      if (b.test === true) return json(res, await testAi());
+      await saveAiConfig(b, adminName);
+      return json(res, await aiStatus());
+    }
+  }
 
   if (sub === 'students' && method === 'GET') {
     const term = str(q1(query.q), 80).toLowerCase();

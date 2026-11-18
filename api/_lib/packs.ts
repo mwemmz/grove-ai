@@ -126,7 +126,7 @@ export async function handlePacks(req: HandlerReq, res: HandlerRes, user: DbUser
   if (segments[1] === 'me') {
     const staffList = (process.env.GROVE_STAFF ?? '').split(',').map((x) => x.trim().toLowerCase()).filter(Boolean);
     const staff = admin || staffList.includes(id.studentId.toLowerCase()) || id.emails.some((e) => staffList.includes(e));
-    json(res, { studentId: id.studentId || null, admin, staff, ai: groveAiConfigured() });
+    json(res, { studentId: id.studentId || null, admin, staff, ai: await groveAiConfigured() });
     return;
   }
 

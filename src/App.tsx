@@ -11,6 +11,9 @@ import { ProgressPanel } from './components/ProgressPanel';
 import { ChatTutorView, NEW_VIEW } from './components/ChatTutorView';
 import { TodayView } from './components/TodayView';
 import { InsightsView } from './components/InsightsView';
+import { StudentsAdmin } from './components/StudentsAdmin';
+import { startTracking, track } from './services/activity';
+import { apiGet, apiPost } from './lib/api';
 import { NetworkBanner } from './components/NetworkBanner';
 import { setSignalCourses } from './services/signals';
 import { DegreeMemoryView } from './components/DegreeMemoryView';
@@ -128,6 +131,12 @@ function GroveApp({ offlineUser }: { offlineUser?: { id: string; username: strin
   const [activeTab, setActiveTab] = useState<AppTab>(() => readPlace().tab);
   // The assistant always knows which screen it was opened from.
   useEffect(() => {
+    if (meLoaded) startTracking();
+  }, [meLoaded]);
+  useEffect(() => {
+    if (meLoaded) track('tab', TAB_LABEL[activeTab]);
+  }, [activeTab, meLoaded]);
+  useEffect(() => {
     copilot.setContext({ place: TAB_LABEL[activeTab] });
   }, [activeTab]);
 
@@ -186,7 +195,8 @@ function GroveApp({ offlineUser }: { offlineUser?: { id: string; username: strin
   }, [activeTab, selectedNoteForDetail]);
   useEffect(() => {
     if (meLoaded && !isStaff && activeTab === 'insights') setActiveTab('today');
-  }, [meLoaded, isStaff, activeTab]);
+    if (meLoaded && !isAdmin && activeTab === 'students') setActiveTab('today');
+  }, [meLoaded, isStaff, isAdmin, activeTab]);
   const [visualFocus, setVisualFocus] = useState<TopicId | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [studyPreset, setStudyPreset] = useState<StudyPreset | null>(null);
@@ -245,6 +255,37 @@ function GroveApp({ offlineUser }: { offlineUser?: { id: string; username: strin
       if (r.added.length) setPackNotice(`Added from your university: ${r.added.map((a) => `${a.count} ${a.code} notes`).join(', ')}.`);
       else if (r.updated.length) setPackNotice(`Your university improved ${r.updated.map((a) => `${a.count} ${a.code} notes`).join(', ')}.`);
     });
+  }, [isDataReady, meLoaded]);
+
+  // Fixes an admin made to this student's account (for example notes moved to the right course) are applied here,
+  // so a copy saved on this device cannot undo them.
+  const [fixNotice, setFixNotice] = useState<string | null>(null);
+  const fixesChecked = useRef(false);
+  useEffect(() => {
+    if (!isDataReady || !meLoaded || fixesChecked.current) return;
+    fixesChecked.current = true;
+    type Fix = { id: number; payload: { type: string; noteIds?: string[]; course?: Course } };
+    apiGet<{ fixes: Fix[] }>('/fixes')
+      .then(({ fixes }) => {
+        if (!fixes.length) return;
+        let nextNotes = storage.getNotes();
+        let nextCourses = storage.getCourses();
+        for (const { payload: f } of fixes) {
+          if (f.type === 'move-notes' && f.course) {
+            const c = f.course;
+            if (!nextCourses.some((x) => x.id === c.id)) nextCourses = [...nextCourses, c];
+            nextNotes = nextNotes.map((n) => (f.noteIds?.includes(n.id) ? { ...n, courseId: c.id, year: c.year } : n));
+          } else if (f.type === 'delete-notes') nextNotes = nextNotes.filter((n) => !f.noteIds?.includes(n.id));
+          else if (f.type === 'update-course' && f.course) nextCourses = nextCourses.map((x) => (x.id === f.course!.id ? { ...x, ...f.course } : x));
+        }
+        setCourses(nextCourses);
+        setNotes(nextNotes);
+        storage.saveCourses(nextCourses);
+        storage.saveNotes(nextNotes);
+        setFixNotice('An admin corrected some of your notes. They are now filed under the right course.');
+        void apiPost('/fixes', { ids: fixes.map((x) => x.id) }).catch(() => {});
+      })
+      .catch(() => {});
   }, [isDataReady, meLoaded]);
 
   // Sync to storage on state changes (each save also PUTs to the API)
@@ -318,6 +359,7 @@ function GroveApp({ offlineUser }: { offlineUser?: { id: string; username: strin
 
   const handleOpenNoteDetail = (note: Note) => {
     setSelectedNoteForDetail(note);
+    track('note', note.title);
     try { localStorage.setItem('grove_last_note', note.id); } catch { /* private mode: fine */ }
     setActiveTab(isPastPaper(note) ? 'papers' : 'notes');
   };
@@ -393,6 +435,7 @@ function GroveApp({ offlineUser }: { offlineUser?: { id: string; username: strin
         sidebar={(api) => (
           <Sidebar
             staff={isStaff}
+            admin={isAdmin}
             tab={activeTab}
             onTab={goTo}
             recents={recents}
@@ -435,6 +478,12 @@ function GroveApp({ offlineUser }: { offlineUser?: { id: string; username: strin
               <button onClick={() => setPackNotice(null)} className="text-muted hover:text-text" aria-label="Dismiss">✕</button>
             </div>
           )}
+          {fixNotice && (
+            <div role="status" className="flex items-start justify-between gap-3 rounded-[22px] bg-surface px-4 py-3 text-sm text-text ring-1 ring-accent/50">
+              <span>{fixNotice}</span>
+              <button onClick={() => setFixNotice(null)} className="text-muted hover:text-text" aria-label="Dismiss">✕</button>
+            </div>
+          )}
           {activeTab === 'today' && (
             <TodayView
               notes={notes}
@@ -449,6 +498,7 @@ function GroveApp({ offlineUser }: { offlineUser?: { id: string; username: strin
             />
           )}
           {activeTab === 'insights' && isStaff && <InsightsView />}
+          {activeTab === 'students' && isAdmin && <StudentsAdmin />}
 
           {activeTab === 'remember' && (
             <>

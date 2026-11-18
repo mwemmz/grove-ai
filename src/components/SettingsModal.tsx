@@ -449,6 +449,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
           <MeaningToggle />
           <ShareToggle />
+          <p className="mt-3 text-xs leading-5 text-muted">To help when something goes wrong, your university's Grove admins can see your name, student ID, course list, note titles and a short log of what you did in Grove (screens opened, uploads, errors). They cannot see your questions, answers or the text of your notes. They can fix things like notes filed under the wrong course.</p>
           <InstallApp />
           <VoiceSettings />
           <AccountPanel />

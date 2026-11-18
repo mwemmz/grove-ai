@@ -3,6 +3,7 @@ import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { Note, LearningProfile, ChatMessage } from '../types';
 import { aiService } from '../services/aiService';
 import { signal } from '../services/signals';
+import { track } from '../services/activity';
 import { hintFor, isProblem, setTryFirst, tryFirstOn } from '../services/learning';
 import { CheckYourself, TryFirst } from './Learning';
 import { storage } from '../services/storage';
@@ -159,7 +160,8 @@ export const ChatTutorView: React.FC<ChatTutorViewProps> = ({
     try {
       await new Promise((r) => setTimeout(r, 400));
       const previous = answer && question ? { question: question.text, answer: answer.text } : undefined;
-      const payload = await aiService.askGrove(query, notes, profile, { previous, task });
+      track('ask', task === 'quiz' ? 'Asked for a quiz' : '');
+        const payload = await aiService.askGrove(query, notes, profile, { previous, task });
 
       setProfile((prev) => {
         const updated = { ...prev, totalQuestionsAsked: prev.totalQuestionsAsked + 1 };

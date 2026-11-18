@@ -6,6 +6,7 @@ import { EmptyState } from './EmptyState';
 import { Note, Course, AcademicYear } from '../types';
 import { storage } from '../services/storage';
 import { ACCEPT, extractText } from '../services/fileText';
+import { track } from '../services/activity';
 import { storePackFigures } from '../services/figures';
 import { field, labelCls, primaryBtn, panel, quietBtn } from './ui';
 import { NoteReader } from './NoteReader';
@@ -177,6 +178,7 @@ export const DegreeMemoryView: React.FC<DegreeMemoryViewProps> = ({
         : done.length > 1
           ? `Added ${done.length} notes to ${courseOf(newCourseId)?.code ?? 'your grove'}.${trunc}`
           : '';
+    track('upload', `${done.length} file${done.length === 1 ? '' : 's'} read, course chosen: ${courseOf(newCourseId)?.code ?? 'none'}${problems.length ? `, ${problems.length} problem${problems.length === 1 ? '' : 's'}` : ''}`);
     setUploadMsg({ ok: done.length > 0 && problems.length === 0, text: [okText, ...problems].filter(Boolean).join(' ') });
     if (fileRef.current) fileRef.current.value = '';
   };
@@ -184,6 +186,7 @@ export const DegreeMemoryView: React.FC<DegreeMemoryViewProps> = ({
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTitle.trim() || !newContent.trim()) return;
+    track('upload', `Saved a note to ${courseOf(newCourseId)?.code ?? 'no course'}`);
     const created = makeNote(newTitle, newContent);
     const updated = [created, ...notes];
     setNotes(updated);
@@ -379,6 +382,7 @@ export const DegreeMemoryView: React.FC<DegreeMemoryViewProps> = ({
           onClose={() => setLecture(false)}
           onSave={(title, content, cid) => {
             const n = { ...makeNote(title, content, 0, cid), tags: [...autoTags(`${title} ${content}`), 'lecture recording'] };
+            track('lecture', `Saved a lecture note to ${courses.find((c) => c.id === cid)?.code ?? 'a course'}`);
             const updated = [n, ...notes];
             setNotes(updated);
             storage.saveNotes(updated);

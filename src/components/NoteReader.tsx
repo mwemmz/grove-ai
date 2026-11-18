@@ -6,6 +6,7 @@ import { ArrowLeft, ArrowRight, Headphones, PanelLeftClose, PanelLeftOpen, Minus
 import { ListenBar } from './ListenBar';
 import { startListening, stop as stopListening, useListen } from '../services/readAloud';
 import { tutorAvailable } from '../services/tutor';
+import { track } from '../services/activity';
 import { lazyWithReload } from '../lib/lazyReload';
 import type { Note } from '../types';
 import { placePictures } from '../data/pictureMatch';
@@ -312,6 +313,7 @@ export function NoteReader({
         <button
           onClick={() => {
             const at = Math.max(0, sections.findIndex((s) => `sec-${s.id}` === active));
+            track('listen', note.title);
             startListening(note.title, sections, at, tutorAvailable());
           }}
           aria-label="Listen to this note"

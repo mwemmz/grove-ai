@@ -25,6 +25,7 @@ import {
   saveProfile,
 } from './collections.js';
 import { exportBackup, importBackup, resetBackup } from './backup.js';
+import { handleAdmin, recordActivity, studentFixes, writeActivity } from './admin.js';
 import { handlePacks } from './packs.js';
 import { readAuthEvents, writeAuthEvent } from './authlog.js';
 import { readInsights, writeSignals } from './insights.js';
@@ -127,8 +128,23 @@ export async function handleRequest(req: HandlerReq, res: HandlerRes): Promise<v
     else await readAuthEvents(req, res, await requireUser(req));
     return;
   }
+  if (resource === 'admin') {
+    await handleAdmin(req, res, await requireUser(req), segments[2] ?? '');
+    return;
+  }
+  if (resource === 'fixes') {
+    await studentFixes(req, res, await requireUser(req));
+    return;
+  }
+  if (resource === 'activity') {
+    if (req.method !== 'POST') throw new ApiError(405, 'POST only');
+    await writeActivity(req, res, await requireUser(req));
+    return;
+  }
   if (resource === 'packs' || resource === 'me') {
-    await handlePacks(req, res, await requireUser(req), segments);
+    const me = await requireUser(req);
+    if (resource === 'me') await recordActivity(me.id, 'open', 'Opened Grove').catch(() => {});
+    await handlePacks(req, res, me, segments);
     return;
   }
   const group = routes[resource];
@@ -158,5 +174,9 @@ export async function handleRequest(req: HandlerReq, res: HandlerRes): Promise<v
     throw new ApiError(405, `Method ${method} not allowed`);
   }
 
+  if (method === 'PUT' && (resource === 'notes' || resource === 'courses')) {
+    const n = Array.isArray(req.body) ? req.body.length : 0;
+    await recordActivity(user.id, 'sync', `Saved ${n} ${resource}`).catch(() => {});
+  }
   await handler(req, res, user.id);
 }

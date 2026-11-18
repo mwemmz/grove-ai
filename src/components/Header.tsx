@@ -14,11 +14,12 @@ import {
   Timer,
   Users,
   BarChart3,
+  UserCog,
   type LucideIcon,
 } from 'lucide-react';
 import { Note } from '../types';
 
-export type AppTab = 'today' | 'remember' | 'notes' | 'papers' | 'library' | 'visuals' | 'study' | 'plan' | 'profile' | 'portfolio' | 'quiz' | 'blueprints' | 'tutoring' | 'insights';
+export type AppTab = 'today' | 'remember' | 'notes' | 'papers' | 'library' | 'visuals' | 'study' | 'plan' | 'profile' | 'portfolio' | 'quiz' | 'blueprints' | 'tutoring' | 'insights' | 'students';
 
 export interface NavItem {
   id: AppTab;
@@ -49,9 +50,11 @@ export const MORE_NAV: NavItem[] = [
 
 /** Only for lecturers and admins (GROVE_STAFF): where the class is stuck, as anonymous totals. */
 export const STAFF_NAV: NavItem = { id: 'insights', label: 'Class insights', icon: BarChart3 };
+/** Only for admins (GROVE_ADMINS): look into a student's account and fix their notes. */
+export const ADMIN_NAV: NavItem = { id: 'students', label: 'Students', icon: UserCog };
 
 export const TAB_LABEL: Record<AppTab, string> = Object.fromEntries(
-  [...PRIMARY_NAV, ...MORE_NAV, STAFF_NAV].map((n) => [n.id, n.label])
+  [...PRIMARY_NAV, ...MORE_NAV, STAFF_NAV, ADMIN_NAV].map((n) => [n.id, n.label])
 ) as Record<AppTab, string>;
 
 const RADII = [14, 26, 38, 50];

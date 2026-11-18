@@ -16,7 +16,8 @@ import { NoteDiagram, NoteMap } from './NoteDiagrams';
 import { Inline } from './ui';
 import { MessageBody } from './ChatTutorView';
 import { cachedCard, cardsAvailable, makeCard } from '../services/answerCard';
-import { Sparkles } from 'lucide-react';
+import { cachedSummary, summariseNote, summaryAvailable } from '../services/summary';
+import { Sparkles, ScrollText } from 'lucide-react';
 import { Figure } from './Figure';
 import { CopilotButton, useAskOnSelect } from './Copilot';
 import { copilot } from '../services/copilot';
@@ -182,8 +183,11 @@ export function NoteReader({
   prev,
   next,
   onGo,
+  onSaveSummary,
 }: {
   note: Note;
+  /** Keeps a summary as a note of its own in the same course. */
+  onSaveSummary?: (title: string, content: string) => void;
   courseName?: string;
   onClose: () => void;
   onOpenVisual?: (id: TopicId) => void;
@@ -268,6 +272,28 @@ export function NoteReader({
     };
   }, [nav]);
 
+  const [sum, setSum] = useState<{ open: boolean; text: string | null; busy: boolean; msg: string; err: string; saved: boolean }>({ open: false, text: null, busy: false, msg: '', err: '', saved: false });
+  useEffect(() => {
+    setSum({ open: false, text: null, busy: false, msg: '', err: '', saved: false });
+    let live = true;
+    void cachedSummary(note).then((t) => live && t && setSum((x) => ({ ...x, text: t })));
+    return () => {
+      live = false;
+    };
+  }, [note.id, note.content]);
+  const runSummary = async (again = false) => {
+    if (sum.busy) return;
+    if (sum.text && !again) return setSum((x) => ({ ...x, open: true }));
+    setSum((x) => ({ ...x, open: true, busy: true, err: '', msg: 'Reading the note…', saved: false, text: again ? null : x.text }));
+    try {
+      track('ask', 'Summarised a note');
+      const t = await summariseNote(note, sections, (msg) => setSum((x) => ({ ...x, msg })));
+      setSum((x) => ({ ...x, text: t, busy: false }));
+    } catch {
+      setSum((x) => ({ ...x, busy: false, err: "Couldn't write the summary just now. Check your connection and try again." }));
+    }
+  };
+
   // Reading comfort: the outline can fold away and the text can be enlarged, up to the width of the screen.
   const [side, setSide] = useState(() => lsGet('grove_reader_side', '1') !== '0');
   const [zoom, setZoom] = useState(() => Math.min(2.4, Math.max(0.9, Number(lsGet('grove_reader_zoom', '1')) || 1)));
@@ -321,6 +347,11 @@ export function NoteReader({
         >
           <Headphones aria-hidden className="h-4 w-4" /> <span className="hidden sm:inline">Listen</span>
         </button>
+        {(sum.text || summaryAvailable()) && (
+          <button onClick={() => void runSummary()} aria-label="Summarise this note" className="flex h-10 items-center gap-2 rounded-full bg-surface/60 px-3 text-sm text-muted ring-1 ring-line hover:text-text sm:px-4">
+            <ScrollText aria-hidden className="h-4 w-4" /> <span className="hidden sm:inline">Summarise</span>
+          </button>
+        )}
         <div className="hidden items-center gap-1 rounded-full bg-surface/60 p-1 ring-1 ring-line md:flex" role="group" aria-label="Text size">
           <button onClick={() => setZ(zoom - 0.15)} aria-label="Smaller text" className="grid h-8 w-8 place-items-center rounded-full text-muted hover:text-text"><Minus className="h-4 w-4" /></button>
           <span className="w-10 text-center font-mono text-xs text-muted">{Math.round(zoom * 100)}%</span>
@@ -348,6 +379,43 @@ export function NoteReader({
 
       <div className="relative flex min-h-0 flex-1">
         <ListenBar />
+        {sum.open && (
+          <div className="absolute inset-0 z-30 flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-6" onClick={() => !sum.busy && setSum((x) => ({ ...x, open: false }))}>
+            <div role="dialog" aria-label="Note summary" onClick={(e) => e.stopPropagation()} className="flex max-h-[92%] w-full max-w-2xl flex-col rounded-t-2xl bg-surface ring-1 ring-line sm:rounded-2xl">
+              <div className="flex items-center justify-between gap-3 border-b border-line px-5 py-3">
+                <div>
+                  <p className="font-mono text-[11px] uppercase tracking-[0.08em] text-muted">Summary</p>
+                  <p className="text-sm text-text">{note.title}</p>
+                </div>
+                <button onClick={() => setSum((x) => ({ ...x, open: false }))} className="rounded-full bg-raised px-3 py-1.5 text-xs text-muted hover:text-text">Close</button>
+              </div>
+              <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
+                {sum.busy && <p className="text-sm text-muted" aria-live="polite">{sum.msg || 'Working…'}</p>}
+                {sum.err && <p className="text-sm text-text">{sum.err}</p>}
+                {sum.text && !sum.busy && <MessageBody text={sum.text} />}
+              </div>
+              {!sum.busy && (
+                <div className="flex flex-wrap gap-2 border-t border-line px-5 py-3">
+                  {sum.text && onSaveSummary && (
+                    <button
+                      disabled={sum.saved}
+                      onClick={() => {
+                        onSaveSummary(`Summary: ${note.title}`, sum.text!);
+                        setSum((x) => ({ ...x, saved: true }));
+                      }}
+                      className="rounded-full bg-accent px-4 py-2 text-sm text-ink disabled:opacity-60"
+                    >
+                      {sum.saved ? 'Saved as a note' : 'Save as a note'}
+                    </button>
+                  )}
+                  <button onClick={() => void runSummary(true)} className="rounded-full bg-raised px-4 py-2 text-sm text-muted hover:text-text">
+                    {sum.text ? 'Rewrite' : 'Try again'}
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
         <nav aria-label="Outline" className={`hidden w-64 shrink-0 overflow-y-auto border-r border-line px-3 py-5 ${side ? 'lg:block' : ''}`}>
           <p className="mb-2 px-2 font-mono text-[11px] uppercase tracking-[0.08em] text-muted">In this note</p>
           <ol className="space-y-0.5">

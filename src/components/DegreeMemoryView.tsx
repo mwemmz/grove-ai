@@ -399,6 +399,14 @@ export const DegreeMemoryView: React.FC<DegreeMemoryViewProps> = ({
           courseName={courseOf(detail.courseId)?.name}
           onClose={() => setSelectedNoteForDetail(null)}
           onOpenVisual={onOpenVisual}
+          onSaveSummary={(title, content) => {
+            const n = { ...makeNote(title, content, 0, detail.courseId), tags: [...autoTags(`${title} ${content}`), 'summary'] };
+            const updated = [n, ...notes];
+            setNotes(updated);
+            storage.saveNotes(updated);
+            setSaved(true);
+            setTimeout(() => setSaved(false), 2500);
+          }}
           prev={at > 0 ? siblings[at - 1] : undefined}
           next={at >= 0 && at < siblings.length - 1 ? siblings[at + 1] : undefined}
           onGo={(n) => {

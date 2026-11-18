@@ -282,7 +282,7 @@ const BASE_TOPICS: VisualTopic[] = [
   },
 ];
 
-export const VISUAL_TOPICS: VisualTopic[] = [...BASE_TOPICS, ...ECON_TOPICS, ...BIT_TOPICS];
+export const VISUAL_TOPICS: VisualTopic[] = [...BASE_TOPICS, ...ECON_TOPICS.map((t) => ({ ...t, audience: 'BPIR' })), ...BIT_TOPICS];
 
 export const TOPIC_BY_ID = Object.fromEntries(VISUAL_TOPICS.map((t) => [t.id, t])) as Record<TopicId, VisualTopic>;
 

@@ -25,6 +25,8 @@ export function canSee(audience?: string): boolean {
 /** Courses whose material is limited to one programme, by student ID prefix. */
 export const COURSE_AUDIENCE: Record<string, string> = {
   BIT353: 'BIT',
+  // Introduction to Macroeconomics is built into every account, but it is the BPIR programme's course.
+  ECF110: 'BPIR',
 };
 
 export const canSeeCourse = (code: string) => canSee(COURSE_AUDIENCE[code.toUpperCase()]);

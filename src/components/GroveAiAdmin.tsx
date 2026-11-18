@@ -36,7 +36,7 @@ export function GroveAiAdmin() {
     getMe()
       .then((me) => {
         setAdmin(me.admin);
-        if (me.admin) void apiGet<Status>('/admin/ai').then(apply).catch(() => {});
+        if (me.admin) void apiGet<Status>('/admin?sub=ai').then(apply).catch(() => {});
       })
       .catch(() => setAdmin(false));
   }, []);
@@ -89,19 +89,19 @@ export function GroveAiAdmin() {
           disabled={busy || (!key && !(st.configured && st.provider === provider))}
           className={`${primaryBtn} disabled:opacity-50`}
           onClick={() => act(async () => {
-            apply(await apiPost<Status>('/admin/ai', { provider, key, model, daily: Number(daily) }));
+            apply(await apiPost<Status>('/admin?sub=ai', { provider, key, model, daily: Number(daily) }));
             setKey('');
-            const t = await apiPost<{ ok: boolean; message: string }>('/admin/ai', { test: true });
+            const t = await apiPost<{ ok: boolean; message: string }>('/admin?sub=ai', { test: true });
             setMsg({ ok: t.ok, text: t.ok ? `Saved. ${t.message}` : `Saved, but the test failed: ${t.message}` });
           })}
         >
           {busy ? 'Saving…' : 'Save and test'}
         </button>
         {st.configured && (
-          <button disabled={busy} className={`${quietBtn} disabled:opacity-50`} onClick={() => act(async () => { const t = await apiPost<{ ok: boolean; message: string }>('/admin/ai', { test: true }); setMsg({ ok: t.ok, text: t.message }); })}>Test</button>
+          <button disabled={busy} className={`${quietBtn} disabled:opacity-50`} onClick={() => act(async () => { const t = await apiPost<{ ok: boolean; message: string }>('/admin?sub=ai', { test: true }); setMsg({ ok: t.ok, text: t.message }); })}>Test</button>
         )}
         {st.configured && st.source === 'app' && (
-          <button disabled={busy} className={`${quietBtn} disabled:opacity-50`} onClick={() => confirm("Turn off Grove's own AI? Students without their own key will get answers from their notes only.") && act(async () => { apply(await apiDelete<Status>('/admin/ai')); setMsg({ ok: true, text: 'Removed.' }); })}>Remove key</button>
+          <button disabled={busy} className={`${quietBtn} disabled:opacity-50`} onClick={() => confirm("Turn off Grove's own AI? Students without their own key will get answers from their notes only.") && act(async () => { apply(await apiDelete<Status>('/admin?sub=ai')); setMsg({ ok: true, text: 'Removed.' }); })}>Remove key</button>
         )}
       </div>
       {msg && <p className={`text-sm ${msg.ok ? 'text-accent' : 'text-warn'}`} role={msg.ok ? 'status' : 'alert'}>{msg.text}</p>}

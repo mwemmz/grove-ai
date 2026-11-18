@@ -129,7 +129,8 @@ export async function handleRequest(req: HandlerReq, res: HandlerRes): Promise<v
     return;
   }
   if (resource === 'admin') {
-    await handleAdmin(req, res, await requireUser(req), segments[2] ?? '');
+    const q = req.query?.sub;
+    await handleAdmin(req, res, await requireUser(req), segments[2] ?? (Array.isArray(q) ? q[0] : q) ?? '');
     return;
   }
   if (resource === 'fixes') {

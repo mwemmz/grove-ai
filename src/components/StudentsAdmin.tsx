@@ -32,7 +32,7 @@ export function StudentsAdmin() {
   useEffect(() => {
     let live = true;
     const t = setTimeout(() => {
-      apiGet<{ students: Row[] }>(`/admin/students?q=${encodeURIComponent(q)}`)
+      apiGet<{ students: Row[] }>(`/admin?sub=students&q=${encodeURIComponent(q)}`)
         .then((d) => live && (setRows(d.students), setError('')))
         .catch((e) => live && setError(String(e.message ?? e)));
     }, 250);
@@ -82,7 +82,7 @@ function StudentDetail({ id, onBack }: { id: string; onBack: () => void }) {
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(() => {
-    apiGet<Detail>(`/admin/student?id=${id}`).then(setD).catch((e) => setError(String(e.message ?? e)));
+    apiGet<Detail>(`/admin?sub=student&id=${id}`).then(setD).catch((e) => setError(String(e.message ?? e)));
   }, [id]);
   useEffect(load, [load]);
 
@@ -99,7 +99,7 @@ function StudentDetail({ id, onBack }: { id: string; onBack: () => void }) {
     setBusy(true);
     setMsg('');
     try {
-      await apiPost('/admin/fix', { userId: id, ...body });
+      await apiPost('/admin?sub=fix', { userId: id, ...body });
       setMsg(done);
       setSel(new Set());
       load();

@@ -17,7 +17,8 @@ import { Inline } from './ui';
 import { MessageBody } from './ChatTutorView';
 import { cachedCard, cardsAvailable, makeCard } from '../services/answerCard';
 import { cachedSummary, summariseNote, summaryAvailable } from '../services/summary';
-import { Sparkles, ScrollText, Trash2 } from 'lucide-react';
+import { Sparkles, ScrollText, Trash2, MoreHorizontal, Focus as FocusIcon } from 'lucide-react';
+import { FlocusHud, FlocusSheet, useFlocus } from './Flocus';
 import { Figure } from './Figure';
 import { CopilotButton, useAskOnSelect } from './Copilot';
 import { copilot } from '../services/copilot';
@@ -218,6 +219,17 @@ export function NoteReader({
   };
   const askPill = useAskOnSelect(scroller);
   const listen = useListen();
+  // Flocus: full-screen reading with an optional timer. "More" holds the rarely used controls so the top bar stays calm.
+  const focus = useFlocus();
+  const [flSheet, setFlSheet] = useState(false);
+  const [menu, setMenu] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!menu) return;
+    const away = (e: MouseEvent) => { if (!menuRef.current?.contains(e.target as Node)) setMenu(false); };
+    document.addEventListener('mousedown', away);
+    return () => document.removeEventListener('mousedown', away);
+  }, [menu]);
   // Leaving the note stops the reading.
   useEffect(() => () => stopListening(), []);
   useEffect(() => {
@@ -248,10 +260,17 @@ export function NoteReader({
   }, [note, active, nav]);
 
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      if (flSheet) setFlSheet(false);
+      else if (menu) setMenu(false);
+      else if (focus.on) focus.leave(true);
+      else onClose();
+    };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onClose, flSheet, menu, focus.on]);
 
   useEffect(() => {
     const root = scroller.current;
@@ -326,7 +345,10 @@ export function NoteReader({
     <div role="dialog" aria-modal="true" aria-label={note.title} className="view-enter fixed inset-0 z-50 isolate flex flex-col bg-bg">
       <div aria-hidden className="ambient" style={{ zIndex: -1 }} />
       {askPill}
-      <header className="glass-strong relative flex items-center gap-3 border-b border-line/70 px-3 py-2 pt-[max(0.5rem,env(safe-area-inset-top))] sm:px-5">
+      {focus.on && <FlocusHud f={focus} />}
+      {flSheet && <FlocusSheet onClose={() => setFlSheet(false)} onStart={(m) => { setFlSheet(false); focus.enter(m); }} />}
+      {!focus.on && (
+      <header className="glass-strong relative flex items-center gap-2 border-b border-line/70 px-3 py-2 pt-[max(0.5rem,env(safe-area-inset-top))] sm:gap-3 sm:px-5">
         <button onClick={onClose} className="flex min-h-10 items-center gap-1.5 rounded-md px-2 text-sm text-muted hover:bg-raised hover:text-text">
           <ArrowLeft className="h-4 w-4" /> Notes
         </button>
@@ -350,30 +372,44 @@ export function NoteReader({
         >
           <Headphones aria-hidden className="h-4 w-4" /> <span className="hidden sm:inline">Listen</span>
         </button>
-        {(sum.text || summaryAvailable()) && (
-          <button onClick={() => void runSummary()} aria-label="Summarise this note" className="flex h-10 items-center gap-2 rounded-full bg-surface/60 px-3 text-sm text-muted ring-1 ring-line hover:text-text sm:px-4">
-            <ScrollText aria-hidden className="h-4 w-4" /> <span className="hidden sm:inline">Summarise</span>
+        <button onClick={() => setFlSheet(true)} aria-label="Flocus: full-screen focus with a timer" className="flex h-10 items-center gap-2 rounded-full bg-surface/60 px-3 text-sm text-muted ring-1 ring-line hover:text-text sm:px-4">
+          <FocusIcon aria-hidden className="h-4 w-4" /> <span className="hidden sm:inline">Flocus</span>
+        </button>
+        <div className="relative" ref={menuRef}>
+          <button onClick={() => setMenu((v) => !v)} aria-label="More" aria-expanded={menu} aria-haspopup="menu" className="grid h-10 w-10 place-items-center rounded-full bg-surface/60 text-muted ring-1 ring-line hover:text-text">
+            <MoreHorizontal aria-hidden className="h-4 w-4" />
           </button>
-        )}
-        {onDelete && (
-          <button onClick={onDelete} aria-label="Delete this note" className="flex h-10 w-10 items-center justify-center rounded-full bg-surface/60 text-muted ring-1 ring-line hover:text-text">
-            <Trash2 aria-hidden className="h-4 w-4" />
-          </button>
-        )}
-        <div className="hidden items-center gap-1 rounded-full bg-surface/60 p-1 ring-1 ring-line md:flex" role="group" aria-label="Text size">
-          <button onClick={() => setZ(zoom - 0.15)} aria-label="Smaller text" className="grid h-8 w-8 place-items-center rounded-full text-muted hover:text-text"><Minus className="h-4 w-4" /></button>
-          <span className="w-10 text-center font-mono text-xs text-muted">{Math.round(zoom * 100)}%</span>
-          <button onClick={() => setZ(zoom + 0.15)} aria-label="Larger text" className="grid h-8 w-8 place-items-center rounded-full text-muted hover:text-text"><Plus className="h-4 w-4" /></button>
-          <button onClick={fit} aria-label="Fit text to the screen" title="Fit to screen" className="grid h-8 w-8 place-items-center rounded-full text-muted hover:text-text"><Maximize2 className="h-4 w-4" /></button>
+          {menu && (
+            <div role="menu" className="absolute right-0 top-12 z-40 w-72 rounded-2xl bg-surface p-2 shadow-xl ring-1 ring-line">
+              {(sum.text || summaryAvailable()) && (
+                <button role="menuitem" onClick={() => { setMenu(false); void runSummary(); }} className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-left text-sm text-text hover:bg-raised">
+                  <ScrollText aria-hidden className="h-4 w-4 text-muted" /> Summarise this note
+                </button>
+              )}
+              <div className="flex min-h-11 items-center gap-2 rounded-xl px-3 text-sm text-text" role="group" aria-label="Text size">
+                <span className="flex-1 whitespace-nowrap">Text size</span>
+                <button onClick={() => setZ(zoom - 0.15)} aria-label="Smaller text" className="grid h-8 w-8 place-items-center rounded-full bg-raised text-muted hover:text-text"><Minus className="h-4 w-4" /></button>
+                <span className="w-10 text-center font-mono text-xs text-muted">{Math.round(zoom * 100)}%</span>
+                <button onClick={() => setZ(zoom + 0.15)} aria-label="Larger text" className="grid h-8 w-8 place-items-center rounded-full bg-raised text-muted hover:text-text"><Plus className="h-4 w-4" /></button>
+                <button onClick={fit} aria-label="Fit text to the screen" title="Fit to screen" className="grid h-8 w-8 place-items-center rounded-full bg-raised text-muted hover:text-text"><Maximize2 className="h-4 w-4" /></button>
+              </div>
+              {onDelete && (
+                <button role="menuitem" onClick={() => { setMenu(false); onDelete(); }} className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-left text-sm text-text hover:bg-raised">
+                  <Trash2 aria-hidden className="h-4 w-4 text-muted" /> Delete this note
+                </button>
+              )}
+            </div>
+          )}
         </div>
         <CopilotButton />
         <div aria-hidden className="absolute inset-x-0 bottom-0 h-0.5 bg-line">
           <div ref={bar} className="h-full origin-left bg-accent will-change-transform" style={{ transform: 'scaleX(0)' }} />
         </div>
       </header>
+      )}
 
       {/* Phones: the outline is a row of chips. */}
-      <nav aria-label="Sections" className="flex gap-1.5 overflow-x-auto border-b border-line px-3 py-2 lg:hidden">
+      <nav aria-label="Sections" className={`gap-1.5 overflow-x-auto border-b border-line px-3 py-2 lg:hidden ${focus.on ? 'hidden' : 'flex'}`}>
         {nav.map((s) => (
           <button
             key={s.id}
@@ -424,7 +460,7 @@ export function NoteReader({
             </div>
           </div>
         )}
-        <nav aria-label="Outline" className={`hidden w-64 shrink-0 overflow-y-auto border-r border-line px-3 py-5 ${side ? 'lg:block' : ''}`}>
+        <nav aria-label="Outline" className={`hidden w-64 shrink-0 overflow-y-auto border-r border-line px-3 py-5 ${side && !focus.on ? 'lg:block' : ''}`}>
           <p className="mb-2 px-2 font-mono text-[11px] uppercase tracking-[0.08em] text-muted">In this note</p>
           <ol className="space-y-0.5">
             {nav.map((s, i) => (

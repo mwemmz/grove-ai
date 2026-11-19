@@ -349,3 +349,22 @@ button:disabled, [role="button"]:disabled {
 
 /* Long notes: sections far off screen are not laid out or painted until they come near. */
 .note-sec { content-visibility: auto; contain-intrinsic-size: auto 480px; }
+
+
+/* Flocus: the reader with everything else taken away. Quieter panels, one narrow column, more air. */
+.flocus {
+  --color-surface: color-mix(in oklab, var(--color-bg) 97%, white 3%);
+  --color-raised: color-mix(in oklab, var(--color-bg) 94%, white 6%);
+  --color-line: color-mix(in oklab, var(--color-text) 13%, transparent);
+  background: radial-gradient(90% 70% at 50% -10%, color-mix(in oklab, var(--color-bg) 96%, white 4%), var(--color-bg) 70%);
+  animation: flocus-in 520ms cubic-bezier(.2, .7, .2, 1) both;
+}
+.flocus .ambient { opacity: 0.35; }
+.flocus-article h2, .flocus-article h3 { font-size: 1.9rem; line-height: 1.25; letter-spacing: -0.01em; margin-bottom: 0.75rem; }
+.flocus-article p, .flocus-article li { letter-spacing: 0.005em; }
+.flocus-article ul, .flocus-article ol { margin-top: 0.75rem; }
+.flocus-article > * { max-width: 100%; }
+.flocus ::-webkit-scrollbar { width: 6px; }
+.flocus ::-webkit-scrollbar-thumb { background: color-mix(in oklab, var(--color-text) 14%, transparent); border-radius: 6px; }
+@keyframes flocus-in { from { opacity: 0; transform: scale(0.985); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .flocus { animation: none; } }

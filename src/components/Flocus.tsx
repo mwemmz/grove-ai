@@ -136,20 +136,43 @@ export function FlocusSheet({ onStart, onClose }: { onStart: (minutes: number) =
   );
 }
 
-/** The only thing left on screen in focus mode: a small, quiet control corner. */
+/** The only thing left on screen in focus mode: a small control corner that fades away while you read. */
 export function FlocusHud({ f }: { f: ReturnType<typeof useFlocus> }) {
+  const [awake, setAwake] = useState(true);
+  useEffect(() => {
+    let t: ReturnType<typeof setTimeout>;
+    const wake = () => {
+      setAwake(true);
+      clearTimeout(t);
+      t = setTimeout(() => setAwake(false), 2800);
+    };
+    wake();
+    const ev = ['mousemove', 'pointerdown', 'touchstart', 'keydown'] as const;
+    ev.forEach((e) => window.addEventListener(e, wake, { passive: true }));
+    return () => {
+      clearTimeout(t);
+      ev.forEach((e) => window.removeEventListener(e, wake));
+    };
+  }, []);
+  const left = f.timer?.left ?? 0;
+  const frac = f.timer ? (f.timer.total - f.timer.left) / f.timer.total : 0;
+  const R = 11;
   return (
     <>
-      <div className="fixed right-3 top-3 z-[65] flex items-center gap-1 rounded-full bg-surface/80 p-1 pl-3 text-sm text-muted opacity-70 ring-1 ring-line backdrop-blur transition-opacity hover:opacity-100 focus-within:opacity-100 pt-[max(0.25rem,env(safe-area-inset-top))]">
+      <div className={`fixed right-4 top-4 z-[65] flex items-center gap-1.5 rounded-full bg-black/35 py-1 pl-1.5 pr-1 text-sm text-white/80 ring-1 ring-white/10 backdrop-blur-md transition-opacity duration-500 pt-[max(0.25rem,env(safe-area-inset-top))] focus-within:opacity-100 ${awake || f.timer?.running === false ? 'opacity-100' : 'pointer-events-none opacity-0 focus-within:pointer-events-auto'}`}>
         {f.timer && (
           <>
-            <span className="font-mono text-sm tabular-nums text-text" aria-live="off" aria-label={`${mmss(f.timer.left)} left`}>{mmss(f.timer.left)}</span>
-            <button onClick={f.toggle} aria-label={f.timer.running ? 'Pause timer' : 'Resume timer'} className="grid h-8 w-8 place-items-center rounded-full hover:bg-raised hover:text-text">
+            <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden className="shrink-0 -rotate-90">
+              <circle cx="14" cy="14" r={R} fill="none" stroke="currentColor" strokeOpacity="0.18" strokeWidth="2.5" />
+              <circle cx="14" cy="14" r={R} fill="none" stroke="var(--color-accent)" strokeWidth="2.5" strokeLinecap="round" strokeDasharray={2 * Math.PI * R} strokeDashoffset={2 * Math.PI * R * (1 - frac)} style={{ transition: 'stroke-dashoffset 0.5s linear' }} />
+            </svg>
+            <span className="min-w-[3.1rem] font-mono text-sm tabular-nums text-white" aria-label={`${mmss(left)} left`}>{mmss(left)}</span>
+            <button onClick={f.toggle} aria-label={f.timer.running ? 'Pause timer' : 'Resume timer'} className="grid h-8 w-8 place-items-center rounded-full hover:bg-white/10 hover:text-white">
               {f.timer.running ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
             </button>
           </>
         )}
-        <button onClick={() => f.leave(true)} aria-label="Leave Flocus" title="Leave Flocus (Esc)" className="flex h-8 items-center gap-1.5 rounded-full px-2.5 hover:bg-raised hover:text-text">
+        <button onClick={() => f.leave(true)} aria-label="Leave Flocus" title="Leave Flocus (Esc)" className="flex h-8 items-center gap-1.5 rounded-full px-3 hover:bg-white/10 hover:text-white">
           <X className="h-4 w-4" /> <span className="text-xs">Leave</span>
         </button>
       </div>

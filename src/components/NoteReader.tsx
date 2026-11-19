@@ -342,7 +342,7 @@ export function NoteReader({
   };
 
   return createPortal(
-    <div role="dialog" aria-modal="true" aria-label={note.title} className="view-enter fixed inset-0 z-50 isolate flex flex-col bg-bg">
+    <div role="dialog" aria-modal="true" aria-label={note.title} className={`view-enter fixed inset-0 z-50 isolate flex flex-col bg-bg ${focus.on ? 'flocus' : ''}`}>
       <div aria-hidden className="ambient" style={{ zIndex: -1 }} />
       {askPill}
       {focus.on && <FlocusHud f={focus} />}
@@ -477,8 +477,8 @@ export function NoteReader({
           </ol>
         </nav>
 
-        <div ref={scroller} className={`min-w-0 flex-1 overflow-auto overscroll-contain scroll-smooth px-4 pt-6 sm:px-8 ${listen.active ? (listen.tutor ? 'pb-72' : 'pb-32') : 'pb-[max(3rem,env(safe-area-inset-bottom))]'}`}>
-          <article style={{ zoom, width: zoom > 1.01 ? '48rem' : undefined }} className="mx-auto max-w-3xl space-y-10 text-[15px] leading-7 text-text">
+        <div ref={scroller} className={`min-w-0 flex-1 overflow-auto overscroll-contain scroll-smooth px-4 sm:px-8 ${focus.on ? 'pt-20' : 'pt-6'} ${listen.active ? (listen.tutor ? 'pb-72' : 'pb-32') : 'pb-[max(3rem,env(safe-area-inset-bottom))]'}`}>
+          <article style={focus.on ? undefined : { zoom, width: zoom > 1.01 ? '48rem' : undefined }} className={focus.on ? 'flocus-article mx-auto max-w-[40rem] space-y-16 pb-[40vh] text-[18px] leading-[1.95] text-text' : 'mx-auto max-w-3xl space-y-10 text-[15px] leading-7 text-text'}>
             {(map.items.length >= 3 || terms.length >= 3) && (
               <section className="mx-auto grid justify-items-center gap-4" style={{ zoom: 1 / zoom, maxWidth: 1100 }}>
                 <NoteMap root={map.root} items={map.items} />

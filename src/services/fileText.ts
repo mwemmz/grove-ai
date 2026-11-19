@@ -242,6 +242,35 @@ async function pptxText(file: File): Promise<string> {
   return slides.join('\n\n');
 }
 
+/** Word documents, plain text and ordinary PDFs arrive as bare lines. Give them the same shape as the headed notes:
+ *  short stand-alone lines become headings (numbered 1.1 lines become sub-headings) and bullet marks become list items,
+ *  so the reader can build sections, outline, pictures and questions from them in the same way. */
+function shape(raw: string): string {
+  if (/^#{1,4}\s/m.test(raw)) return raw; // already headed (slides, Markdown, packs)
+  const lines = raw.replace(/\r\n?/g, '\n').split('\n');
+  const out: string[] = [];
+  let headed = 0;
+  for (let i = 0; i < lines.length; i++) {
+    const t = lines[i].trim();
+    const prevBlank = i === 0 || !lines[i - 1].trim();
+    const nextText = lines.slice(i + 1).some((l) => l.trim());
+    const bullet = t.match(/^[•●▪■◦·–—*-]\s+(.*)$/);
+    if (bullet) { out.push(`- ${calm(bullet[1])}`); continue; }
+    const num = t.match(/^(\d+(?:\.\d+){0,2})[.)]?\s+([A-Za-z].{2,64})$/);
+    const looksHead = t.length >= 3 && t.length <= 70 && !/[.,;:!?]$/.test(t) && prevBlank && nextText && t.split(/\s+/).length <= 9;
+    const caps = mostlyCaps(t);
+    const titled = /^[A-Z][^.]*$/.test(t) && t.split(/\s+/).filter((w) => /^[A-Z]/.test(w)).length >= Math.ceil(t.split(/\s+/).length * 0.6);
+    if (num && num[2].length <= 64 && prevBlank) {
+      headed++;
+      out.push(`${num[1].includes('.') ? '###' : '##'} ${calm(num[2])}`);
+    } else if (looksHead && (caps || titled)) {
+      headed++;
+      out.push(`## ${calm(t)}`);
+    } else out.push(lines[i]);
+  }
+  return headed >= 2 ? out.join('\n') : raw;
+}
+
 export async function extractText(file: File, onProgress?: Progress): Promise<ExtractedFile> {
   const e = ext(file.name);
   if (file.size > MAX_BYTES) throw new Error(`${file.name} is larger than 8 MB.`);
@@ -258,7 +287,7 @@ export async function extractText(file: File, onProgress?: Progress): Promise<Ex
     raw = await file.text();
     if (e === 'html' || e === 'htm') raw = new DOMParser().parseFromString(raw, 'text/html').body.textContent ?? '';
   } else throw new Error(`${file.name}: this file type isn't supported. Use PDF, Word (.docx), PowerPoint (.pptx), a photo (PNG or JPG), text, Markdown or CSV.`);
-  const text = tidy(raw);
+  const text = tidy(e === 'pdf' || e === 'docx' || e === 'txt' ? shape(raw) : raw);
   if (!text) throw new Error(`${file.name}: no readable text found, even after reading the page images. Try a clearer scan or photo.`);
   return { title: baseName(file.name), text: text.slice(0, MAX_CHARS), truncated: text.length > MAX_CHARS };
 }

@@ -17,7 +17,7 @@ import { Inline } from './ui';
 import { MessageBody } from './ChatTutorView';
 import { cachedCard, cardsAvailable, makeCard } from '../services/answerCard';
 import { cachedSummary, summariseNote, summaryAvailable } from '../services/summary';
-import { Sparkles, ScrollText } from 'lucide-react';
+import { Sparkles, ScrollText, Trash2 } from 'lucide-react';
 import { Figure } from './Figure';
 import { CopilotButton, useAskOnSelect } from './Copilot';
 import { copilot } from '../services/copilot';
@@ -184,10 +184,13 @@ export function NoteReader({
   next,
   onGo,
   onSaveSummary,
+  onDelete,
 }: {
   note: Note;
   /** Keeps a summary as a note of its own in the same course. */
   onSaveSummary?: (title: string, content: string) => void;
+  /** Lets the student delete the note (asks them to confirm first). */
+  onDelete?: () => void;
   courseName?: string;
   onClose: () => void;
   onOpenVisual?: (id: TopicId) => void;
@@ -350,6 +353,11 @@ export function NoteReader({
         {(sum.text || summaryAvailable()) && (
           <button onClick={() => void runSummary()} aria-label="Summarise this note" className="flex h-10 items-center gap-2 rounded-full bg-surface/60 px-3 text-sm text-muted ring-1 ring-line hover:text-text sm:px-4">
             <ScrollText aria-hidden className="h-4 w-4" /> <span className="hidden sm:inline">Summarise</span>
+          </button>
+        )}
+        {onDelete && (
+          <button onClick={onDelete} aria-label="Delete this note" className="flex h-10 w-10 items-center justify-center rounded-full bg-surface/60 text-muted ring-1 ring-line hover:text-text">
+            <Trash2 aria-hidden className="h-4 w-4" />
           </button>
         )}
         <div className="hidden items-center gap-1 rounded-full bg-surface/60 p-1 ring-1 ring-line md:flex" role="group" aria-label="Text size">

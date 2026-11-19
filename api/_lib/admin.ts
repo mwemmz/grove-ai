@@ -24,7 +24,7 @@ export function ensureAdminTables() {
 
 const str = (v: unknown, max: number) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
 const q1 = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? '';
-const KINDS = new Set(['open', 'tab', 'note', 'upload', 'error', 'sync', 'ask', 'lecture', 'listen', 'fix']);
+const KINDS = new Set(['open', 'tab', 'note', 'upload', 'error', 'sync', 'ask', 'lecture', 'listen', 'delete', 'fix']);
 
 /** Writes one line of what a student did. Same kind and detail within a minute is written once. */
 export async function recordActivity(userId: string, kind: string, detail: string): Promise<void> {

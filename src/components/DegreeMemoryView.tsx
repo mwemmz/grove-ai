@@ -1,6 +1,6 @@
 import { isPastPaper, compareNotes } from '../lib/noteOrder';
 import React, { useRef, useState } from 'react';
-import { ArrowRight, ChevronRight, FileUp, Mic } from 'lucide-react';
+import { ArrowRight, ChevronRight, FileUp, Mic, Trash2 } from 'lucide-react';
 import { CourseCover } from './CourseCover';
 import { EmptyState } from './EmptyState';
 import { Note, Course, AcademicYear } from '../types';
@@ -81,6 +81,16 @@ export const DegreeMemoryView: React.FC<DegreeMemoryViewProps> = ({
       n.tags.some((t) => t.toLowerCase().includes(q))
     );
   });
+
+  /** The student's own notes are theirs to delete. The change saves like any other and reaches the server. */
+  const removeNote = (n: Note) => {
+    if (!confirm(`Delete "${n.title}"? This can't be undone.`)) return false;
+    const updated = notes.filter((x) => x.id !== n.id);
+    setNotes(updated);
+    storage.saveNotes(updated);
+    track('delete', 'a note');
+    return true;
+  };
 
   const courseOf = (id: string) => courses.find((c) => c.id === id);
 
@@ -342,7 +352,7 @@ export const DegreeMemoryView: React.FC<DegreeMemoryViewProps> = ({
                   {g.items.map((note) => {
                     const m = /^(?:unit|week|chapter|lecture|topic)\s*([\d.]+)\s*[·:\-]\s*(.+)$/i.exec(note.title);
                     return (
-                      <li key={note.id}>
+                      <li key={note.id} className="flex items-center gap-1">
                         <button
                           onClick={() => setSelectedNoteForDetail(note)}
                           className="nudge group flex min-h-12 w-full items-center gap-3 rounded-[16px] px-3 py-2 text-left hover:bg-raised/70"
@@ -354,6 +364,9 @@ export const DegreeMemoryView: React.FC<DegreeMemoryViewProps> = ({
                           )}
                           <span className="min-w-0 flex-1 text-text">{m ? m[2] : note.title}</span>
                           <ArrowRight aria-hidden className="h-4 w-4 shrink-0 text-muted opacity-0 group-hover:opacity-100" />
+                        </button>
+                        <button type="button" onClick={() => removeNote(note)} aria-label={`Delete ${note.title}`} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-muted hover:bg-raised hover:text-text">
+                          <Trash2 aria-hidden className="h-4 w-4" />
                         </button>
                       </li>
                     );
@@ -399,6 +412,7 @@ export const DegreeMemoryView: React.FC<DegreeMemoryViewProps> = ({
           courseName={courseOf(detail.courseId)?.name}
           onClose={() => setSelectedNoteForDetail(null)}
           onOpenVisual={onOpenVisual}
+          onDelete={() => { if (removeNote(detail)) setSelectedNoteForDetail(null); }}
           onSaveSummary={(title, content) => {
             const n = { ...makeNote(title, content, 0, detail.courseId), tags: [...autoTags(`${title} ${content}`), 'summary'] };
             const updated = [n, ...notes];

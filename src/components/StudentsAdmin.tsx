@@ -23,7 +23,7 @@ const ago = (t: string | number | null) => {
   if (s < 86400) return `${Math.round(s / 3600)} h ago`;
   return `${Math.round(s / 86400)} d ago`;
 };
-const KIND: Record<string, string> = { open: 'Opened Grove', tab: 'Went to', note: 'Read', upload: 'Uploaded', error: 'Error', sync: 'Saved', ask: 'Asked a question', lecture: 'Recorded a lecture', listen: 'Listened to', fix: 'Admin fix' };
+const KIND: Record<string, string> = { open: 'Opened Grove', tab: 'Went to', note: 'Read', upload: 'Uploaded', error: 'Error', sync: 'Saved', ask: 'Asked a question', lecture: 'Recorded a lecture', listen: 'Listened to', delete: 'Deleted', fix: 'Admin fix' };
 
 export function StudentsAdmin() {
   const [q, setQ] = useState('');

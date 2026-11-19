@@ -2,7 +2,7 @@
    Only short labels are sent: which screen, which note title, an upload, an error. Never questions, answers or note text. */
 import { apiPost } from '../lib/api';
 
-type Kind = 'tab' | 'note' | 'upload' | 'error' | 'ask' | 'lecture' | 'listen';
+type Kind = 'tab' | 'note' | 'upload' | 'error' | 'ask' | 'lecture' | 'listen' | 'delete';
 let queue: { kind: Kind; detail: string }[] = [];
 let timer: ReturnType<typeof setTimeout> | null = null;
 let on = false;

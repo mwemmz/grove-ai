@@ -4,7 +4,7 @@ import { saveLocalFigure } from './figures';
 
 export const MAX_BYTES = 8 * 1024 * 1024;
 export const MAX_CHARS = 60_000;
-export const ACCEPT = '.txt,.md,.markdown,.csv,.json,.html,.htm,.pdf,.docx,.pptx,.pptm,.png,.jpg,.jpeg,.webp';
+export const ACCEPT = '.zip,.txt,.md,.markdown,.csv,.json,.html,.htm,.pdf,.docx,.pptx,.pptm,.png,.jpg,.jpeg,.webp';
 const IMAGE_EXT = ['png', 'jpg', 'jpeg', 'webp'];
 /** Scanned pages beyond this are skipped: reading a page takes a few seconds on a phone. */
 const MAX_OCR_PAGES = 40;
@@ -271,6 +271,28 @@ function shape(raw: string): string {
   return headed >= 2 ? out.join('\n') : raw;
 }
 
+/** A .zip of notes (a whole module or course) opens into the files inside it that Grove can read. Nothing is sent anywhere. */
+export const MAX_ZIP_BYTES = 60 * 1024 * 1024;
+const MAX_ZIP_FILES = 60;
+export async function unzipNotes(file: File): Promise<{ files: File[]; skipped: number }> {
+  if (file.size > MAX_ZIP_BYTES) throw new Error(`${file.name} is larger than 60 MB. Split it into smaller zips.`);
+  const { default: JSZip } = await import('jszip');
+  const zip = await JSZip.loadAsync(await file.arrayBuffer());
+  const readable = new Set(['txt', 'md', 'markdown', 'csv', 'html', 'htm', 'pdf', 'docx', 'pptx', 'pptm', 'png', 'jpg', 'jpeg', 'webp']);
+  const entries = Object.values(zip.files)
+    .filter((f) => !f.dir && !/(^|\/)(__MACOSX|\.[^/]*$)/.test(f.name) && readable.has(ext(f.name)))
+    .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+  const files: File[] = [];
+  let skipped = Math.max(0, entries.length - MAX_ZIP_FILES);
+  for (const e of entries.slice(0, MAX_ZIP_FILES)) {
+    const blob = await e.async('blob');
+    if (blob.size > MAX_BYTES) { skipped++; continue; }
+    files.push(new File([blob], e.name.split('/').pop() || e.name, { type: blob.type }));
+  }
+  if (!files.length) throw new Error(`${file.name}: no notes Grove can read inside (PDF, Word, PowerPoint, text or photos).`);
+  return { files, skipped };
+}
+
 export async function extractText(file: File, onProgress?: Progress): Promise<ExtractedFile> {
   const e = ext(file.name);
   if (file.size > MAX_BYTES) throw new Error(`${file.name} is larger than 8 MB.`);
@@ -286,7 +308,7 @@ export async function extractText(file: File, onProgress?: Progress): Promise<Ex
   else if (TEXT_EXT.includes(e) || file.type.startsWith('text/')) {
     raw = await file.text();
     if (e === 'html' || e === 'htm') raw = new DOMParser().parseFromString(raw, 'text/html').body.textContent ?? '';
-  } else throw new Error(`${file.name}: this file type isn't supported. Use PDF, Word (.docx), PowerPoint (.pptx), a photo (PNG or JPG), text, Markdown or CSV.`);
+  } else throw new Error(`${file.name}: this file type isn't supported. Use a zip, PDF, Word (.docx), PowerPoint (.pptx), a photo (PNG or JPG), text, Markdown or CSV.`);
   const text = tidy(e === 'pdf' || e === 'docx' || e === 'txt' ? shape(raw) : raw);
   if (!text) throw new Error(`${file.name}: no readable text found, even after reading the page images. Try a clearer scan or photo.`);
   return { title: baseName(file.name), text: text.slice(0, MAX_CHARS), truncated: text.length > MAX_CHARS };

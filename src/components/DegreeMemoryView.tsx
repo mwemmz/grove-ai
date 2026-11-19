@@ -5,7 +5,7 @@ import { CourseCover } from './CourseCover';
 import { EmptyState } from './EmptyState';
 import { Note, Course, AcademicYear } from '../types';
 import { storage } from '../services/storage';
-import { ACCEPT, extractText } from '../services/fileText';
+import { ACCEPT, extractText, unzipNotes } from '../services/fileText';
 import { track } from '../services/activity';
 import { storePackFigures } from '../services/figures';
 import { field, labelCls, primaryBtn, panel, quietBtn } from './ui';
@@ -62,6 +62,9 @@ export const DegreeMemoryView: React.FC<DegreeMemoryViewProps> = ({
   const [newTitle, setNewTitle] = useState('');
   const [newCourseId, setNewCourseId] = useState(courses[0]?.id || '');
   const [newYear, setNewYear] = useState<AcademicYear>(4);
+  // "A new course" is chosen from the same list as the existing ones; its code and name are asked for below it.
+  const [nc, setNc] = useState({ code: '', name: '' });
+  const NEW = '__new';
   const [newContent, setNewContent] = useState('');
 
   const fileRef = useRef<HTMLInputElement>(null);
@@ -112,14 +115,52 @@ export const DegreeMemoryView: React.FC<DegreeMemoryViewProps> = ({
     };
   };
 
+  /** The course the notes go into. A new course is created here, or an existing one with the same code is reused. */
+  const ensureCourse = (): string | null => {
+    if (newCourseId !== NEW) return newCourseId;
+    const code = nc.code.trim().toUpperCase().replace(/\s+/g, '');
+    const name = nc.name.trim();
+    if (!code || !name) return null;
+    const same = courses.find((c) => c.code.toUpperCase() === code);
+    if (same) { setNewCourseId(same.id); return same.id; }
+    const course: Course = { id: `c-${code.toLowerCase()}-${Date.now().toString(36)}`, code, name, year: newYear, semester: 1, color: '#6366f1', description: '' };
+    onAddCourse?.(course);
+    setNewCourseId(course.id);
+    return course.id;
+  };
+  const needCourse = () => newCourseId === NEW && (!nc.code.trim() || !nc.name.trim());
+
   /** One file fills the form so it can be reviewed; several files are saved straight away. */
   const handleFiles = async (list: FileList | File[]) => {
-    const files = Array.from(list);
+    let files = Array.from(list);
     if (!files.length) return;
+    if (needCourse()) {
+      setUploadMsg({ ok: false, text: 'Give the new course a code and a name first, then choose your files.' });
+      if (fileRef.current) fileRef.current.value = '';
+      return;
+    }
     setReading(true);
     setUploadMsg(null);
+    // A zip opens into the notes inside it; they all go into the chosen course.
+    const zipNotes: string[] = [];
+    for (const z of files.filter((x) => x.name.toLowerCase().endsWith('.zip'))) {
+      files = files.filter((x) => x !== z);
+      try {
+        const { files: inside, skipped } = await unzipNotes(z);
+        files.push(...inside);
+        if (skipped) zipNotes.push(`${skipped} file${skipped === 1 ? ' was' : 's were'} skipped from ${z.name} (too many or too large).`);
+      } catch (err) {
+        zipNotes.push(err instanceof Error ? err.message : `${z.name}: could not be opened.`);
+      }
+    }
+    if (!files.length) {
+      setReading(false);
+      setUploadMsg({ ok: false, text: zipNotes.join(' ') || 'Nothing to read.' });
+      if (fileRef.current) fileRef.current.value = '';
+      return;
+    }
     const done: { title: string; text: string; truncated: boolean }[] = [];
-    const problems: string[] = [];
+    const problems: string[] = [...zipNotes];
     // A Grove notes pack (.json) brings a whole course at once: add it and its notes directly.
     for (const f of files.filter((x) => x.name.toLowerCase().endsWith('.json'))) {
       const rawText = await f.text().catch(() => '');
@@ -176,7 +217,8 @@ export const DegreeMemoryView: React.FC<DegreeMemoryViewProps> = ({
       setNewTitle(done[0].title);
       setNewContent(done[0].text);
     } else if (done.length > 1) {
-      const created = done.map((d, i) => makeNote(d.title, d.text, i));
+      const cid = ensureCourse() ?? newCourseId;
+      const created = done.map((d, i) => makeNote(d.title, d.text, i, cid));
       const updated = [...created, ...notes];
       setNotes(updated);
       storage.saveNotes(updated);
@@ -186,7 +228,7 @@ export const DegreeMemoryView: React.FC<DegreeMemoryViewProps> = ({
       done.length === 1
         ? `Read “${done[0].title}”. Check it, then save.${trunc}`
         : done.length > 1
-          ? `Added ${done.length} notes to ${courseOf(newCourseId)?.code ?? 'your grove'}.${trunc}`
+          ? `Added ${done.length} notes to ${courseOf(newCourseId)?.code ?? (nc.code.trim().toUpperCase() || 'your grove')}.${trunc}`
           : '';
     track('upload', `${done.length} file${done.length === 1 ? '' : 's'} read, course chosen: ${courseOf(newCourseId)?.code ?? 'none'}${problems.length ? `, ${problems.length} problem${problems.length === 1 ? '' : 's'}` : ''}`);
     setUploadMsg({ ok: done.length > 0 && problems.length === 0, text: [okText, ...problems].filter(Boolean).join(' ') });
@@ -196,8 +238,13 @@ export const DegreeMemoryView: React.FC<DegreeMemoryViewProps> = ({
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTitle.trim() || !newContent.trim()) return;
-    track('upload', `Saved a note to ${courseOf(newCourseId)?.code ?? 'no course'}`);
-    const created = makeNote(newTitle, newContent);
+    if (needCourse()) {
+      setUploadMsg({ ok: false, text: 'Give the new course a code and a name first.' });
+      return;
+    }
+    const cid = ensureCourse() ?? newCourseId;
+    track('upload', `Saved a note to ${courseOf(cid)?.code ?? (nc.code.trim().toUpperCase() || 'no course')}`);
+    const created = makeNote(newTitle, newContent, 0, cid);
     const updated = [created, ...notes];
     setNotes(updated);
     storage.saveNotes(updated);
@@ -259,7 +306,17 @@ export const DegreeMemoryView: React.FC<DegreeMemoryViewProps> = ({
                   Year {c.year} · {c.code}: {c.name}
                 </option>
               ))}
+              <option value={NEW}>＋ A new course…</option>
             </select>
+            {newCourseId === NEW && (
+              <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_2fr_auto]">
+                <input aria-label="New course code" value={nc.code} onChange={(e) => setNc({ ...nc, code: e.target.value })} placeholder="Code, e.g. BIT201" className={field} />
+                <input aria-label="New course name" value={nc.name} onChange={(e) => setNc({ ...nc, name: e.target.value })} placeholder="Name, e.g. Databases" className={field} />
+                <select aria-label="Year of the new course" value={newYear} onChange={(e) => setNewYear(Number(e.target.value) as AcademicYear)} className={field}>
+                  {[1, 2, 3, 4].map((y) => <option key={y} value={y}>Year {y}</option>)}
+                </select>
+              </div>
+            )}
           </div>
         ) : (
           <div>
@@ -294,7 +351,7 @@ export const DegreeMemoryView: React.FC<DegreeMemoryViewProps> = ({
             <FileUp aria-hidden className="h-5 w-5 shrink-0 text-accent" />
             <span className="min-w-0">
               {reading ? readingMsg ?? 'Reading…' : 'Choose files or drop them here'}
-              <span className="block text-xs text-muted">PDF (scans too), Word, PowerPoint, photos of pages, text or CSV. Read on your device, up to 8 MB each.</span>
+              <span className="block text-xs text-muted">A zip of a whole module or course, or single PDFs (scans too), Word, PowerPoint, photos of pages, text or CSV. Read on your device, up to 8 MB each.</span>
             </span>
           </label>
           {uploadMsg && (
@@ -391,7 +448,7 @@ export const DegreeMemoryView: React.FC<DegreeMemoryViewProps> = ({
       {lecture && (
         <LectureRecorder
           courses={courses}
-          defaultCourseId={openCourse ?? newCourseId}
+          defaultCourseId={openCourse ?? (newCourseId === NEW ? courses[0]?.id ?? '' : newCourseId)}
           onClose={() => setLecture(false)}
           onSave={(title, content, cid) => {
             const n = { ...makeNote(title, content, 0, cid), tags: [...autoTags(`${title} ${content}`), 'lecture recording'] };

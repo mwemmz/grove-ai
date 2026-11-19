@@ -148,7 +148,8 @@ async function flushDirty(): Promise<void> {
       continue;
     }
     try {
-      await apiPut(r.route, cache[r.field]);
+      if (key === 'notes') await syncNotes(cache.notes);
+      else await apiPut(r.route, cache[r.field]);
       left = left.filter((k) => k !== key);
     } catch {
       break; // still offline
@@ -162,6 +163,27 @@ if (typeof window !== 'undefined') window.addEventListener('online', () => void 
 // (e.g. toggling several settings) coalesce into one PUT.
 const SYNC_DEBOUNCE_MS = 150;
 const pendingSyncs = new Map<string, ReturnType<typeof setTimeout>>();
+
+/** One request carries at most a few MB, so a student with many large notes sends them in batches, then the list to keep. */
+const ONE_REQUEST = 3_000_000;
+async function syncNotes(notes: Note[]): Promise<unknown> {
+  const size = JSON.stringify(notes).length;
+  if (size <= ONE_REQUEST) return apiPut('/notes', notes);
+  let batch: Note[] = [];
+  let used = 0;
+  for (const n of notes) {
+    const len = JSON.stringify(n).length;
+    if (batch.length && used + len > 2_000_000) {
+      await apiPut('/notes?mode=merge', batch);
+      batch = [];
+      used = 0;
+    }
+    batch.push(n);
+    used += len;
+  }
+  if (batch.length) await apiPut('/notes?mode=merge', batch);
+  return apiPut('/notes?mode=prune', notes.map((n) => n.id));
+}
 
 function scheduleSync(key: string, run: () => Promise<unknown>): void {
   const existing = pendingSyncs.get(key);
@@ -178,6 +200,8 @@ function scheduleSync(key: string, run: () => Promise<unknown>): void {
         // Kept on this device and sent when the connection is back.
         writeDirty([...readDirty(), key]);
         if (navigator.onLine) console.error(`Sync failed for ${key}:`, err);
+        // So an admin can see that this student's changes are not reaching the server.
+        if (navigator.onLine) void import('./activity').then((m) => m.track('error', `Could not save ${key}: ${String((err as Error)?.message ?? err).slice(0, 90)}`)).catch(() => {});
       });
     }, SYNC_DEBOUNCE_MS),
   );
@@ -375,7 +399,7 @@ export const storage = {
 
   saveNotes(notes: Note[]): void {
     cache.notes = notes;
-    scheduleSync('notes', () => apiPut('/notes', notes));
+    scheduleSync('notes', () => syncNotes(notes));
   },
 
   // --- Profile ---

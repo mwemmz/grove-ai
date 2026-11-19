@@ -17,6 +17,8 @@ import {
   replaceCourses,
   replaceFlashcards,
   replaceNotes,
+  mergeNotes,
+  pruneNotes,
   replaceProjects,
   replaceSeniorComments,
   replaceSkills,
@@ -63,7 +65,21 @@ function collectionRoutes<T>(
 }
 
 const routes: Record<string, Record<string, RouteHandler>> = {
-  notes: collectionRoutes<Note>(listNotes, replaceNotes),
+  notes: {
+    GET: async (_req, res, userId) => {
+      json(res, await listNotes(userId));
+    },
+    // A student with a lot of notes cannot send them all in one request, so they arrive in batches ("merge"),
+    // then the list of ids to keep ("prune"). A plain PUT still replaces everything.
+    PUT: async (req, res, userId) => {
+      const body = requireArrayBody(req.body);
+      const mode = Array.isArray(req.query.mode) ? req.query.mode[0] : req.query.mode;
+      if (mode === 'merge') await mergeNotes(userId, body as Note[]);
+      else if (mode === 'prune') await pruneNotes(userId, body.filter((x): x is string => typeof x === 'string'));
+      else await replaceNotes(userId, body as Note[]);
+      json(res, { ok: true });
+    },
+  },
   courses: collectionRoutes<Course>(listCourses, replaceCourses),
   flashcards: collectionRoutes<Flashcard>(listFlashcards, replaceFlashcards),
   skills: collectionRoutes<PortfolioSkill>(listSkills, replaceSkills),

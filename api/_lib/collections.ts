@@ -98,6 +98,34 @@ export async function replaceNotes(userId: string, items: Note[]): Promise<void>
   });
 }
 
+/** Adds or updates some of a student's notes without touching the rest: used when all notes are too big for one request. */
+export async function mergeNotes(userId: string, items: Note[]): Promise<void> {
+  if (!items.length) return;
+  await db.transaction(async (tx) => {
+    await lockFor(tx, userId, 'notes');
+    await tx
+      .insert(notes)
+      .values(items.map((n) => ({ ...toNoteValues(n), userId })))
+      .onConflictDoUpdate({
+        target: [notes.userId, notes.id],
+        set: {
+          courseId: sql`excluded.course_id`, year: sql`excluded.year`, title: sql`excluded.title`, content: sql`excluded.content`,
+          summary: sql`excluded.summary`, tags: sql`excluded.tags`, keyTakeaways: sql`excluded.key_takeaways`,
+          createdAt: sql`excluded.created_at`, updatedAt: sql`excluded.updated_at`, masteryScore: sql`excluded.mastery_score`,
+        },
+      });
+  });
+}
+
+/** Removes the student's notes that are not in `keep` (the last step of a batched save). */
+export async function pruneNotes(userId: string, keep: string[]): Promise<void> {
+  await db.transaction(async (tx) => {
+    await lockFor(tx, userId, 'notes');
+    if (!keep.length) await tx.delete(notes).where(eq(notes.userId, userId));
+    else await tx.execute(sql`delete from notes where user_id = ${userId}::uuid and id not in (${sql.join(keep.map((k) => sql`${k}::text`), sql`, `)})`);
+  });
+}
+
 export async function getProfile(userId: string): Promise<LearningProfile | null> {
   const rows = await db.select().from(learningProfiles).where(eq(learningProfiles.userId, userId));
   return rows[0] ? fromProfileRow(rows[0]) : null;

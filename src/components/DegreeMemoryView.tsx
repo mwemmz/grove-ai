@@ -7,6 +7,7 @@ import { Note, Course, AcademicYear } from '../types';
 import { storage } from '../services/storage';
 import { ACCEPT, extractText, unzipNotes } from '../services/fileText';
 import { track } from '../services/activity';
+import { tidyAvailable, tidyNote } from '../services/tidy';
 import { storePackFigures } from '../services/figures';
 import { field, labelCls, primaryBtn, panel, quietBtn } from './ui';
 import { NoteReader } from './NoteReader';
@@ -65,6 +66,8 @@ export const DegreeMemoryView: React.FC<DegreeMemoryViewProps> = ({
   // "A new course" is chosen from the same list as the existing ones; its code and name are asked for below it.
   const [nc, setNc] = useState({ code: '', name: '' });
   const NEW = '__new';
+  const [tidyOn, setTidyOn] = useState(true);
+  const MAX_TIDY = 10; // each note takes one or more AI calls
   const [newContent, setNewContent] = useState('');
 
   const fileRef = useRef<HTMLInputElement>(null);
@@ -211,6 +214,15 @@ export const DegreeMemoryView: React.FC<DegreeMemoryViewProps> = ({
         problems.push(err instanceof Error ? err.message : `${f.name}: could not be read.`);
       }
     }
+    // Optional: arrange untidy notes into the headed shape. Only a few at a time, since each uses the AI allowance.
+    let tidied = 0;
+    if (tidyOn && tidyAvailable() && done.length > 0 && done.length <= MAX_TIDY) {
+      for (let i = 0; i < done.length; i++) {
+        const before = done[i].text;
+        const after = await tidyNote(done[i].title, before, (m) => setReadingMsg(done.length > 1 ? `Note ${i + 1} of ${done.length}: ${m}` : m)).catch(() => before);
+        if (after !== before) { done[i] = { ...done[i], text: after }; tidied++; }
+      }
+    } else if (tidyOn && tidyAvailable() && done.length > MAX_TIDY) problems.push(`Tidying with AI is limited to ${MAX_TIDY} notes at a time, so these were added as they are.`);
     setReading(false);
     setReadingMsg(null);
     if (done.length === 1) {
@@ -224,11 +236,12 @@ export const DegreeMemoryView: React.FC<DegreeMemoryViewProps> = ({
       storage.saveNotes(updated);
     }
     const trunc = done.some((d) => d.truncated) ? ' Very long files were shortened.' : '';
+    const tidyNote2 = tidied ? ` ${tidied === 1 ? 'Tidied into Grove format.' : `${tidied} notes tidied into Grove format.`}` : '';
     const okText =
       done.length === 1
-        ? `Read “${done[0].title}”. Check it, then save.${trunc}`
+        ? `Read “${done[0].title}”. Check it, then save.${trunc}${tidyNote2}`
         : done.length > 1
-          ? `Added ${done.length} notes to ${courseOf(newCourseId)?.code ?? (nc.code.trim().toUpperCase() || 'your grove')}.${trunc}`
+          ? `Added ${done.length} notes to ${courseOf(newCourseId)?.code ?? (nc.code.trim().toUpperCase() || 'your grove')}.${trunc}${tidyNote2}`
           : '';
     track('upload', `${done.length} file${done.length === 1 ? '' : 's'} read, course chosen: ${courseOf(newCourseId)?.code ?? 'none'}${problems.length ? `, ${problems.length} problem${problems.length === 1 ? '' : 's'}` : ''}`);
     setUploadMsg({ ok: done.length > 0 && problems.length === 0, text: [okText, ...problems].filter(Boolean).join(' ') });
@@ -354,6 +367,12 @@ export const DegreeMemoryView: React.FC<DegreeMemoryViewProps> = ({
               <span className="block text-xs text-muted">A zip of a whole module or course, or single PDFs (scans too), Word, PowerPoint, photos of pages, text or CSV. Read on your device, up to 8 MB each.</span>
             </span>
           </label>
+          {tidyAvailable() && (
+            <label className="mt-2 flex items-start gap-2 text-xs text-muted">
+              <input type="checkbox" checked={tidyOn} onChange={(e) => setTidyOn(e.target.checked)} className="mt-0.5 h-4 w-4" />
+              <span>Tidy into Grove format. Arranges the notes into headings and bullet points so you get the overview, diagrams and questions. It only re-arranges what you wrote, and uses your AI.</span>
+            </label>
+          )}
           {uploadMsg && (
             <p role="status" className={`mt-2 text-xs ${uploadMsg.ok ? 'text-accent' : 'text-warn'}`}>{uploadMsg.text}</p>
           )}

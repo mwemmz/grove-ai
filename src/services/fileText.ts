@@ -28,6 +28,20 @@ function tidy(raw: string): string {
   return raw.replace(/\r\n?/g, '\n').replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
 }
 
+const SMALL = new Set('a an the of in to is are and or for as at by on be we us you can not all but how why who what with from that this they your has had was its one may per use set if so no do it'.split(' '));
+const KEEP = new Set(['IT', 'ICT', 'IEEE', 'SDLC', 'UML', 'GUI', 'API', 'CPU', 'DBMS', 'SQL', 'ERD', 'DFD', 'UI', 'UX', 'AI', 'ML', 'IOT']);
+/** Slides are often typed in capitals. Read as notes they shout, so sentence-case them, keeping acronyms. */
+function calm(line: string): string {
+  const letters = line.replace(/[^A-Za-z]/g, '');
+  if (letters.length < 8 || letters.replace(/[^A-Z]/g, '').length / letters.length < 0.8) return line;
+  const out = line.replace(/[A-Za-z][A-Za-z']*/g, (w) => (w === w.toUpperCase() && (KEEP.has(w) || !/[AEIOUY]/.test(w)) ? w : w.toLowerCase()));
+  return out.replace(/(^|[.:!?]\s+)([a-z])/g, (_m, a, b) => a + b.toUpperCase()).replace(/^([^A-Za-z]*)([a-z])/, (_m, a, b) => a + b.toUpperCase());
+}
+const mostlyCaps = (t: string) => {
+  const l = t.replace(/[^A-Za-z]/g, '');
+  return l.length >= 4 && l.replace(/[^A-Z]/g, '').length / l.length > 0.8;
+};
+
 async function pdfText(file: File, onProgress?: Progress): Promise<{ text: string; ocrPages: number }> {
   const pdfjs = await import('pdfjs-dist');
   const worker = (await import('pdfjs-dist/build/pdf.worker.min.mjs?url')).default;
@@ -36,6 +50,9 @@ async function pdfText(file: File, onProgress?: Progress): Promise<{ text: strin
   const pages: string[] = [];
   let ocrPages = 0;
   let figures = 0;
+  // A deck saved as PDF: landscape pages, several of them. Each page is a slide, so it becomes a headed section.
+  const first = (await doc.getPage(1)).getViewport({ scale: 1 });
+  const deck = doc.numPages >= 5 && first.width > first.height * 1.25;
   const { OPS } = pdfjs;
   const paintOps = new Set([OPS.paintImageXObject, OPS.paintInlineImageXObject, OPS.paintImageXObjectRepeat]);
   /** How much of the page is figure: the largest picture's share of the page area (logos and icons are small),
@@ -92,12 +109,22 @@ async function pdfText(file: File, onProgress?: Progress): Promise<{ text: strin
         ocrPages++;
       }
     }
+    if (deck) {
+      const ls = text.split('\n').map((l) => l.replace(/^[\s•●▪■◦·–—-]+/, '').trim()).filter((l) => l && !/^\d{1,3}$/.test(l));
+      let title = ls.shift() ?? '';
+      // A title that wraps onto a second capitalised line.
+      if (title.length < 60 && ls[0] && ls[0].length < 60 && mostlyCaps(title) && mostlyCaps(ls[0])) title += ' ' + ls.shift();
+      if (!title) continue;
+      text = [`### ${calm(title)}`, ...ls.map((l) => `- ${calm(l)}`)].join('\n');
+    }
     // Keep a picture of the page when it holds a real figure (a diagram, chart or photo, not just a logo).
     // The first page of a long deck is its title slide: never a figure.
     if (figures < MAX_FIGURES && !(i === 1 && doc.numPages > 5)) {
       const f = await figureOn(page).catch(() => ({ picture: 0, shapes: 0 }));
       const words = (text.match(/[A-Za-z0-9]/g) ?? []).length;
-      if (f.picture >= 0.12 || (f.shapes >= 20 && words < 700)) {
+      // In a deck the background and the drawn text boxes are not figures: only a real picture is kept.
+      const real = deck ? f.picture >= 0.12 && f.picture < 0.75 : f.picture >= 0.12 || (f.shapes >= 20 && words < 700);
+      if (real) {
         onProgress?.(`Keeping the figure on page ${i}…`);
         canvas ??= await render(page, 1.6);
         try {
@@ -107,6 +134,16 @@ async function pdfText(file: File, onProgress?: Progress): Promise<{ text: strin
         } catch {
           /* storage full or blocked: keep the text */
         }
+      }
+    }
+    if (deck && pages.length) {
+      // Slides that build up (same title, more bullets each time) are one section, not several.
+      const prev = pages[pages.length - 1];
+      const head = text.split('\n')[0];
+      if (head.startsWith('### ') && prev.split('\n')[0] === head) {
+        const have = new Set(prev.split('\n'));
+        pages[pages.length - 1] = [prev, ...text.split('\n').slice(1).filter((l) => l && !have.has(l))].join('\n');
+        continue;
       }
     }
     pages.push(text);

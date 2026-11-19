@@ -264,7 +264,7 @@ function GroveApp({ offlineUser }: { offlineUser?: { id: string; username: strin
   useEffect(() => {
     if (!isDataReady || !meLoaded || fixesChecked.current) return;
     fixesChecked.current = true;
-    type Fix = { id: number; payload: { type: string; noteIds?: string[]; course?: Course } };
+    type Fix = { id: number; payload: { type: string; noteIds?: string[]; course?: Course; noteId?: string; title?: string; content?: string; summary?: string } };
     apiGet<{ fixes: Fix[] }>('/fixes')
       .then(({ fixes }) => {
         if (!fixes.length) return;
@@ -276,6 +276,7 @@ function GroveApp({ offlineUser }: { offlineUser?: { id: string; username: strin
             if (!nextCourses.some((x) => x.id === c.id)) nextCourses = [...nextCourses, c];
             nextNotes = nextNotes.map((n) => (f.noteIds?.includes(n.id) ? { ...n, courseId: c.id, year: c.year } : n));
           } else if (f.type === 'delete-notes') nextNotes = nextNotes.filter((n) => !f.noteIds?.includes(n.id));
+          else if (f.type === 'edit-note' && f.noteId) nextNotes = nextNotes.map((n) => (n.id === f.noteId ? { ...n, title: f.title ?? n.title, content: f.content ?? n.content, summary: f.summary ?? n.summary, updatedAt: new Date().toISOString() } : n));
           else if (f.type === 'update-course' && f.course) nextCourses = nextCourses.map((x) => (x.id === f.course!.id ? { ...x, ...f.course } : x));
         }
         setCourses(nextCourses);

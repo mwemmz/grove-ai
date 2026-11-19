@@ -151,6 +151,18 @@ export async function handleAdmin(req: HandlerReq, res: HandlerRes, user: DbUser
     return;
   }
 
+  // Read one of the student's notes, so an admin can see what the student sees. Every read is recorded.
+  if (sub === 'note' && method === 'GET') {
+    const target = str(q1(query.userId), 40);
+    const noteId = str(q1(query.id), 120);
+    if (!/^[0-9a-f-]{36}$/i.test(target) || !noteId) throw new ApiError(400, 'Bad request');
+    const n = (await db.execute(sql`select id, title, content, course_id as "courseId", year, summary, tags, key_takeaways as "keyTakeaways", created_at as "createdAt", updated_at as "updatedAt" from notes where user_id = ${target}::uuid and id = ${noteId}`)).rows[0] as Record<string, unknown> | undefined;
+    if (!n) throw new ApiError(404, 'No such note');
+    await audit(adminName, target, 'read-note', String(n.title).slice(0, 120));
+    json(res, { note: { ...n, tags: n.tags ?? [], keyTakeaways: n.keyTakeaways ?? [], createdAt: String(n.createdAt), updatedAt: String(n.updatedAt) } });
+    return;
+  }
+
   if (sub === 'fix' && method === 'POST') {
     const b = requireObjectBody(req.body);
     const target = str(b.userId, 40);
@@ -190,6 +202,20 @@ export async function handleAdmin(req: HandlerReq, res: HandlerRes, user: DbUser
       await queue({ type: 'delete-notes', noteIds });
       await audit(adminName, target, 'delete-notes', `${noteIds.length} notes`);
       json(res, { ok: true, deleted: noteIds.length });
+      return;
+    }
+
+    if (action === 'edit-note') {
+      const noteId = str(b.noteId, 120);
+      const title = str(b.title, 200).trim();
+      const content = typeof b.content === 'string' ? b.content.slice(0, 200_000) : '';
+      if (!noteId || (!title && !content.trim())) throw new ApiError(400, 'Nothing to change');
+      const summary = content.trim() ? content.trim().replace(/\s+/g, ' ').slice(0, 140) : '';
+      const row = (await db.execute(sql`update notes set title = coalesce(nullif(${title}::text, ''), title), content = coalesce(nullif(${content}::text, ''), content), summary = coalesce(nullif(${summary}::text, ''), summary), updated_at = ${new Date().toISOString()}::text where user_id = ${target}::uuid and id = ${noteId} returning id`)).rows[0];
+      if (!row) throw new ApiError(404, 'No such note');
+      await queue({ type: 'edit-note', noteId, title: title || undefined, content: content.trim() ? content : undefined, summary: summary || undefined });
+      await audit(adminName, target, 'edit-note', `${noteId}${title ? ` · renamed to ${title.slice(0, 60)}` : ''}${content.trim() ? ' · text edited' : ''}`);
+      json(res, { ok: true });
       return;
     }
 

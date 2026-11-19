@@ -1,9 +1,11 @@
 /* For admins: who is using Grove, what they were doing, and fixes for their notes (for example notes filed under the wrong course).
-   Admins see names, IDs, courses, note titles and an activity log. They never see chat questions or the text of notes.
-   Every change is recorded, and the student's device is told so a saved copy cannot undo it. */
+   Admins see names, IDs, courses, note titles, an activity log, and can open a student's notes the way the student sees them.
+   They never see chat questions. Every read and change is recorded, and the student's device is told of changes so a saved copy cannot undo them. */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, Search, ShieldCheck } from 'lucide-react';
 import { apiGet, apiPost } from '../lib/api';
+import type { Note } from '../types';
+import { NoteReader } from './NoteReader';
 import { EmptyState } from './EmptyState';
 import { field, labelCls, primaryBtn, quietBtn } from './ui';
 
@@ -47,7 +49,7 @@ export function StudentsAdmin() {
     <div className="mx-auto max-w-3xl space-y-5 p-4 sm:p-6">
       <header className="space-y-1">
         <h2 className="font-display text-2xl text-text">Students</h2>
-        <p className="flex items-start gap-2 text-sm text-muted"><ShieldCheck aria-hidden className="mt-0.5 h-4 w-4 shrink-0" />You can see names, IDs, courses, note titles and what a student was doing. Chat questions and the text of notes stay private. Every fix you make is recorded.</p>
+        <p className="flex items-start gap-2 text-sm text-muted"><ShieldCheck aria-hidden className="mt-0.5 h-4 w-4 shrink-0" />You can see names, IDs, courses, note titles and what a student was doing, and open their notes to fix them. Chat questions stay private. Every note you open and every fix you make is recorded.</p>
       </header>
       <label className="relative block">
         <Search aria-hidden className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
@@ -80,6 +82,7 @@ function StudentDetail({ id, onBack }: { id: string; onBack: () => void }) {
   const [toName, setToName] = useState('');
   const [msg, setMsg] = useState('');
   const [busy, setBusy] = useState(false);
+  const [view, setView] = useState<string | null>(null);
 
   const load = useCallback(() => {
     apiGet<Detail>(`/admin?sub=student&id=${id}`).then(setD).catch((e) => setError(String(e.message ?? e)));
@@ -121,6 +124,8 @@ function StudentDetail({ id, onBack }: { id: string; onBack: () => void }) {
         {d.pendingFixes > 0 && <p className="mt-1 text-sm text-warn">{d.pendingFixes} fix{d.pendingFixes > 1 ? 'es' : ''} waiting for their device. They apply the next time they open Grove.</p>}
       </header>
 
+      {view && <AdminNote userId={id} noteId={view} who={d.student.name || d.student.studentId || 'the student'} onClose={() => { setView(null); load(); }} />}
+
       <section aria-label="Notes" className="space-y-3">
         <h3 className="font-display text-lg text-text">Notes by course</h3>
         {d.notes.length === 0 && <p className="text-sm text-muted">No notes saved yet.</p>}
@@ -141,6 +146,7 @@ function StudentDetail({ id, onBack }: { id: string; onBack: () => void }) {
                       <input type="checkbox" checked={sel.has(n.id)} onChange={() => toggle(n.id)} aria-label={n.title} className="h-4 w-4" />
                       <span className="min-w-0 flex-1 truncate text-text">{n.title}</span>
                       <span className="shrink-0 text-xs">{Math.max(1, Math.round(n.size / 1000))} KB · {ago(n.updatedAt)}</span>
+                      <button type="button" onClick={(e) => { e.preventDefault(); setView(n.id); }} className="shrink-0 rounded-full bg-raised px-3 py-1 text-xs text-text ring-1 ring-line hover:bg-accent hover:text-ink">Open</button>
                     </label>
                   </li>
                 ))}
@@ -182,5 +188,63 @@ function StudentDetail({ id, onBack }: { id: string; onBack: () => void }) {
         </ul>
       </section>
     </div>
+  );
+}
+
+
+/** A student's note opened the way they see it, with the tools to fix it. Reads and edits are recorded. */
+function AdminNote({ userId, noteId, who, onClose }: { userId: string; noteId: string; who: string; onClose: () => void }) {
+  const [note, setNote] = useState<Note | null>(null);
+  const [err, setErr] = useState('');
+  const [editing, setEditing] = useState(false);
+  const [title, setTitle] = useState('');
+  const [text, setText] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState('');
+  useEffect(() => {
+    apiGet<{ note: Note }>(`/admin?sub=note&userId=${userId}&id=${encodeURIComponent(noteId)}`)
+      .then(({ note: n }) => { setNote(n); setTitle(n.title); setText(n.content); })
+      .catch((e) => setErr(String(e.message ?? e)));
+  }, [userId, noteId]);
+  const save = async () => {
+    if (!note) return;
+    setBusy(true);
+    setMsg('');
+    try {
+      await apiPost('/admin?sub=fix', { userId, action: 'edit-note', noteId, title: title.trim() !== note.title ? title.trim() : undefined, content: text !== note.content ? text : undefined });
+      setNote({ ...note, title: title.trim() || note.title, content: text });
+      setEditing(false);
+      setMsg('Saved. Their device picks it up the next time they open Grove.');
+    } catch (e) {
+      setMsg(String((e as Error).message ?? e));
+    }
+    setBusy(false);
+  };
+  return (
+    <>
+      {note && !editing && <NoteReader key={note.content.length + note.title} note={note} onClose={onClose} />}
+      <div className="fixed inset-x-0 bottom-0 z-[60] border-t border-line bg-surface px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-lg">
+        <div className="mx-auto flex max-w-3xl flex-wrap items-center gap-2 text-sm">
+          <ShieldCheck aria-hidden className="h-4 w-4 shrink-0 text-accent" />
+          <span className="min-w-0 flex-1 truncate text-text">Viewing {who}'s note as admin{msg ? ` · ${msg}` : ''}</span>
+          {err && <span className="text-warn">{err}</span>}
+          {note && !editing && <button onClick={() => setEditing(true)} className={quietBtn}>Edit title and text</button>}
+          <button onClick={onClose} className={quietBtn}>Close</button>
+        </div>
+      </div>
+      {editing && note && (
+        <div role="dialog" aria-label="Edit note" className="fixed inset-0 z-50 flex flex-col gap-3 overflow-y-auto bg-bg p-4 pb-24 sm:p-6">
+          <h3 className="font-display text-xl text-text">Edit {who}'s note</h3>
+          <label><span className={labelCls}>Title</span><input value={title} onChange={(e) => setTitle(e.target.value)} className={field} /></label>
+          <label className="flex min-h-0 flex-1 flex-col"><span className={labelCls}>Text (use ## for headings, ### for sub-headings, - for bullets)</span>
+            <textarea value={text} onChange={(e) => setText(e.target.value)} className={`${field} min-h-[50vh] flex-1 font-mono text-xs leading-5`} />
+          </label>
+          <div className="flex gap-2">
+            <button disabled={busy || !title.trim() || !text.trim()} onClick={() => void save()} className={`${primaryBtn} disabled:opacity-50`}>Save for the student</button>
+            <button onClick={() => { setEditing(false); setTitle(note.title); setText(note.content); }} className={quietBtn}>Cancel</button>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

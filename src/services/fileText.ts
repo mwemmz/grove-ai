@@ -30,11 +30,13 @@ function tidy(raw: string): string {
 
 const SMALL = new Set('a an the of in to is are and or for as at by on be we us you can not all but how why who what with from that this they your has had was its one may per use set if so no do it'.split(' '));
 const KEEP = new Set(['IT', 'ICT', 'IEEE', 'SDLC', 'UML', 'GUI', 'API', 'CPU', 'DBMS', 'SQL', 'ERD', 'DFD', 'UI', 'UX', 'AI', 'ML', 'IOT']);
+/** Names that keep their capitals when a line typed in capitals is calmed down. */
+const NAMES = Object.fromEntries('Hadoop MapReduce NameNode DataNode YARN NoSQL MySQL PostgreSQL MongoDB Spark Kafka Hive Python Java JavaScript Linux Windows Excel Oracle Zambia Lusaka Africa Google Microsoft Amazon Facebook WhatsApp Android iOS GitHub Wi-Fi'.split(' ').map((n) => [n.toLowerCase(), n]));
 /** Slides are often typed in capitals. Read as notes they shout, so sentence-case them, keeping acronyms. */
 function calm(line: string): string {
   const letters = line.replace(/[^A-Za-z]/g, '');
   if (letters.length < 8 || letters.replace(/[^A-Z]/g, '').length / letters.length < 0.8) return line;
-  const out = line.replace(/[A-Za-z][A-Za-z']*/g, (w) => (w === w.toUpperCase() && (KEEP.has(w) || !/[AEIOUY]/.test(w)) ? w : w.toLowerCase()));
+  const out = line.replace(/[A-Za-z][A-Za-z']*/g, (w) => (w === w.toUpperCase() && (KEEP.has(w) || !/[AEIOUY]/.test(w)) ? w : (NAMES[w.toLowerCase()] ?? w.toLowerCase())));
   return out.replace(/(^|[.:!?]\s+)([a-z])/g, (_m, a, b) => a + b.toUpperCase()).replace(/^([^A-Za-z]*)([a-z])/, (_m, a, b) => a + b.toUpperCase());
 }
 const mostlyCaps = (t: string) => {
